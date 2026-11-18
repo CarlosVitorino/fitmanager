@@ -36,6 +36,13 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # The web image installs production dependencies only (Dockerfile, prod-deps). A lockfile can pass
+      # everything above and still fail that install, so try it the same way here.
+      - name: Production-only install
+        run: |
+          dir="$(mktemp -d)"
+          cp package.json package-lock.json "$dir"
+          cd "$dir" && npm ci --omit=dev --no-audit --no-fund
 
   # The server builds the images itself; GitHub holds a key that can only run deploy/deploy.sh with this
   # commit's sha (docs/deploy.md). Until the three secrets exist the job warns and skips, so CI stays green.
