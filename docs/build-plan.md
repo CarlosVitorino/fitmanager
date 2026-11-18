@@ -18,45 +18,47 @@ The feature list below is the founder's scope (2026-11-18). Where it differs fro
 - [x] ESLint, Prettier, GitHub Actions CI (typecheck, lint, test, build). Seed script with a demo studio.
 - Done when: `npm run dev` brings up the database and the app with seeded data, and CI is green.
 
-## 3. Core
+## 3. Core ✅
 Built in milestones, each one usable and committed before the next.
 
 ### 3a. Domain rules (most tested code in the repo)
-- [ ] Credit ledger: balances are derived from entries (`granted`, `reserved`, `released`, `consumed`, `waived`, `expired`, `manual_adjustment`), never stored as an editable number.
-- [ ] Pack types with entries and validity; packs expire at end of day in the studio's timezone.
-- [ ] Booking reserves one credit from the pack closest to expiry that is still valid on the class date; packs without expiry are spent last.
-- [ ] Cancellation inside the window releases the credit; after it, the credit stays reserved.
-- [ ] Settlement on the class date: every reservation becomes `consumed`. Idempotent; runs from a scheduled job and before any balance is read.
-- [ ] Coach override per booking: mark no-show, and choose whether the credit is consumed (default yes, unless cancelled inside the window). Changing the choice after settlement writes a compensating ledger entry.
-- [ ] Achievements: total classes, weekly streak (consecutive weeks with at least one attended class), milestones (10, 25, 50, 100). No-shows don't count.
+- [x] Credit ledger: balances are derived from entries (`grant`, `adjust`, `reserve`, `release`, `consume`, `refund`, `charge`, `expire`), never stored as an editable number.
+- [x] Pack types with entries and validity; packs expire at end of day in the studio's timezone.
+- [x] Booking reserves one credit from the pack closest to expiry that is still valid on the class date; packs without expiry are spent last.
+- [x] Cancellation inside the window releases the credit; after it, the credit stays reserved.
+- [x] Settlement on the class date: every reservation becomes `consumed`. Idempotent; runs from a scheduled job and before any balance is read.
+- [x] Coach override per booking: mark no-show, and choose whether the credit is consumed (default yes, unless cancelled inside the window). Changing the choice after settlement writes a compensating ledger entry.
+- [x] Achievements: total classes, weekly streak (consecutive weeks with at least one attended class), milestones (1, 10, 25, 50, 100…). No-shows don't count.
 
 ### 3b. Admin setup
-- [ ] Studio settings: name, timezone, booking cutoff (default 2h), cancellation cutoff (default 24h).
-- [ ] Pack types: single class (1 entry, 30 days), trimester (10 entries, 3 months), expiring (10 entries, 14 weeks). Price, entries and validity editable per studio.
-- [ ] Calendars (e.g. Private classes, Group classes) with recurring weekly slots: day, time, duration, capacity, coach, class template. Sessions generated ahead from the recurrence; single sessions can be edited or cancelled.
-- [ ] Class templates: "General class" by default; admin creates others with name, description, colour, icon.
-- [ ] Admin week view of sessions (Schedule-X, verified at the start of this milestone; FullCalendar as fallback).
+- [x] Studio settings: name, timezone, booking cutoff (default 2h), cancellation cutoff (default 24h).
+- [x] Pack types: single class (1 entry, 30 days), trimester (10 entries, 3 months), expiring (10 entries, 14 weeks). Price, entries and validity editable per studio.
+- [x] Calendars (e.g. Private classes, Group classes) with recurring weekly slots: day, time, duration, capacity, coach, class template. Sessions generated ahead from the recurrence; single sessions can be edited or cancelled.
+- [x] Class templates: "General class" by default; admin creates others with name, description, colour, icon.
+- [x] Admin week view of sessions: hand-built day columns, not a calendar library (see Decisions).
 
 ### 3c. Member side
-- [ ] Join a studio by invite link; sign up / sign in.
-- [ ] Calendar: day list of sessions with template colour/icon and spots left; book and cancel within the windows; full sessions shown as full.
-- [ ] Profile: my packs (entries left, expiry), class history, achievements.
-- [ ] See the studio's pack types and prices, so members know what to ask the coach for.
+- [x] Join a studio by invite link; sign up / sign in.
+- [x] Calendar: day list of sessions with template colour/icon and spots left; book and cancel within the windows; full sessions shown as full.
+- [x] Profile: my packs (entries left, expiry), class history, achievements.
+- [x] See the studio's pack types and prices, so members know what to ask the coach for.
 
 ### 3d. Admin members
-- [ ] Members list: name, contact, active packs, entries left, next expiry.
-- [ ] Member detail: profile; fitness notes (private to coaches, and shared with the member); class history; payment history (the payments recorded when plans were assigned).
-- [ ] Assign a plan: the coach adds pack type X to member A. Optional payment details on the same form (amount, method, date paid), which feed the payment history.
-- [ ] Adjust credits: add or remove entries on an existing pack, with a required reason. Used for migrating existing balances, corrections and goodwill.
-- [ ] Booking adjustments on a member's behalf: add (including to a full session), remove, move.
-- [ ] Audit log of every manual change: what, who, when, why.
+- [x] Members list: name, contact, active packs, entries left, next expiry.
+- [x] Member detail: profile; fitness notes (private to coaches, and shared with the member); class history; payment history (the payments recorded when plans were assigned).
+- [x] Assign a plan: the coach adds pack type X to member A. Optional payment details on the same form (amount, method, date paid), which feed the payment history.
+- [x] Adjust credits: add or remove entries on an existing pack, with a required reason. Used for migrating existing balances, corrections and goodwill.
+- [x] Booking adjustments on a member's behalf: add (including to a full session), remove, move.
+- [x] Audit log of every manual change: what, who, when, why.
+
+- [x] Studio Today dashboard: today's classes, plans expiring in 14 days, members running low.
 
 - Done when: a demo studio runs the whole loop (set up calendars and packs, coach assigns a plan, member books, class happens, credits settle, coach sees history and payments) on seeded and real data.
 
 ## 4. Harden
 - [ ] Playwright end-to-end tests for the core loop.
-- [ ] Tenant isolation tests: no query returns another studio's data; role checks on every server action.
-- [ ] Error handling for what users actually hit: double booking, full session race, expired pack, timezone edges.
+- [ ] Tenant isolation tests: no query returns another studio's data; role checks on every server action. (Started: integration tests cover studio context, bookings, notes and plans across studios.)
+- [ ] Error handling for what users actually hit: double booking, full session race, expired pack, timezone edges. (Races for the last spot and for one credit paying two classes are tested.)
 - [ ] Error monitoring (Sentry or similar) and structured logs.
 - Done when: the founder is comfortable putting it in front of a real studio.
 
@@ -81,6 +83,15 @@ Built in milestones, each one usable and committed before the next.
 - **Studio settings are kept in their own table** (`studio_settings`), not on Better Auth's organization table, so auth upgrades never touch them. Timezone is chosen when the studio is created.
 - **Logins are server-rendered forms**, so login and signup work without JavaScript. Astro's origin check blocks cross-site form posts.
 - **Not a member and no such studio both return 404**, so studio addresses can't be probed.
+- **No calendar library.** The coach week view is seven server-rendered day columns and the member view is a day list of cards. Both are simple, work on phones, and need no JavaScript. Schedule-X stays an option if coaches ask for a drag-and-drop time grid.
+- **Late cancellation frees the spot** for someone else; the credit is still used. Cancelling a whole class returns every credit.
+- **Coaches can book members past the cutoff, into full classes, and into past classes** (to fix the record). A credit is still needed; there's no "free" booking, a coach adds a credit with a reason instead.
+- **Moving a booking** returns the old credit and reserves a new one, so the closest-to-expiry rule still applies to the new date.
+- **Recurring slots generate classes 8 weeks ahead.** Editing a slot regenerates its future classes that nobody booked; booked ones keep their time until a coach changes them.
+- **Settlement runs before studio pages** (at most every 30 seconds per studio) and from `npm run jobs:settle`, which should run hourly in production.
+- **Roles:** owners manage settings, plans and staff; coaches manage classes, members, credits and notes; members book and see their own data. Defined in `src/server/authz.ts`.
+- **New studios start with** a General class, Group and Private calendars, and the three plans (prices left empty).
+- **Currency** is a studio setting (default EUR), used for plan prices and payments.
 
 ## Open decisions
 
