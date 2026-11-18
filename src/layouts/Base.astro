@@ -1,0 +1,42 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const { user, studio } = Astro.locals;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · FitManager</title>
+  </head>
+  <body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
+    <header class="border-b border-stone-200 bg-white">
+      <nav class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+        <a href="/" class="font-semibold tracking-tight">
+          FitManager{studio && <span class="font-normal text-stone-500"> / {studio.name}</span>}
+        </a>
+        {user ? (
+          <div class="flex items-center gap-3 text-sm">
+            <span class="text-stone-600">{user.name}</span>
+            <form method="post" action="/logout">
+              <button class="rounded px-2 py-1 text-stone-600 hover:bg-stone-100">Log out</button>
+            </form>
+          </div>
+        ) : (
+          <a href="/login" class="text-sm">
+            Log in
+          </a>
+        )}
+      </nav>
+    </header>
+    <main class="mx-auto max-w-5xl px-4 py-8">
+      <slot />
+    </main>
+  </body>
+</html>

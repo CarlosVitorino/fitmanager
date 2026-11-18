@@ -1,0 +1,55 @@
+---
+import Base from "../layouts/Base.astro";
+import { db } from "../db/client";
+import { listUserStudios } from "../server/studio-context";
+
+const { user } = Astro.locals;
+const studios = user ? await listUserStudios(db, user.id) : [];
+if (user && studios.length === 1) return Astro.redirect(`/s/${studios[0]!.slug}`);
+---
+
+<Base title="Home">
+  {user ? (
+    <div class="space-y-6">
+      <h1 class="text-2xl font-semibold">Your studios</h1>
+      {studios.length === 0 ? (
+        <p class="text-stone-600">
+          You're not part of a studio yet. Ask your coach for an invite link, or create your own studio.
+        </p>
+      ) : (
+        <ul class="divide-y divide-stone-200 rounded border border-stone-200 bg-white">
+          {studios.map((s) => (
+            <li>
+              <a href={`/s/${s.slug}`} class="flex justify-between px-4 py-3 hover:bg-stone-50">
+                <span>{s.name}</span>
+                <span class="text-sm capitalize text-stone-500">{s.role}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      <a
+        href="/studios/new"
+        class="inline-block rounded border border-stone-300 bg-white px-3 py-2 text-sm hover:bg-stone-100"
+      >
+        Create a studio
+      </a>
+    </div>
+  ) : (
+    <div class="space-y-4">
+      <h1 class="text-3xl font-semibold tracking-tight">Class credits your members can see for themselves.</h1>
+      <p class="max-w-prose text-stone-600">
+        FitManager keeps class packs, bookings and credits for small studios and independent coaches, so nobody has to
+        email to know what's left.
+      </p>
+      <div class="flex gap-3">
+        <a href="/signup" class="rounded bg-stone-900 px-4 py-2 font-medium text-white hover:bg-stone-700">
+          Get started
+        </a>
+        <a href="/login" class="rounded border border-stone-300 bg-white px-4 py-2 hover:bg-stone-100">
+          Log in
+        </a>
+      </div>
+    </div>
+  )}
+</Base>

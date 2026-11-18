@@ -1,0 +1,88 @@
+---
+import FormError from "../../components/FormError.astro";
+import Base from "../../layouts/Base.astro";
+import { HttpError } from "../../server/errors";
+import { createStudio, createStudioInput } from "../../server/studios";
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect("/login?next=/studios/new");
+
+let error: string | null = null;
+let values = { name: "", slug: "", timezone: "" };
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  values = {
+    name: String(form.get("name") ?? ""),
+    slug: String(form.get("slug") ?? ""),
+    timezone: String(form.get("timezone") ?? ""),
+  };
+  const parsed = createStudioInput.safeParse(values);
+  if (!parsed.success) {
+    error = parsed.error.issues[0]?.message ?? "Check the form";
+    Astro.response.status = 400;
+  } else {
+    try {
+      await createStudio(user.id, parsed.data);
+      return Astro.redirect(`/s/${parsed.data.slug}`, 303);
+    } catch (e) {
+      if (!(e instanceof HttpError)) throw e;
+      error = e.message;
+      Astro.response.status = e.status;
+    }
+  }
+}
+
+const timezones = Intl.supportedValuesOf("timeZone");
+---
+
+<Base title="Create a studio">
+  <div class="mx-auto max-w-md space-y-6">
+    <h1 class="text-2xl font-semibold">Create a studio</h1>
+    <FormError message={error} />
+    <form method="post" class="space-y-4">
+      <label class="block space-y-1">
+        <span class="text-sm font-medium">Studio name</span>
+        <input name="name" required value={values.name} class="w-full rounded border border-stone-300 px-3 py-2" />
+      </label>
+      <label class="block space-y-1">
+        <span class="text-sm font-medium">Address</span>
+        <div class="flex items-center rounded border border-stone-300 bg-white">
+          <span class="pl-3 text-stone-500">/s/</span>
+          <input
+            name="slug"
+            required
+            value={values.slug}
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            class="w-full rounded px-1 py-2 outline-none"
+          />
+        </div>
+        <span class="text-xs text-stone-500">Lowercase letters, numbers and dashes. Members use this link.</span>
+      </label>
+      <label class="block space-y-1">
+        <span class="text-sm font-medium">Timezone</span>
+        <select
+          name="timezone"
+          required
+          id="timezone"
+          class="w-full rounded border border-stone-300 bg-white px-3 py-2"
+        >
+          {timezones.map((tz) => (
+            <option value={tz} selected={tz === values.timezone}>
+              {tz}
+            </option>
+          ))}
+        </select>
+        <span class="text-xs text-stone-500">Class times, expiry dates and credit settlement use this timezone.</span>
+      </label>
+      <button class="w-full rounded bg-stone-900 px-3 py-2 font-medium text-white hover:bg-stone-700">
+        Create studio
+      </button>
+    </form>
+  </div>
+  <script>
+    const select = document.getElementById("timezone") as HTMLSelectElement | null;
+    if (select && !select.querySelector("option[selected]"))
+      select.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  </script>
+</Base>

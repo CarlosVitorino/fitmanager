@@ -1,0 +1,76 @@
+---
+import FormError from "../components/FormError.astro";
+import Base from "../layouts/Base.astro";
+import { auth } from "../lib/auth";
+import { readAuthError, redirectWithCookies, safeNext } from "../server/forms";
+
+const next = safeNext(Astro.url.searchParams.get("next"));
+let error: string | null = null;
+let name = "";
+let email = "";
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  name = String(form.get("name") ?? "").trim();
+  email = String(form.get("email") ?? "").trim();
+  const res = await auth.api.signUpEmail({
+    body: { name, email, password: String(form.get("password") ?? "") },
+    headers: Astro.request.headers,
+    asResponse: true,
+  });
+  if (res.ok) return redirectWithCookies(next, res);
+  error = await readAuthError(res, "Could not create the account");
+  Astro.response.status = res.status;
+} else if (Astro.locals.user) {
+  return Astro.redirect(next);
+}
+---
+
+<Base title="Sign up">
+  <div class="mx-auto max-w-sm space-y-6">
+    <h1 class="text-2xl font-semibold">Create your account</h1>
+    <FormError message={error} />
+    <form method="post" class="space-y-4">
+      <label class="block space-y-1">
+        <span class="text-sm font-medium">Name</span>
+        <input
+          name="name"
+          required
+          autocomplete="name"
+          value={name}
+          class="w-full rounded border border-stone-300 px-3 py-2"
+        />
+      </label>
+      <label class="block space-y-1">
+        <span class="text-sm font-medium">Email</span>
+        <input
+          name="email"
+          type="email"
+          required
+          autocomplete="email"
+          value={email}
+          class="w-full rounded border border-stone-300 px-3 py-2"
+        />
+      </label>
+      <label class="block space-y-1">
+        <span class="text-sm font-medium">Password</span>
+        <input
+          name="password"
+          type="password"
+          required
+          minlength="8"
+          autocomplete="new-password"
+          class="w-full rounded border border-stone-300 px-3 py-2"
+        />
+        <span class="text-xs text-stone-500">At least 8 characters.</span>
+      </label>
+      <button class="w-full rounded bg-stone-900 px-3 py-2 font-medium text-white hover:bg-stone-700">Sign up</button>
+    </form>
+    <p class="text-sm text-stone-600">
+      Already have an account?{" "}
+      <a class="underline" href={`/login?next=${encodeURIComponent(next)}`}>
+        Log in
+      </a>
+    </p>
+  </div>
+</Base>
