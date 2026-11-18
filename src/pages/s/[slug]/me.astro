@@ -1,0 +1,259 @@
+---
+import BookingStatus from "../../../components/BookingStatus.astro";
+import PackCard from "../../../components/PackCard.astro";
+import Section from "../../../components/Section.astro";
+import Studio from "../../../layouts/Studio.astro";
+import { describeValidity } from "../../../domain/packs";
+import { formatDate, formatDay, formatInstant, formatMoney, formatTime, plural } from "../../../lib/format";
+import { handleActions, str } from "../../../server/actions";
+import { listPackTypes } from "../../../server/catalog";
+import {
+  classHistory,
+  getMember,
+  listNotes,
+  listPayments,
+  memberAchievements,
+  profileInput,
+  updateProfile,
+} from "../../../server/members";
+import { memberPacks, validityOf } from "../../../server/packs";
+
+const ctx = Astro.locals.studio!;
+const result = await handleActions(Astro, {
+  profile: async (f) => {
+    await updateProfile(ctx, ctx.userId, profileInput.parse({ name: str(f, "name"), phone: str(f, "phone") }));
+    return "Profile saved.";
+  },
+});
+if (result instanceof Response) return result;
+
+const [me, packs, history, notes, payments, plans] = await Promise.all([
+  getMember(ctx, ctx.userId),
+  memberPacks(ctx, ctx.userId),
+  classHistory(ctx, ctx.userId),
+  listNotes(ctx, ctx.userId),
+  listPayments(ctx, { memberId: ctx.userId }),
+  listPackTypes(ctx),
+]);
+const a = memberAchievements(ctx, history);
+const now = new Date();
+const upcoming = history.filter((h) => h.status === "booked" && h.startsAt > now && !h.sessionCancelled).reverse();
+const past = history.filter((h) => h.startsAt <= now || h.status !== "booked" || h.sessionCancelled);
+const current = packs.filter((p) => p.status === "active" || p.status === "upcoming");
+const old = packs.filter((p) => p.status === "expired" || p.status === "used_up");
+const editing = Astro.url.searchParams.has("edit");
+---
+
+<Studio title="My plans & progress" flash={result.flash} error={result.error}>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">Hi, {me.name.split(" ")[0]}</h1>
+      <p class="muted">
+        {me.email}
+        {me.phone && ` · ${me.phone}`} ·{" "}
+        <a href="?edit" class="underline">
+          edit profile
+        </a>
+      </p>
+    </div>
+    <a href={`/s/${ctx.slug}/book`} class="btn btn-primary">
+      Book a class
+    </a>
+  </div>
+
+  {editing && (
+    <form method="post" class="card mb-6 grid max-w-xl gap-3 p-5 sm:grid-cols-2">
+      <input type="hidden" name="_action" value="profile" />
+      <input type="hidden" name="_redirect" value={Astro.url.pathname} />
+      <label class="block space-y-1">
+        <span class="label">Name</span>
+        <input name="name" required class="input" value={me.name} />
+      </label>
+      <label class="block space-y-1">
+        <span class="label">Phone</span>
+        <input name="phone" class="input" value={me.phone ?? ""} />
+      </label>
+      <div class="flex gap-2 sm:col-span-2">
+        <button class="btn btn-primary">Save</button>
+        <a href={Astro.url.pathname} class="btn">
+          Cancel
+        </a>
+      </div>
+    </form>
+  )}
+
+  <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="card p-4">
+      <div class="text-3xl font-semibold tabular-nums">{a.totalClasses}</div>
+      <div class="muted">classes done</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-3xl font-semibold tabular-nums">
+        {a.currentStreakWeeks}
+        <span class="text-lg">🔥</span>
+      </div>
+      <div class="muted">week streak</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-3xl font-semibold tabular-nums">{a.longestStreakWeeks}</div>
+      <div class="muted">longest streak (weeks)</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-3xl font-semibold tabular-nums">{a.classesThisWeek}</div>
+      <div class="muted">this week</div>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+    <div class="space-y-6">
+      <Section title="My plans">
+        {current.length === 0 && <p class="muted">No active plan. Ask your coach to add one.</p>}
+        <div class="grid gap-3 sm:grid-cols-2">
+          {current.map((p) => (
+            <PackCard pack={p} timezone={ctx.timezone} />
+          ))}
+        </div>
+        {old.length > 0 && (
+          <details class="mt-4">
+            <summary class="muted cursor-pointer">Past plans ({old.length})</summary>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              {old.map((p) => (
+                <PackCard pack={p} timezone={ctx.timezone} />
+              ))}
+            </div>
+          </details>
+        )}
+      </Section>
+
+      <Section title="Upcoming classes">
+        {upcoming.length === 0 && (
+          <p class="muted">
+            Nothing booked.{" "}
+            <a class="underline" href={`/s/${ctx.slug}/book`}>
+              Book a class
+            </a>
+          </p>
+        )}
+        <ul class="divide-y divide-stone-100">
+          {upcoming.map((h) => (
+            <li class="flex items-center justify-between py-2.5 text-sm">
+              <span>
+                <span class="font-medium">
+                  {formatDay(h.localDate)} · {formatTime(h.startsAt, ctx.timezone)}
+                </span>
+                <span class="ml-2" style={`color:${h.color}`}>
+                  {h.icon} {h.templateName}
+                </span>
+              </span>
+              <a href={`/s/${ctx.slug}/book`} class="muted text-xs underline">
+                manage
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section title="Class history">
+        {past.length === 0 && <p class="muted">No classes yet.</p>}
+        <ul class="divide-y divide-stone-100">
+          {past.slice(0, 30).map((h) => (
+            <li class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+              <span>
+                <span class="font-medium">
+                  {formatDay(h.localDate)} · {formatTime(h.startsAt, ctx.timezone)}
+                </span>
+                <span class="ml-2" style={`color:${h.color}`}>
+                  {h.icon} {h.templateName}
+                </span>
+              </span>
+              <BookingStatus
+                status={h.status}
+                charged={h.charged}
+                noShow={h.noShow}
+                settled={h.settled}
+                sessionCancelled={h.sessionCancelled}
+              />
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </div>
+
+    <div class="space-y-6">
+      <Section title="Milestones">
+        <ul class="space-y-2">
+          {a.milestones.slice(0, 6).map((m) => (
+            <li class:list={["flex items-center gap-3 text-sm", !m.reachedOn && "opacity-40"]}>
+              <span
+                class:list={[
+                  "flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold",
+                  m.reachedOn ? "bg-amber-100 text-amber-800" : "bg-stone-100 text-stone-500",
+                ]}
+              >
+                {m.count}
+              </span>
+              <span>
+                {m.count === 1 ? "First class" : `${m.count} classes`}
+                {m.reachedOn && <span class="muted block text-xs">{formatDate(m.reachedOn)}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {a.nextMilestone && (
+          <p class="muted mt-3">
+            {plural(a.nextMilestone.remaining, "class", "classes")} to go until {a.nextMilestone.count}.
+          </p>
+        )}
+      </Section>
+
+      {notes.length > 0 && (
+        <Section title="Notes from your coach">
+          <ul class="space-y-3">
+            {notes.map((n) => (
+              <li class="rounded-lg bg-stone-50 p-3 text-sm">
+                <p class="whitespace-pre-line">{n.body}</p>
+                <p class="muted mt-1 text-xs">
+                  {n.authorName} · {formatInstant(n.createdAt, ctx.timezone)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      <Section title="Plans this studio offers" description="Ask your coach to add one to your account.">
+        <ul class="space-y-3" id="plans">
+          {plans.map((p) => (
+            <li class="text-sm">
+              <div class="flex justify-between gap-2 font-medium">
+                <span>{p.name}</span>
+                <span>{formatMoney(p.priceCents, ctx.currency)}</span>
+              </div>
+              <div class="muted text-xs">
+                {plural(p.entries, "class", "classes")} · {describeValidity(validityOf(p))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      {payments.length > 0 && (
+        <Section title="My payments">
+          <ul class="space-y-2 text-sm">
+            {payments.map((p) => (
+              <li class="flex justify-between gap-2">
+                <span>
+                  {formatDate(p.paidOn)}
+                  <span class="muted block text-xs">
+                    {p.packName ?? "Payment"} · {p.method}
+                  </span>
+                </span>
+                <span class="font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+    </div>
+  </div>
+</Studio>

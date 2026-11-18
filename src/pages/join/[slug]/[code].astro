@@ -1,0 +1,64 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { HttpError } from "../../../server/errors";
+import { findStudioByInvite, joinStudio } from "../../../server/members";
+
+const { slug, code } = Astro.params as { slug: string; code: string };
+const studio = await findStudioByInvite(slug, code);
+const user = Astro.locals.user;
+let error: string | null = null;
+
+if (Astro.request.method === "POST" && user && studio) {
+  try {
+    await joinStudio(user.id, slug, code);
+    return Astro.redirect(`/s/${slug}/book`, 303);
+  } catch (e) {
+    if (!(e instanceof HttpError)) throw e;
+    error = e.message;
+  }
+}
+if (!studio) Astro.response.status = 404;
+const here = encodeURIComponent(Astro.url.pathname);
+---
+
+<Base title={studio ? `Join ${studio.name}` : "Invite not valid"}>
+  <div class="mx-auto max-w-sm space-y-5 text-center">
+    {studio ? (
+      <>
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-900 text-2xl font-bold text-white">
+          {studio.name.slice(0, 1)}
+        </div>
+        <h1 class="text-2xl font-semibold">Join {studio.name}</h1>
+        <p class="text-stone-600">Book classes and see your plan, credits and progress.</p>
+        {error && <p class="text-sm text-red-700">{error}</p>}
+        {user ? (
+          <form method="post">
+            <button class="w-full rounded bg-stone-900 px-4 py-2.5 font-medium text-white hover:bg-stone-700">
+              Join as {user.name}
+            </button>
+          </form>
+        ) : (
+          <div class="space-y-2">
+            <a
+              href={`/signup?next=${here}`}
+              class="block rounded bg-stone-900 px-4 py-2.5 font-medium text-white hover:bg-stone-700"
+            >
+              Create an account
+            </a>
+            <a
+              href={`/login?next=${here}`}
+              class="block rounded border border-stone-300 bg-white px-4 py-2.5 hover:bg-stone-100"
+            >
+              I already have one
+            </a>
+          </div>
+        )}
+      </>
+    ) : (
+      <>
+        <h1 class="text-2xl font-semibold">This invite link isn't valid</h1>
+        <p class="text-stone-600">It may have been replaced. Ask your coach for a new one.</p>
+      </>
+    )}
+  </div>
+</Base>
