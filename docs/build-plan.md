@@ -1,6 +1,6 @@
 # Build plan — FitManager
 
-Size: **First version**. The smallest product a real person can use end to end, built well enough that you can learn from their use of it.
+Size: **Full product**. A production-ready product: sound architecture, tests, security, monitoring and documentation, built in reviewed stages.
 
 A starting plan in five phases. Tick them off as you go, rewrite them freely, and put your own decisions at the bottom.
 
@@ -11,20 +11,20 @@ A starting plan in five phases. Tick them off as you go, rewrite them freely, an
 - Done when: the person has read the plan and agreed.
 
 ## 2. Foundation
-- [ ] A conventional stack for the problem, running locally with one command.
+- [ ] Considered architecture, CI and environments from the first commit.
 - Done when: the project runs locally with one command.
 
 ## 3. Core
-- [ ] The whole path a user takes, with real data stored properly. Accounts and payments only if the idea cannot be tested without them.
+- [ ] Every feature in the brief, with proper accounts, permissions and, where needed, payments.
 - [ ] Target: One studio's credit lifecycle running end to end: members hold packs of the three types, book themselves into slots, credits consume automatically on the class date, packs drain closest-to-expiry first, and the owner sees a consumption-versus-expiry view with reminders firing in-app. Payment records can be manual entries at first; the proof is whether a real owner trusts the counts more than their spreadsheet.
 - Done when: the smallest thing worth building first works.
 
 ## 4. Harden
-- [ ] Handle the failures a user will actually meet. Tests for the core path.
+- [ ] Broad tests, security review, performance, accessibility and error monitoring.
 - Done when: the person is comfortable putting it in front of someone.
 
 ## 5. Ship and learn
-- [ ] Deploy it somewhere real and measure the stop condition from the brief.
+- [ ] Staged rollout, backups, runbooks and analytics tied to the stop condition.
 - [ ] Measure: nothing at this point
 - Done when: there is evidence for or against the idea.
 

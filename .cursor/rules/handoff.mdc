@@ -20,7 +20,7 @@ Do not build:
 
 These are defaults to start from, not rules. If you have a better way to reach the goal, use it and say why. Ask the person you are working for whenever the brief leaves something that changes the outcome.
 
-**Size of the build: First version.** The smallest product a real person can use end to end, built well enough that you can learn from their use of it.
+**Size of the build: Full product.** A production-ready product: sound architecture, tests, security, monitoring and documentation, built in reviewed stages.
 
 **Before writing code**
 - Read `build-brief.md` end to end.
