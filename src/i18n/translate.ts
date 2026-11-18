@@ -17,7 +17,9 @@ function lookup(tree: Tree, key: string): string | Plural | undefined {
 }
 
 export function interpolate(template: string, vars: Vars = {}): string {
-  return template.replace(/\{(\w+)\}/g, (match, name: string) => (vars[name] === undefined || vars[name] === null ? match : String(vars[name])));
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    vars[name] === undefined || vars[name] === null ? match : String(vars[name]),
+  );
 }
 
 /**

@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  choosePack,
-  computeExpiry,
-  describeValidity,
-  isPackExpired,
-  isPackValidOn,
-  type PackForAllocation,
-} from "./packs";
+import { choosePack, computeExpiry, isPackExpired, isPackValidOn, type PackForAllocation } from "./packs";
 
 describe("computeExpiry", () => {
   it("counts the start day as day one", () => {
@@ -23,12 +16,6 @@ describe("computeExpiry", () => {
   it("rejects zero or fractional validity", () => {
     expect(() => computeExpiry("2026-01-05", { unit: "days", amount: 0 })).toThrow();
     expect(() => computeExpiry("2026-01-05", { unit: "days", amount: 1.5 })).toThrow();
-  });
-
-  it("describes validity", () => {
-    expect(describeValidity({ unit: "weeks", amount: 14 })).toBe("Valid 14 weeks");
-    expect(describeValidity({ unit: "months", amount: 1 })).toBe("Valid 1 month");
-    expect(describeValidity(null)).toBe("Never expires");
   });
 });
 

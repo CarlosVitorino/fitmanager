@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+
 /** An error that maps to an HTTP status. Thrown from server code, turned into a response by pages/endpoints. */
 export class HttpError extends Error {
   constructor(
@@ -9,6 +11,6 @@ export class HttpError extends Error {
   }
 }
 
-export const notFound = (what = "Not found") => new HttpError(404, what);
-export const forbidden = (what = "You don't have permission to do that") => new HttpError(403, what);
+export const notFound = (what?: string) => new HttpError(404, what ?? t("common.notFound"));
+export const forbidden = (what?: string) => new HttpError(403, what ?? t("errors.noPermission"));
 export const badRequest = (what: string) => new HttpError(400, what);

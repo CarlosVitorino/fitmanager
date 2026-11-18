@@ -1,5 +1,6 @@
 import type { AstroGlobal } from "astro";
 import { ZodError } from "zod";
+import { t } from "../i18n";
 import { HttpError } from "./errors";
 
 export type ActionHandler = (form: FormData) => Promise<string | void | Response>;
@@ -30,7 +31,7 @@ export async function handleActions(
   const form = await Astro.request.formData();
   const name = String(form.get("_action") ?? "");
   const handler = handlers[name];
-  if (!handler) return { error: "Unknown action", flash: null, failedForm: form };
+  if (!handler) return { error: t("errors.unknownAction"), flash: null, failedForm: form };
   try {
     const result = await handler(form);
     if (result instanceof Response) return result;
@@ -45,7 +46,7 @@ export async function handleActions(
     }
     if (e instanceof ZodError) {
       Astro.response.status = 400;
-      return { error: e.issues[0]?.message ?? "Check the form", flash: null, failedForm: form };
+      return { error: e.issues[0]?.message ?? t("errors.checkForm"), flash: null, failedForm: form };
     }
     throw e;
   }
@@ -64,7 +65,7 @@ export function optStr(form: FormData, key: string): string | null {
 export function int(form: FormData, key: string, label = key): number {
   const raw = str(form, key);
   const n = Number(raw);
-  if (raw === "" || !Number.isInteger(n)) throw new HttpError(400, `Enter a whole number for ${label}`);
+  if (raw === "" || !Number.isInteger(n)) throw new HttpError(400, t("errors.wholeNumber", { label }));
   return n;
 }
 
@@ -76,7 +77,7 @@ export function optInt(form: FormData, key: string, label = key): number | null 
 export function money(form: FormData, key: string): number | null {
   const raw = str(form, key).replace(",", ".");
   if (raw === "") return null;
-  if (!/^\d+(\.\d{1,2})?$/.test(raw)) throw new HttpError(400, "Enter an amount like 12.50");
+  if (!/^\d+(\.\d{1,2})?$/.test(raw)) throw new HttpError(400, t("errors.amount"));
   return Math.round(Number(raw) * 100);
 }
 
@@ -90,6 +91,6 @@ export function decimal(form: FormData, key: string, label = key): number | null
   const raw = str(form, key).replace(",", ".");
   if (raw === "") return null;
   const n = Number(raw);
-  if (!Number.isFinite(n)) throw new HttpError(400, `Enter a number for ${label}`);
+  if (!Number.isFinite(n)) throw new HttpError(400, t("errors.number", { label }));
   return n;
 }

@@ -21,11 +21,46 @@ export interface DatePatterns {
 }
 
 export const DATE_PATTERNS: Record<Locale, DatePatterns> = {
-  en: { day: "EEE d MMM", dayLong: "EEEE d MMMM", date: "d MMM yyyy", dateWithDay: "EEE d MMM yyyy", monthYear: "MMMM yyyy", time: "HH:mm" },
-  de: { day: "EEE, d. MMM", dayLong: "EEEE, d. MMMM", date: "d. MMM yyyy", dateWithDay: "EEE, d. MMM yyyy", monthYear: "MMMM yyyy", time: "HH:mm" },
-  es: { day: "EEE d MMM", dayLong: "EEEE, d 'de' MMMM", date: "d MMM yyyy", dateWithDay: "EEE d MMM yyyy", monthYear: "MMMM 'de' yyyy", time: "HH:mm" },
-  fr: { day: "EEE d MMM", dayLong: "EEEE d MMMM", date: "d MMM yyyy", dateWithDay: "EEE d MMM yyyy", monthYear: "MMMM yyyy", time: "HH:mm" },
-  pt: { day: "EEE, d MMM", dayLong: "EEEE, d 'de' MMMM", date: "d MMM yyyy", dateWithDay: "EEE, d MMM yyyy", monthYear: "MMMM 'de' yyyy", time: "HH:mm" },
+  en: {
+    day: "EEE d MMM",
+    dayLong: "EEEE d MMMM",
+    date: "d MMM yyyy",
+    dateWithDay: "EEE d MMM yyyy",
+    monthYear: "MMMM yyyy",
+    time: "HH:mm",
+  },
+  de: {
+    day: "EEE, d. MMM",
+    dayLong: "EEEE, d. MMMM",
+    date: "d. MMM yyyy",
+    dateWithDay: "EEE, d. MMM yyyy",
+    monthYear: "MMMM yyyy",
+    time: "HH:mm",
+  },
+  es: {
+    day: "EEE d MMM",
+    dayLong: "EEEE, d 'de' MMMM",
+    date: "d MMM yyyy",
+    dateWithDay: "EEE d MMM yyyy",
+    monthYear: "MMMM 'de' yyyy",
+    time: "HH:mm",
+  },
+  fr: {
+    day: "EEE d MMM",
+    dayLong: "EEEE d MMMM",
+    date: "d MMM yyyy",
+    dateWithDay: "EEE d MMM yyyy",
+    monthYear: "MMMM yyyy",
+    time: "HH:mm",
+  },
+  pt: {
+    day: "EEE, d MMM",
+    dayLong: "EEEE, d 'de' MMMM",
+    date: "d MMM yyyy",
+    dateWithDay: "EEE, d MMM yyyy",
+    monthYear: "MMMM 'de' yyyy",
+    time: "HH:mm",
+  },
 };
 
 /** Spanish, French and Portuguese write weekdays and months in lower case; headings start upper case. */

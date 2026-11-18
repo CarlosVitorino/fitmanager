@@ -4,14 +4,20 @@
  * Islands don't import this; they receive translated labels as props.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
+import { z } from "zod";
 import { DEFAULT_LOCALE, LOCALES, LOCALE_TAGS, type Locale } from "./locales";
 import { translate, type Vars } from "./translate";
 import type { Paths } from "./types";
 import common from "./messages/common";
 import nav from "./messages/nav";
 import setup from "./messages/setup";
+import auth from "./messages/auth";
+import errors from "./messages/errors";
+import booking from "./messages/booking";
+import members from "./messages/members";
+import profile from "./messages/profile";
 
-const namespaces = { common, nav, setup };
+const namespaces = { common, nav, setup, auth, errors, booking, members, profile };
 
 type Namespaces = typeof namespaces;
 export type Messages = { [N in keyof Namespaces]: Namespaces[N]["en"] };
@@ -47,10 +53,18 @@ export function tIn(locale: Locale, key: MessageKey, vars?: Vars): string {
   return translate(locale, byLocale[locale], byLocale.en, key, vars);
 }
 
+/** One namespace's messages in the request's language, for islands (they can't call t()). */
+export function messagesFor<N extends keyof Namespaces>(namespace: N): Namespaces[N]["en"] {
+  return namespaces[namespace][getLocale()] as Namespaces[N]["en"];
+}
+
 /** Zod error option that translates lazily, at validation time, in the request's language. */
 export function msg(key: MessageKey, vars?: Vars) {
   return { error: () => t(key, vars) };
 }
+
+// Any validation without its own message falls back to a translated "check the form".
+z.config({ localeError: () => t("errors.checkForm") });
 
 /** All messages of every language, for the completeness test. */
 export const allMessages = byLocale;

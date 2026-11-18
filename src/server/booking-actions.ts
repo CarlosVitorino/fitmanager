@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 /** The coach booking controls, shared by the class page and the member page. */
 import * as bookings from "./bookings";
 import { bool, str, type ActionHandler } from "./actions";
@@ -8,20 +9,20 @@ export function bookingActions(ctx: StudioContext): Record<string, ActionHandler
     noShow: async (f) => {
       const value = bool(f, "value");
       await bookings.setNoShow(ctx, str(f, "bookingId"), value);
-      return value ? "Marked as no-show. The credit is still used unless you waive it." : "No-show removed.";
+      return value ? t("booking.flash.noShowOn") : t("booking.flash.noShowOff");
     },
     charge: async (f) => {
       const value = bool(f, "value");
       await bookings.setBookingCharged(ctx, str(f, "bookingId"), value);
-      return value ? "Credit charged." : "Credit waived and given back.";
+      return value ? t("booking.flash.charged") : t("booking.flash.waived");
     },
     remove: async (f) => {
       await bookings.removeBooking(ctx, str(f, "bookingId"));
-      return "Booking removed. The credit went back to the member.";
+      return t("booking.flash.removed");
     },
     move: async (f) => {
       await bookings.moveBooking(ctx, str(f, "bookingId"), str(f, "toSessionId"));
-      return "Booking moved.";
+      return t("booking.flash.moved");
     },
   };
 }

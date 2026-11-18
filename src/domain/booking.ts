@@ -8,15 +8,6 @@ export function minutesUntil(start: Date, now: Date): number {
 export type BookingRefusal =
   "session_cancelled" | "class_started" | "booking_closed" | "class_full" | "already_booked" | "no_credits";
 
-export const REFUSAL_MESSAGES: Record<BookingRefusal, string> = {
-  session_cancelled: "This class was cancelled.",
-  class_started: "This class has already started.",
-  booking_closed: "Booking for this class has closed.",
-  class_full: "This class is full.",
-  already_booked: "You're already booked into this class.",
-  no_credits: "No credits valid on this date. Ask your coach for a plan.",
-};
-
 export interface BookingRequest<P extends PackForAllocation> {
   now: Date;
   startsAt: Date;

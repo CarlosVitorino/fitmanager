@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { msg, t } from "../i18n";
 import { isLocalDate, localDateOf, type LocalDate } from "../domain/dates";
 import { checkAdjustment, makeEntry } from "../domain/ledger";
 import { computeExpiry, isPackExpired, type Validity } from "../domain/packs";
@@ -97,13 +98,13 @@ export async function memberPacks(ctx: StudioContext, memberId: string, ex: Exec
 export const assignPlanInput = z.object({
   memberId: z.string().min(1),
   packTypeId: z.uuid(),
-  startsOn: z.string().refine(isLocalDate, "Pick a valid start date"),
+  startsOn: z.string().refine(isLocalDate, msg("errors.validStartDate")),
   note: z.string().trim().max(500).optional(),
   payment: z
     .object({
       amountCents: z.number().int().min(0),
       method: z.enum(PAYMENT_METHODS),
-      paidOn: z.string().refine(isLocalDate, "Pick a valid payment date"),
+      paidOn: z.string().refine(isLocalDate, msg("errors.validPaymentDate")),
       note: z.string().trim().max(500).optional(),
     })
     .optional(),
@@ -115,7 +116,7 @@ async function assertMember(ex: Executor, ctx: StudioContext, memberId: string) 
     .select({ id: member.id })
     .from(member)
     .where(and(eq(member.organizationId, ctx.studioId), eq(member.userId, memberId)));
-  if (!m) throw notFound("Member not found");
+  if (!m) throw notFound(t("errors.memberNotFound"));
 }
 
 /** Coach gives a member a plan, optionally recording what they paid. */
@@ -127,7 +128,7 @@ export async function assignPlan(ctx: StudioContext, input: AssignPlanInput) {
       .select()
       .from(packType)
       .where(and(eq(packType.id, input.packTypeId), eq(packType.studioId, ctx.studioId), isNull(packType.archivedAt)));
-    if (!type) throw notFound("Plan not found");
+    if (!type) throw notFound(t("errors.planNotFound"));
 
     const expiresOn = computeExpiry(input.startsOn, validityOf(type));
     const [created] = await tx
@@ -179,7 +180,7 @@ export async function assignPlan(ctx: StudioContext, input: AssignPlanInput) {
 export const adjustCreditsInput = z.object({
   packId: z.uuid(),
   delta: z.number().int(),
-  reason: z.string().trim().min(3, "Say why, so the history explains the change").max(500),
+  reason: z.string().trim().min(3, msg("errors.sayWhy")).max(500),
 });
 
 /** Coach adds or removes free credits on a pack, with a reason. */
@@ -191,13 +192,16 @@ export async function adjustCredits(ctx: StudioContext, input: z.infer<typeof ad
       .from(pack)
       .where(and(eq(pack.id, input.packId), eq(pack.studioId, ctx.studioId)))
       .for("update");
-    if (!p) throw notFound("Pack not found");
+    if (!p) throw notFound(t("errors.packNotFound"));
     const [{ available } = { available: 0 }] = await tx
       .select({ available: sql<number>`coalesce(sum(${creditEntry.delta}), 0)::int` })
       .from(creditEntry)
       .where(eq(creditEntry.packId, p.id));
     const check = checkAdjustment(available, input.delta);
-    if (!check.ok) throw badRequest(check.reason);
+    if (!check.ok)
+      throw badRequest(
+        check.reason === "not_whole" ? t("errors.adjustWhole") : t("errors.adjustTooMany", { count: check.available }),
+      );
     await tx.insert(creditEntry).values({
       studioId: ctx.studioId,
       packId: p.id,

@@ -1,7 +1,14 @@
 import type { Shape } from "../types";
 
 const en = {
-  defaults: { singleName: "Single class", singleDesc: "One class.", trimesterName: "Trimester pack", trimesterDesc: "10 classes over three months.", tenName: "10-class pack", tenDesc: "10 classes, valid for 14 weeks." },
+  defaults: {
+    singleName: "Single class",
+    singleDesc: "One class.",
+    trimesterName: "Trimester pack",
+    trimesterDesc: "10 classes over three months.",
+    tenName: "10-class pack",
+    tenDesc: "10 classes, valid for 14 weeks.",
+  },
   title: "Setup",
   subtitle: "Everything members see when they book: plans, class types, the schedule and your rules.",
   nav: {
@@ -142,10 +149,23 @@ const en = {
 };
 
 const de: Shape<typeof en> = {
-  defaults: { singleName: "Einzelstunde", singleDesc: "Ein Kurs.", trimesterName: "Trimesterkarte", trimesterDesc: "10 Kurse in drei Monaten.", tenName: "10er-Karte", tenDesc: "10 Kurse, 14 Wochen gültig." },
+  defaults: {
+    singleName: "Einzelstunde",
+    singleDesc: "Ein Kurs.",
+    trimesterName: "Trimesterkarte",
+    trimesterDesc: "10 Kurse in drei Monaten.",
+    tenName: "10er-Karte",
+    tenDesc: "10 Kurse, 14 Wochen gültig.",
+  },
   title: "Einrichtung",
   subtitle: "Alles, was Mitglieder beim Buchen sehen: Tarife, Kursarten, den Stundenplan und deine Regeln.",
-  nav: { overview: "Übersicht", plans: "Tarife", classTypes: "Kursarten", calendars: "Kalender", settings: "Studio-Einstellungen" },
+  nav: {
+    overview: "Übersicht",
+    plans: "Tarife",
+    classTypes: "Kursarten",
+    calendars: "Kalender",
+    settings: "Studio-Einstellungen",
+  },
   overview: {
     checklistTitle: "Mach dein Studio startklar",
     checklistProgress: "{done} von {total} erledigt",
@@ -277,10 +297,23 @@ const de: Shape<typeof en> = {
 };
 
 const es: Shape<typeof en> = {
-  defaults: { singleName: "Clase suelta", singleDesc: "Una clase.", trimesterName: "Bono trimestral", trimesterDesc: "10 clases en tres meses.", tenName: "Bono de 10 clases", tenDesc: "10 clases, válido 14 semanas." },
+  defaults: {
+    singleName: "Clase suelta",
+    singleDesc: "Una clase.",
+    trimesterName: "Bono trimestral",
+    trimesterDesc: "10 clases en tres meses.",
+    tenName: "Bono de 10 clases",
+    tenDesc: "10 clases, válido 14 semanas.",
+  },
   title: "Configuración",
   subtitle: "Todo lo que ven los socios al reservar: planes, tipos de clase, el horario y tus normas.",
-  nav: { overview: "Resumen", plans: "Planes", classTypes: "Tipos de clase", calendars: "Calendarios", settings: "Ajustes del estudio" },
+  nav: {
+    overview: "Resumen",
+    plans: "Planes",
+    classTypes: "Tipos de clase",
+    calendars: "Calendarios",
+    settings: "Ajustes del estudio",
+  },
   overview: {
     checklistTitle: "Prepara tu estudio",
     checklistProgress: "{done} de {total} hechos",
@@ -348,7 +381,8 @@ const es: Shape<typeof en> = {
   },
   calendars: {
     title: "Calendarios",
-    subtitle: "Cada calendario tiene sus propias clases semanales. Los socios pueden filtrar por calendario al reservar.",
+    subtitle:
+      "Cada calendario tiene sus propias clases semanales. Los socios pueden filtrar por calendario al reservar.",
     add: "Añadir un calendario",
     addButton: "Añadir calendario",
     namePlaceholder: "p. ej. Bootcamp al aire libre",
@@ -412,10 +446,23 @@ const es: Shape<typeof en> = {
 };
 
 const fr: Shape<typeof en> = {
-  defaults: { singleName: "Cours à l’unité", singleDesc: "Un cours.", trimesterName: "Formule trimestre", trimesterDesc: "10 cours sur trois mois.", tenName: "Carte 10 cours", tenDesc: "10 cours, valable 14 semaines." },
+  defaults: {
+    singleName: "Cours à l’unité",
+    singleDesc: "Un cours.",
+    trimesterName: "Formule trimestre",
+    trimesterDesc: "10 cours sur trois mois.",
+    tenName: "Carte 10 cours",
+    tenDesc: "10 cours, valable 14 semaines.",
+  },
   title: "Configuration",
   subtitle: "Tout ce que voient les adhérents en réservant : formules, types de cours, planning et règles.",
-  nav: { overview: "Vue d’ensemble", plans: "Formules", classTypes: "Types de cours", calendars: "Calendriers", settings: "Réglages du studio" },
+  nav: {
+    overview: "Vue d’ensemble",
+    plans: "Formules",
+    classTypes: "Types de cours",
+    calendars: "Calendriers",
+    settings: "Réglages du studio",
+  },
   overview: {
     checklistTitle: "Préparez votre studio",
     checklistProgress: "{done} sur {total} faits",
@@ -443,7 +490,8 @@ const fr: Shape<typeof en> = {
   },
   plans: {
     title: "Formules",
-    subtitle: "Les formules que vous attribuez aux adhérents. Les modifications ne concernent que les formules attribuées ensuite.",
+    subtitle:
+      "Les formules que vous attribuez aux adhérents. Les modifications ne concernent que les formules attribuées ensuite.",
     add: "Ajouter une formule",
     addButton: "Ajouter la formule",
     nameLabel: "Nom",
@@ -526,7 +574,8 @@ const fr: Shape<typeof en> = {
     studio: "Studio",
     studioName: "Nom du studio",
     defaultLanguage: "Langue par défaut",
-    defaultLanguageHint: "Pour ceux qui n’ont pas choisi de langue et dont le navigateur utilise une langue non prise en charge.",
+    defaultLanguageHint:
+      "Pour ceux qui n’ont pas choisi de langue et dont le navigateur utilise une langue non prise en charge.",
     timezone: "Fuseau horaire",
     currency: "Devise",
     bookingRules: "Règles de réservation",
@@ -547,10 +596,23 @@ const fr: Shape<typeof en> = {
 };
 
 const pt: Shape<typeof en> = {
-  defaults: { singleName: "Aula avulsa", singleDesc: "Uma aula.", trimesterName: "Pack trimestral", trimesterDesc: "10 aulas em três meses.", tenName: "Pack de 10 aulas", tenDesc: "10 aulas, válido durante 14 semanas." },
+  defaults: {
+    singleName: "Aula avulsa",
+    singleDesc: "Uma aula.",
+    trimesterName: "Pack trimestral",
+    trimesterDesc: "10 aulas em três meses.",
+    tenName: "Pack de 10 aulas",
+    tenDesc: "10 aulas, válido durante 14 semanas.",
+  },
   title: "Configuração",
   subtitle: "Tudo o que os membros veem ao reservar: planos, tipos de aula, o horário e as suas regras.",
-  nav: { overview: "Resumo", plans: "Planos", classTypes: "Tipos de aula", calendars: "Calendários", settings: "Definições do estúdio" },
+  nav: {
+    overview: "Resumo",
+    plans: "Planos",
+    classTypes: "Tipos de aula",
+    calendars: "Calendários",
+    settings: "Definições do estúdio",
+  },
   overview: {
     checklistTitle: "Prepare o seu estúdio",
     checklistProgress: "{done} de {total} concluídos",

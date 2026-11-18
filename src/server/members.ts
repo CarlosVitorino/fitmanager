@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { msg, t } from "../i18n";
 import { computeAchievements } from "../domain/achievements";
 import { localDateOf } from "../domain/dates";
 import {
@@ -108,12 +109,12 @@ export async function getMember(ctx: StudioContext, memberId: string) {
     .innerJoin(user, eq(user.id, member.userId))
     .leftJoin(memberProfile, and(eq(memberProfile.userId, user.id), eq(memberProfile.studioId, ctx.studioId)))
     .where(and(eq(member.organizationId, ctx.studioId), eq(member.userId, memberId)));
-  if (!row) throw notFound("Member not found");
+  if (!row) throw notFound(t("errors.memberNotFound"));
   return { ...row, role: isRole(row.role) ? row.role : ("member" as Role) };
 }
 
 export const profileInput = z.object({
-  name: z.string().trim().min(1, "Enter a name").max(80),
+  name: z.string().trim().min(1, msg("errors.enterName")).max(80),
   phone: z
     .string()
     .trim()
@@ -145,7 +146,7 @@ export async function setRole(ctx: StudioContext, memberId: string, role: Role) 
       .select({ owners: sql<number>`count(*)::int` })
       .from(member)
       .where(and(eq(member.organizationId, ctx.studioId), eq(member.role, "owner")));
-    if (owners <= 1) throw badRequest("A studio needs at least one owner.");
+    if (owners <= 1) throw badRequest(t("errors.needsOwner"));
   }
   await db
     .update(member)
@@ -230,7 +231,7 @@ export type NoteInput = z.input<typeof noteInput>;
 function cleanNote(raw: NoteInput) {
   const input = noteInput.parse(raw);
   const body = cleanHtml(input.body);
-  if (!body) throw badRequest("Write something");
+  if (!body) throw badRequest(t("errors.writeSomething"));
   return { ...input, body };
 }
 
@@ -274,7 +275,7 @@ export async function updateNote(ctx: StudioContext, noteId: string, input: Note
     .set({ ...cleanNote(input), updatedAt: new Date() })
     .where(and(eq(memberNote.id, noteId), eq(memberNote.studioId, ctx.studioId)))
     .returning({ id: memberNote.id });
-  if (!row) throw notFound("Note not found");
+  if (!row) throw notFound(t("errors.noteNotFound"));
 }
 
 export async function setNotePinned(ctx: StudioContext, noteId: string, pinned: boolean) {
@@ -327,7 +328,7 @@ export async function deletePayment(ctx: StudioContext, paymentId: string) {
     .delete(payment)
     .where(and(eq(payment.id, paymentId), eq(payment.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Payment not found");
+  if (!row) throw notFound(t("errors.paymentNotFound"));
   await audit(db, ctx, "payment.deleted", row.memberId, {
     amountCents: row.amountCents,
     method: row.method,
@@ -389,7 +390,7 @@ export async function memberAudit(ctx: StudioContext, memberId: string, limit = 
 export const settingsInput = z.object({
   name: z.string().trim().min(2).max(80),
   timezone: z.string(),
-  currency: z.string().regex(/^[A-Z]{3}$/, "Use a 3-letter currency code like EUR"),
+  currency: z.string().regex(/^[A-Z]{3}$/, msg("errors.currencyCode")),
   locale: z.enum(LOCALES),
   bookingCutoffMinutes: z.number().int().min(0).max(10080),
   cancellationCutoffMinutes: z.number().int().min(0).max(10080),
@@ -403,7 +404,7 @@ export async function getSettings(ctx: StudioContext) {
 export async function updateSettings(ctx: StudioContext, input: z.infer<typeof settingsInput>) {
   requireCapability(ctx, "studio:settings");
   const { isValidTimezone } = await import("./studios");
-  if (!isValidTimezone(input.timezone)) throw badRequest("Unknown timezone");
+  if (!isValidTimezone(input.timezone)) throw badRequest(t("errors.unknownTimezone"));
   await db.update(organization).set({ name: input.name }).where(eq(organization.id, ctx.studioId));
   await db
     .update(studioSettings)
@@ -444,7 +445,7 @@ export async function findStudioByInvite(slug: string, code: string) {
 /** Adds the user to the studio as a member. Already in it: nothing changes. */
 export async function joinStudio(userId: string, slug: string, code: string) {
   const studio = await findStudioByInvite(slug, code);
-  if (!studio) throw forbidden("This invite link is no longer valid. Ask your coach for a new one.");
+  if (!studio) throw forbidden(t("errors.inviteInvalid"));
   const [existing] = await db
     .select({ id: member.id })
     .from(member)

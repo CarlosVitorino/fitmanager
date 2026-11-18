@@ -1,6 +1,7 @@
 /** Personal profile, fitness profile, measurements and benchmarks for a member. */
 import { and, asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { msg, t } from "../i18n";
 import { isLocalDate } from "../domain/dates";
 import {
   BENCHMARK_UNITS,
@@ -31,12 +32,12 @@ const optDate = z
   .trim()
   .transform((v) => v || null)
   .nullable()
-  .refine((v) => v === null || isLocalDate(v), "Pick a valid date");
+  .refine((v) => v === null || isLocalDate(v), msg("errors.pickDate"));
 
 /* ---------- Personal profile ---------- */
 
 export const personalInput = z.object({
-  name: z.string().trim().min(1, "Enter a name").max(80),
+  name: z.string().trim().min(1, msg("errors.enterName")).max(80),
   phone: opt(40),
   dateOfBirth: optDate,
   gender: opt(40),
@@ -220,7 +221,7 @@ export async function setSectionShared(ctx: StudioContext, memberId: string, sec
 const num = (min: number, max: number) => z.number().min(min).max(max).nullable();
 export const measurementInput = z
   .object({
-    measuredOn: z.string().refine(isLocalDate, "Pick a date"),
+    measuredOn: z.string().refine(isLocalDate, msg("errors.pickDate")),
     weightKg: num(20, 400),
     bodyFatPct: num(2, 75),
     waistCm: num(30, 250),
@@ -236,9 +237,7 @@ export const measurementInput = z
       [m.weightKg, m.bodyFatPct, m.waistCm, m.hipsCm, m.chestCm, m.armCm, m.thighCm, m.restingHr].some(
         (v) => v !== null,
       ),
-    {
-      message: "Enter at least one measurement",
-    },
+    msg("errors.oneMeasurement"),
   );
 
 /** Measurements, oldest first. Members only see them when the section is shared. */
@@ -263,16 +262,16 @@ export async function deleteMeasurement(ctx: StudioContext, id: string) {
     .delete(bodyMeasurement)
     .where(and(eq(bodyMeasurement.id, id), eq(bodyMeasurement.studioId, ctx.studioId)))
     .returning({ id: bodyMeasurement.id });
-  if (!row) throw notFound("Measurement not found");
+  if (!row) throw notFound(t("errors.measurementNotFound"));
 }
 
 /* ---------- Benchmarks ---------- */
 
 export const benchmarkInput = z.object({
-  exercise: z.string().trim().min(2, "Name the exercise").max(60),
-  value: z.number().positive("Enter a result").max(100000),
+  exercise: z.string().trim().min(2, msg("errors.nameExercise")).max(60),
+  value: z.number().positive(msg("errors.enterResult")).max(100000),
   unit: z.enum(BENCHMARK_UNITS),
-  recordedOn: z.string().refine(isLocalDate, "Pick a date"),
+  recordedOn: z.string().refine(isLocalDate, msg("errors.pickDate")),
   note: opt(300),
 });
 
@@ -297,7 +296,7 @@ export async function deleteBenchmark(ctx: StudioContext, id: string) {
     .delete(benchmark)
     .where(and(eq(benchmark.id, id), eq(benchmark.studioId, ctx.studioId)))
     .returning({ id: benchmark.id });
-  if (!row) throw notFound("Result not found");
+  if (!row) throw notFound(t("errors.resultNotFound"));
 }
 
 /** Exercise names already used in the studio, for autocomplete. */

@@ -21,12 +21,6 @@ export function computeExpiry(startsOn: LocalDate, validity: Validity): LocalDat
   }
 }
 
-export function describeValidity(validity: Validity): string {
-  if (!validity) return "Never expires";
-  const unit = validity.amount === 1 ? validity.unit.slice(0, -1) : validity.unit;
-  return `Valid ${validity.amount} ${unit}`;
-}
-
 /** What allocation needs to know about a pack the member holds. */
 export interface PackForAllocation {
   id: string;

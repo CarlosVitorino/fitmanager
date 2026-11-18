@@ -2,7 +2,7 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { calendar, classTemplate, packType } from "../db/schema";
-import { t } from "../i18n";
+import { msg, t } from "../i18n";
 import { notFound } from "./errors";
 import { requireCapability, type StudioContext } from "./studio-context";
 import { db } from "./tx";
@@ -20,16 +20,14 @@ const optionalText = (max: number) =>
 
 export const packTypeInput = z
   .object({
-    name: z.string().trim().min(2, "Give the plan a name").max(60),
+    name: z.string().trim().min(2, msg("errors.namePlan")).max(60),
     description: optionalText(300),
-    entries: z.number().int().min(1, "At least one class").max(500),
+    entries: z.number().int().min(1, msg("errors.atLeastOneClass")).max(500),
     validityUnit: z.enum(["days", "weeks", "months"]).nullable(),
     validityAmount: z.number().int().min(1).max(1000).nullable(),
     priceCents: z.number().int().min(0).nullable(),
   })
-  .refine((v) => (v.validityUnit === null) === (v.validityAmount === null), {
-    message: "Set both how long the plan lasts and the unit, or neither",
-  });
+  .refine((v) => (v.validityUnit === null) === (v.validityAmount === null), msg("errors.validityPair"));
 export type PackTypeInput = z.infer<typeof packTypeInput>;
 
 export function listPackTypes(ctx: StudioContext, opts: { includeArchived?: boolean } = {}) {
@@ -54,7 +52,7 @@ export async function savePackType(ctx: StudioContext, input: PackTypeInput, id?
     .set(input)
     .where(and(eq(packType.id, id), eq(packType.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Plan not found");
+  if (!row) throw notFound(t("errors.planNotFound"));
   return row;
 }
 
@@ -112,9 +110,9 @@ export const TEMPLATE_COLORS = [
 ] as const;
 
 export const templateInput = z.object({
-  name: z.string().trim().min(2, "Give the class a name").max(60),
+  name: z.string().trim().min(2, msg("errors.nameClass")).max(60),
   description: optionalText(300),
-  color: z.string().regex(/^#[0-9a-f]{6}$/i, "Pick a colour"),
+  color: z.string().regex(/^#[0-9a-f]{6}$/i, msg("errors.pickColour")),
   icon: z.string().min(1).max(8),
 });
 export type TemplateInput = z.infer<typeof templateInput>;
@@ -146,7 +144,7 @@ export async function saveTemplate(ctx: StudioContext, input: TemplateInput, id?
     .set(input)
     .where(and(eq(classTemplate.id, id), eq(classTemplate.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Class type not found");
+  if (!row) throw notFound(t("errors.classTypeNotFound"));
   return row;
 }
 
@@ -162,7 +160,7 @@ export async function archiveTemplate(ctx: StudioContext, id: string, archived =
 /* ---------- Calendars ---------- */
 
 export const calendarInput = z.object({
-  name: z.string().trim().min(2, "Give the calendar a name").max(60),
+  name: z.string().trim().min(2, msg("errors.nameCalendar")).max(60),
   description: optionalText(300),
 });
 
@@ -179,7 +177,7 @@ export async function getCalendar(ctx: StudioContext, id: string) {
     .select()
     .from(calendar)
     .where(and(eq(calendar.id, id), eq(calendar.studioId, ctx.studioId), isNull(calendar.archivedAt)));
-  if (!row) throw notFound("Calendar not found");
+  if (!row) throw notFound(t("errors.calendarNotFound"));
   return row;
 }
 
@@ -197,7 +195,7 @@ export async function saveCalendar(ctx: StudioContext, input: z.infer<typeof cal
     .set(input)
     .where(and(eq(calendar.id, id), eq(calendar.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Calendar not found");
+  if (!row) throw notFound(t("errors.calendarNotFound"));
   return row;
 }
 

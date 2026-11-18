@@ -34,7 +34,10 @@ export async function resolveLocale(opts: {
   const fromCookie = opts.cookies.get(LANG_COOKIE)?.value;
   if (isLocale(fromCookie)) return fromCookie;
   if (opts.userId) {
-    const [pref] = await db.select({ locale: userPreference.locale }).from(userPreference).where(eq(userPreference.userId, opts.userId));
+    const [pref] = await db
+      .select({ locale: userPreference.locale })
+      .from(userPreference)
+      .where(eq(userPreference.userId, opts.userId));
     if (isLocale(pref?.locale)) {
       setLangCookie(opts.cookies, pref.locale);
       return pref.locale;

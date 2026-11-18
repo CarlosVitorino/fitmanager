@@ -46,10 +46,12 @@ export function available(entries: readonly Pick<CreditEntry, "delta">[]): numbe
   return entries.reduce((sum, e) => sum + e.delta, 0);
 }
 
+export type AdjustmentProblem =
+  { ok: false; reason: "not_whole" } | { ok: false; reason: "too_many"; available: number };
+
 /** A coach adjustment may not take a pack below zero available credits. */
-export function checkAdjustment(currentAvailable: number, delta: number): { ok: true } | { ok: false; reason: string } {
-  if (!Number.isInteger(delta) || delta === 0) return { ok: false, reason: "Enter a whole number other than zero" };
-  if (currentAvailable + delta < 0)
-    return { ok: false, reason: `Only ${currentAvailable} credits are free to remove; the rest are booked or used` };
+export function checkAdjustment(currentAvailable: number, delta: number): { ok: true } | AdjustmentProblem {
+  if (!Number.isInteger(delta) || delta === 0) return { ok: false, reason: "not_whole" };
+  if (currentAvailable + delta < 0) return { ok: false, reason: "too_many", available: currentAvailable };
   return { ok: true };
 }

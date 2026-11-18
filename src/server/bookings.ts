@@ -1,5 +1,6 @@
+import { t } from "../i18n";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import { chargeChange, decideBooking, decideCancellation, REFUSAL_MESSAGES } from "../domain/booking";
+import { chargeChange, decideBooking, decideCancellation } from "../domain/booking";
 import { makeEntry } from "../domain/ledger";
 import { booking, classSession, creditEntry, member, pack } from "../db/schema";
 import { audit } from "./audit";
@@ -18,7 +19,7 @@ async function lockSession(tx: Tx, ctx: StudioContext, sessionId: string) {
     .from(classSession)
     .where(and(eq(classSession.id, sessionId), eq(classSession.studioId, ctx.studioId)))
     .for("update");
-  if (!s) throw notFound("Class not found");
+  if (!s) throw notFound(t("errors.classNotFound"));
   return s;
 }
 
@@ -49,7 +50,7 @@ async function insertBooking(tx: Tx, ctx: StudioContext, sessionId: string, memb
     .select({ id: member.id })
     .from(member)
     .where(and(eq(member.organizationId, ctx.studioId), eq(member.userId, memberId)));
-  if (!m) throw notFound("Member not found");
+  if (!m) throw notFound(t("errors.memberNotFound"));
 
   const [counts] = await tx
     .select({
@@ -71,7 +72,7 @@ async function insertBooking(tx: Tx, ctx: StudioContext, sessionId: string, memb
     packs: await availablePacks(tx, ctx, memberId),
     byStaff,
   });
-  if (!decision.ok) throw new HttpError(409, REFUSAL_MESSAGES[decision.reason]);
+  if (!decision.ok) throw new HttpError(409, t(`errors.refusal.${decision.reason}`));
 
   const [b] = await tx
     .insert(booking)
@@ -115,7 +116,7 @@ async function lockBooking(tx: Tx, ctx: StudioContext, bookingId: string) {
     .innerJoin(classSession, eq(classSession.id, booking.sessionId))
     .where(and(eq(booking.id, bookingId), eq(booking.studioId, ctx.studioId)))
     .for("update", { of: booking });
-  if (!b) throw notFound("Booking not found");
+  if (!b) throw notFound(t("errors.bookingNotFound"));
   return b;
 }
 
@@ -145,9 +146,9 @@ export async function cancelOwnBooking(ctx: StudioContext, bookingId: string): P
   return db.transaction(async (tx) => {
     const { booking: b, startsAt } = await lockBooking(tx, ctx, bookingId);
     if (b.memberId !== ctx.userId) throw forbidden();
-    if (b.status !== "booked") throw badRequest("This booking is already cancelled.");
+    if (b.status !== "booked") throw badRequest(t("errors.alreadyCancelled"));
     const outcome = decideCancellation(startsAt, new Date(), ctx.cancellationCutoffMinutes);
-    if (outcome === "too_late") throw badRequest("This class has already started.");
+    if (outcome === "too_late") throw badRequest(t("errors.classStarted"));
     if (outcome === "release") {
       await release(tx, ctx, b, "cancelled");
       return "released";
@@ -165,7 +166,7 @@ export async function removeBooking(ctx: StudioContext, bookingId: string, reaso
   requireCapability(ctx, "members:manage");
   return db.transaction(async (tx) => {
     const { booking: b, startsAt } = await lockBooking(tx, ctx, bookingId);
-    if (b.status === "cancelled") throw badRequest("This booking is already cancelled.");
+    if (b.status === "cancelled") throw badRequest(t("errors.alreadyCancelled"));
     await release(tx, ctx, b, "cancelled");
     await audit(tx, ctx, "booking.removed", b.memberId, { bookingId: b.id, sessionId: b.sessionId, startsAt, reason });
   });
@@ -176,8 +177,8 @@ export async function moveBooking(ctx: StudioContext, bookingId: string, toSessi
   requireCapability(ctx, "members:manage");
   return db.transaction(async (tx) => {
     const { booking: b, startsAt } = await lockBooking(tx, ctx, bookingId);
-    if (b.status !== "booked") throw badRequest("Only active bookings can be moved.");
-    if (b.sessionId === toSessionId) throw badRequest("Pick a different class.");
+    if (b.status !== "booked") throw badRequest(t("errors.onlyActiveMove"));
+    if (b.sessionId === toSessionId) throw badRequest(t("errors.pickDifferentClass"));
     await release(tx, ctx, b, "cancelled");
     const r = await insertBooking(tx, ctx, toSessionId, b.memberId, true);
     await audit(tx, ctx, "booking.moved", b.memberId, {
@@ -195,8 +196,8 @@ export async function setBookingCharged(ctx: StudioContext, bookingId: string, c
   requireCapability(ctx, "credits:manage");
   return db.transaction(async (tx) => {
     const { booking: b } = await lockBooking(tx, ctx, bookingId);
-    if (b.status === "cancelled") throw badRequest("Cancelled bookings don't use a credit.");
-    if (!b.packId) throw badRequest("This booking isn't linked to a pack.");
+    if (b.status === "cancelled") throw badRequest(t("errors.cancelledNoCredit"));
+    if (!b.packId) throw badRequest(t("errors.noPack"));
     const kind = chargeChange(b.charged, charged);
     if (!kind) return;
     await tx.update(booking).set({ charged }).where(eq(booking.id, b.id));
@@ -217,7 +218,7 @@ export async function setNoShow(ctx: StudioContext, bookingId: string, noShow: b
   requireCapability(ctx, "members:manage");
   return db.transaction(async (tx) => {
     const { booking: b } = await lockBooking(tx, ctx, bookingId);
-    if (b.status !== "booked") throw badRequest("Only bookings that weren't cancelled can be marked.");
+    if (b.status !== "booked") throw badRequest(t("errors.onlyBookedMark"));
     if (b.noShow === noShow) return;
     await tx.update(booking).set({ noShow }).where(eq(booking.id, b.id));
     await audit(tx, ctx, "booking.no_show_changed", b.memberId, { bookingId: b.id, noShow });
@@ -229,7 +230,7 @@ export async function cancelSession(ctx: StudioContext, sessionId: string) {
   requireCapability(ctx, "calendar:manage");
   return db.transaction(async (tx) => {
     const s = await lockSession(tx, ctx, sessionId);
-    if (s.cancelledAt) throw badRequest("This class is already cancelled.");
+    if (s.cancelledAt) throw badRequest(t("errors.classAlreadyCancelled"));
     await tx.update(classSession).set({ cancelledAt: new Date() }).where(eq(classSession.id, s.id));
     const active = await tx
       .select()
