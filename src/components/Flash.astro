@@ -1,0 +1,18 @@
+---
+interface Props {
+  message?: string | null | undefined;
+  error?: string | null | undefined;
+}
+const { message, error } = Astro.props;
+---
+
+{error && (
+  <p role="alert" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
+    {error}
+  </p>
+)}
+{message && !error && (
+  <p role="status" class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+    {message}
+  </p>
+)}

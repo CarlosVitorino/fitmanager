@@ -1,0 +1,23 @@
+---
+interface Props {
+  name: string;
+  color: string;
+  icon: string;
+  size?: "sm" | "md";
+}
+const { name, color, icon, size = "md" } = Astro.props;
+---
+
+<span class:list={["inline-flex items-center gap-1.5 font-medium", size === "sm" ? "text-xs" : "text-sm"]}>
+  <span
+    class:list={[
+      "inline-flex items-center justify-center rounded-md",
+      size === "sm" ? "h-5 w-5 text-xs" : "h-7 w-7 text-base",
+    ]}
+    style={`background:${color}1f;color:${color}`}
+    aria-hidden="true"
+  >
+    {icon}
+  </span>
+  <span>{name}</span>
+</span>

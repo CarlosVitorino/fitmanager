@@ -1,0 +1,92 @@
+---
+import "../styles/global.css";
+import Flash from "../components/Flash.astro";
+import { isStaff } from "../server/authz";
+
+interface Props {
+  title: string;
+  flash?: string | null | undefined;
+  error?: string | null | undefined;
+  wide?: boolean;
+}
+const { title, flash, error, wide = false } = Astro.props;
+const studio = Astro.locals.studio!;
+const user = Astro.locals.user!;
+const base = `/s/${studio.slug}`;
+const staff = isStaff(studio.role);
+const path = Astro.url.pathname;
+
+const nav = staff
+  ? [
+      { href: base, label: "Today", exact: true },
+      { href: `${base}/admin/calendar`, label: "Calendar" },
+      { href: `${base}/admin/members`, label: "Members" },
+      { href: `${base}/admin/payments`, label: "Payments" },
+      {
+        href: `${base}/admin/setup`,
+        label: "Setup",
+        match: [
+          `${base}/admin/setup`,
+          `${base}/admin/plans`,
+          `${base}/admin/classes`,
+          `${base}/admin/calendars`,
+          `${base}/admin/settings`,
+        ],
+      },
+      { href: `${base}/book`, label: "Member view" },
+    ]
+  : [
+      { href: `${base}/book`, label: "Book a class" },
+      { href: `${base}/me`, label: "My plans & progress" },
+    ];
+const isActive = (item: (typeof nav)[number]) =>
+  "exact" in item && item.exact
+    ? path === item.href || path === `${item.href}/`
+    : ("match" in item && item.match ? item.match : [item.href]).some((h) => path.startsWith(h));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · {studio.name}</title>
+  </head>
+  <body class="min-h-screen bg-stone-100 text-stone-900 antialiased">
+    <header class="border-b border-stone-200 bg-white">
+      <div class:list={["mx-auto flex items-center justify-between gap-4 px-4 pt-3", wide ? "max-w-7xl" : "max-w-5xl"]}>
+        <a href={staff ? base : `${base}/book`} class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-sm font-bold text-white">
+            {studio.name.slice(0, 1).toUpperCase()}
+          </span>
+          <span class="font-semibold tracking-tight">{studio.name}</span>
+        </a>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="hidden text-stone-600 sm:inline">{user.name}</span>
+          <form method="post" action="/logout">
+            <button class="rounded-md px-2 py-1 text-stone-500 hover:bg-stone-100 hover:text-stone-800">Log out</button>
+          </form>
+        </div>
+      </div>
+      <nav class:list={["mx-auto flex gap-1 overflow-x-auto px-3", wide ? "max-w-7xl" : "max-w-5xl"]}>
+        {nav.map((item) => (
+          <a
+            href={item.href}
+            class:list={[
+              "border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap",
+              isActive(item)
+                ? "border-stone-900 text-stone-900"
+                : "border-transparent text-stone-500 hover:text-stone-800",
+            ]}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+    </header>
+    <main class:list={["mx-auto px-4 py-6", wide ? "max-w-7xl" : "max-w-5xl"]}>
+      <Flash message={flash} error={error} />
+      <slot />
+    </main>
+  </body>
+</html>

@@ -1,3 +1,5 @@
+// Loads .env when present (local dev, `npm start`); real environment variables always win.
+import "dotenv/config";
 import { z } from "zod";
 
 const schema = z.object({
