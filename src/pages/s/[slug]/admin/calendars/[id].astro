@@ -1,5 +1,7 @@
 ---
 import ClassBadge from "../../../../../components/ClassBadge.astro";
+import DateField from "../../../../../components/islands/DateField";
+import TimeField from "../../../../../components/TimeField.astro";
 import Studio from "../../../../../layouts/Studio.astro";
 import { localDateOf } from "../../../../../domain/dates";
 import { WEEKDAY_NAMES } from "../../../../../domain/schedule";
@@ -145,10 +147,10 @@ const form = editing ?? blank;
               ))}
             </select>
           </label>
-          <label class="block space-y-1">
+          <div class="space-y-1">
             <span class="label">Starts at</span>
-            <input name="startTime" type="time" required class="input" value={form.startTime} />
-          </label>
+            <TimeField name="startTime" value={form.startTime ?? "18:00"} label="Start" />
+          </div>
           <label class="block space-y-1">
             <span class="label">Minutes</span>
             <input name="durationMinutes" type="number" min="5" required class="input" value={form.durationMinutes} />
@@ -182,13 +184,28 @@ const form = editing ?? blank;
         <div class="grid grid-cols-2 gap-3">
           <label class="block space-y-1">
             <span class="label">From</span>
-            <input name="startsOn" type="date" class="input" value={form.startsOn} />
+            <DateField
+              client:load
+              name="startsOn"
+              value={form.startsOn ?? today}
+              today={today}
+              required
+              ariaLabel="From"
+            />
           </label>
           <label class="block space-y-1">
             <span class="label">
               Until <span class="font-normal text-stone-400">(optional)</span>
             </span>
-            <input name="endsOn" type="date" class="input" value={form.endsOn ?? ""} />
+            <DateField
+              client:load
+              name="endsOn"
+              value={form.endsOn ?? null}
+              today={today}
+              optional
+              placeholder="No end date"
+              ariaLabel="Until"
+            />
           </label>
         </div>
         <div class="flex gap-2">

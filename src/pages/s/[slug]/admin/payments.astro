@@ -1,7 +1,7 @@
 ---
 import Studio from "../../../../layouts/Studio.astro";
 import { addMonths, localDateOf } from "../../../../domain/dates";
-import { formatDate, formatMoney } from "../../../../lib/format";
+import { formatDate, formatMoney, formatMonthYear } from "../../../../lib/format";
 import { listPayments } from "../../../../server/members";
 
 const ctx = Astro.locals.studio!;
@@ -18,11 +18,7 @@ const byMethod = Object.entries(
     {},
   ),
 );
-const label = new Date(`${from}T12:00:00Z`).toLocaleDateString("en-GB", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
+const label = formatMonthYear(from);
 ---
 
 <Studio title="Payments">

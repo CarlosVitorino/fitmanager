@@ -1,0 +1,42 @@
+---
+/** 24-hour time as two selects (hour, minute in 5-minute steps). Submits "HH:MM" under `name`. */
+interface Props {
+  name: string;
+  value?: string | null;
+  label?: string;
+}
+const { name, value = "18:00", label = "Time" } = Astro.props;
+const [h, m] = (value ?? "18:00").split(":");
+const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+const id = `t-${name}-${Math.random().toString(36).slice(2, 7)}`;
+---
+
+<div class="flex items-center gap-1" data-time-field={id}>
+  <input type="hidden" name={name} value={`${h}:${m}`} />
+  <select class="input" aria-label={`${label} hour`} data-part="h">
+    {hours.map((x) => (
+      <option value={x} selected={x === h}>
+        {x}
+      </option>
+    ))}
+  </select>
+  <span class="font-semibold text-stone-400">:</span>
+  <select class="input" aria-label={`${label} minutes`} data-part="m">
+    {minutes.map((x) => (
+      <option value={x} selected={x === m}>
+        {x}
+      </option>
+    ))}
+  </select>
+</div>
+
+<script>
+  for (const el of document.querySelectorAll<HTMLElement>("[data-time-field]")) {
+    const hidden = el.querySelector<HTMLInputElement>("input[type=hidden]")!;
+    const [hour, min] = [...el.querySelectorAll<HTMLSelectElement>("select")];
+    const sync = () => (hidden.value = `${hour!.value}:${min!.value}`);
+    hour!.addEventListener("change", sync);
+    min!.addEventListener("change", sync);
+  }
+</script>

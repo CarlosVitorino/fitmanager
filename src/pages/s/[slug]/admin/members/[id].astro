@@ -1,4 +1,5 @@
 ---
+import DateField from "../../../../../components/islands/DateField";
 import BookingControls from "../../../../../components/admin/BookingControls.astro";
 import BookingStatus from "../../../../../components/BookingStatus.astro";
 import PackCard from "../../../../../components/PackCard.astro";
@@ -311,7 +312,7 @@ const tabs = [
           </label>
           <label class="block space-y-1">
             <span class="label">Starts on</span>
-            <input name="startsOn" type="date" required value={today} class="input" />
+            <DateField client:load name="startsOn" value={today} today={today} required ariaLabel="Starts on" />
             <span class="text-xs text-stone-500">
               Expiry is counted from this day. Set it in the past to carry over an existing plan.
             </span>
@@ -330,7 +331,7 @@ const tabs = [
                 ))}
               </select>
             </div>
-            <input name="paidOn" type="date" value={today} class="input" aria-label="Paid on" />
+            <DateField client:load name="paidOn" value={today} today={today} ariaLabel="Paid on" />
           </fieldset>
           <input name="note" placeholder="Note (optional)" class="input" />
           <button class="btn btn-primary w-full">Add plan</button>
@@ -522,7 +523,7 @@ const tabs = [
               ))}
             </select>
           </div>
-          <input name="paidOn" type="date" value={today} class="input" aria-label="Paid on" />
+          <DateField client:load name="paidOn" value={today} today={today} ariaLabel="Paid on" />
           <select name="packId" class="input">
             <option value="">Not linked to a plan</option>
             {packs.map((p) => (
