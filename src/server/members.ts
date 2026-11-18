@@ -12,6 +12,7 @@ import {
   member,
   memberNote,
   memberProfile,
+  NOTE_CATEGORIES,
   organization,
   pack,
   payment,
@@ -23,6 +24,7 @@ import { auth } from "../lib/auth";
 import { audit } from "./audit";
 import { can, isRole, type Role } from "./authz";
 import { badRequest, forbidden, notFound } from "./errors";
+import { cleanHtml } from "./html";
 import { requireCapability, type StudioContext } from "./studio-context";
 import { newJoinCode } from "./studios";
 import { db } from "./tx";
@@ -216,9 +218,20 @@ export function memberAchievements(ctx: StudioContext, history: readonly History
 /* ---------- Notes ---------- */
 
 export const noteInput = z.object({
-  body: z.string().trim().min(1, "Write something").max(5000),
+  body: z.string().max(50000),
   visibility: z.enum(["private", "shared"]),
+  category: z.enum(NOTE_CATEGORIES).default("general"),
+  pinned: z.boolean().default(false),
 });
+
+export type NoteInput = z.input<typeof noteInput>;
+
+function cleanNote(raw: NoteInput) {
+  const input = noteInput.parse(raw);
+  const body = cleanHtml(input.body);
+  if (!body) throw badRequest("Write something");
+  return { ...input, body };
+}
 
 /** Staff see every note; members only see notes shared with them. */
 export async function listNotes(ctx: StudioContext, memberId: string) {
@@ -229,6 +242,8 @@ export async function listNotes(ctx: StudioContext, memberId: string) {
       id: memberNote.id,
       body: memberNote.body,
       visibility: memberNote.visibility,
+      category: memberNote.category,
+      pinned: memberNote.pinned,
       createdAt: memberNote.createdAt,
       updatedAt: memberNote.updatedAt,
       authorName: user.name,
@@ -242,23 +257,31 @@ export async function listNotes(ctx: StudioContext, memberId: string) {
         canSeePrivate ? undefined : eq(memberNote.visibility, "shared"),
       ),
     )
-    .orderBy(desc(memberNote.createdAt));
+    .orderBy(desc(memberNote.pinned), desc(memberNote.createdAt));
 }
 
-export async function addNote(ctx: StudioContext, memberId: string, input: z.infer<typeof noteInput>) {
+export async function addNote(ctx: StudioContext, memberId: string, input: NoteInput) {
   requireCapability(ctx, "notes:private");
   await getMember(ctx, memberId);
-  await db.insert(memberNote).values({ ...input, studioId: ctx.studioId, memberId, authorId: ctx.userId });
+  await db.insert(memberNote).values({ ...cleanNote(input), studioId: ctx.studioId, memberId, authorId: ctx.userId });
 }
 
-export async function updateNote(ctx: StudioContext, noteId: string, input: z.infer<typeof noteInput>) {
+export async function updateNote(ctx: StudioContext, noteId: string, input: NoteInput) {
   requireCapability(ctx, "notes:private");
   const [row] = await db
     .update(memberNote)
-    .set({ ...input, updatedAt: new Date() })
+    .set({ ...cleanNote(input), updatedAt: new Date() })
     .where(and(eq(memberNote.id, noteId), eq(memberNote.studioId, ctx.studioId)))
     .returning({ id: memberNote.id });
   if (!row) throw notFound("Note not found");
+}
+
+export async function setNotePinned(ctx: StudioContext, noteId: string, pinned: boolean) {
+  requireCapability(ctx, "notes:private");
+  await db
+    .update(memberNote)
+    .set({ pinned })
+    .where(and(eq(memberNote.id, noteId), eq(memberNote.studioId, ctx.studioId)));
 }
 
 export async function deleteNote(ctx: StudioContext, noteId: string) {
