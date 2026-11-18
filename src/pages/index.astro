@@ -8,12 +8,18 @@ import {
   Dumbbell,
   Globe,
   HeartPulse,
+  Languages,
+  Link2,
+  MonitorPlay,
   MessageCircleQuestion,
   Sheet,
+  Smartphone,
   Ticket,
   TriangleAlert,
   UserRound,
+  X,
 } from "@lucide/astro";
+import { Image } from "astro:assets";
 import Flash from "../components/Flash.astro";
 import Logo from "../components/brand/Logo.astro";
 import BrowserFrame from "../components/landing/BrowserFrame.astro";
@@ -41,12 +47,27 @@ const pains = [
   { icon: CalendarX2, title: t("site.home.pains.twoTitle"), text: t("site.home.pains.twoText") },
   { icon: Sheet, title: t("site.home.pains.threeTitle"), text: t("site.home.pains.threeText") },
 ];
-const stats = [
-  ["3", t("site.home.stats.plans")],
-  ["5", t("site.home.stats.languages")],
-  ["0", t("site.home.stats.apps")],
-  ["1", t("site.home.stats.link")],
+const facts = [
+  { icon: Smartphone, text: t("site.home.proof.noApp") },
+  { icon: Languages, text: t("site.home.proof.languages") },
+  { icon: Link2, text: t("site.home.proof.link") },
 ];
+const demoViews = [
+  {
+    role: "coach",
+    icon: Dumbbell,
+    title: t("site.home.pickCoachTitle"),
+    text: t("site.home.pickCoachText"),
+    shot: shot("today"),
+  },
+  {
+    role: "member",
+    icon: UserRound,
+    title: t("site.home.pickMemberTitle"),
+    text: t("site.home.pickMemberText"),
+    shot: shot("phone-home"),
+  },
+] as const;
 const steps = [
   [t("site.home.steps.oneTitle"), t("site.home.steps.oneText")],
   [t("site.home.steps.twoTitle"), t("site.home.steps.twoText")],
@@ -111,28 +132,23 @@ const classTypes = t("site.home.classTypes").split(" · ");
             <span class="mt-1 block text-volt">{t("site.home.titleB")}</span>
           </h1>
           <p class="mt-8 max-w-xl text-lg leading-relaxed text-stone-300">{t("site.home.text")}</p>
-          <form method="post" action="/demo" class="mt-8 flex flex-wrap gap-3" data-demo-form>
-            <button
-              name="as"
-              value="coach"
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a
+              href="/signup?next=/studios/new"
               class="group inline-flex items-center gap-2 rounded-xl bg-volt px-5 py-3 font-semibold text-ink transition hover:bg-white"
             >
-              {t("site.home.demoCoach")}
+              {t("site.home.tryIt")}
               <ArrowRight size={18} class="transition group-hover:translate-x-0.5" />
-            </button>
+            </a>
             <button
-              name="as"
-              value="member"
+              type="button"
+              data-demo-open
               class="inline-flex items-center gap-2 rounded-xl border border-white/25 px-5 py-3 font-semibold text-white transition hover:border-white hover:bg-white/5"
             >
-              {t("site.home.demoMember")}
+              <MonitorPlay size={18} />
+              {t("site.home.seeDemo")}
             </button>
-          </form>
-          <p class="mt-4 hidden text-sm font-medium text-volt" data-demo-wait aria-live="polite">
-            <span class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-volt/30 border-t-volt align-[-1px]" />
-            {t("site.home.preparing")}
-          </p>
-          <p class="mt-4 max-w-md text-sm text-stone-400">{t("site.home.demoNote")}</p>
+          </div>
         </div>
 
         <div class="relative mx-auto w-full max-w-2xl lg:mr-[-4rem] lg:max-w-none">
@@ -254,15 +270,25 @@ const classTypes = t("site.home.classTypes").split(" · ");
       </Feature>
     </section>
 
-    {/* ---------- Numbers ---------- */}
-    <section class="bg-ink text-white">
-      <div class="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden px-4 py-4 sm:px-6 md:grid-cols-4">
-        {stats.map(([n, label]) => (
-          <div class="px-4 py-8">
-            <p class="font-display text-7xl leading-none font-extrabold text-volt">{n}</p>
-            <p class="mt-2 text-sm text-stone-300">{label}</p>
-          </div>
-        ))}
+    {/* ---------- The question nobody asks anymore ---------- */}
+    <section class="relative overflow-hidden bg-ink text-white">
+      <div class="hero-grid pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+      <div class="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+        <h2 class="font-display text-5xl leading-[0.95] font-extrabold tracking-tight uppercase sm:text-7xl lg:text-[5rem]">
+          <span class="struck block max-w-5xl text-stone-500">{t("site.home.proof.question")}</span>
+          <span class="mt-3 block text-volt">{t("site.home.proof.answer")}</span>
+        </h2>
+        <div class="mt-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <p class="max-w-xl text-lg leading-relaxed text-stone-300">{t("site.home.proof.text")}</p>
+          <ul class="flex flex-wrap gap-2.5">
+            {facts.map((f) => (
+              <li class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-stone-200">
+                <f.icon size={15} class="text-volt" />
+                {f.text}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -319,24 +345,92 @@ const classTypes = t("site.home.classTypes").split(" · ");
         <div class="relative mt-8 flex flex-wrap gap-3">
           <a
             href="/signup?next=/studios/new"
-            class="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 font-semibold text-white transition hover:bg-stone-800"
+            class="group inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 font-semibold text-white transition hover:bg-stone-800"
           >
-            <UserRound size={18} />
-            {t("site.home.createStudio")}
+            {t("site.home.tryIt")}
+            <ArrowRight size={18} class="transition group-hover:translate-x-0.5" />
           </a>
-          <form method="post" action="/demo" data-demo-form>
-            <button
-              name="as"
-              value="coach"
-              class="inline-flex items-center gap-2 rounded-xl border-2 border-ink px-5 py-2.5 font-semibold transition hover:bg-ink hover:text-white"
-            >
-              {t("site.home.demoCoach")}
-              <ArrowRight size={18} />
-            </button>
-          </form>
+          <button
+            type="button"
+            data-demo-open
+            class="inline-flex items-center gap-2 rounded-xl border-2 border-ink px-5 py-2.5 font-semibold transition hover:bg-ink hover:text-white"
+          >
+            <MonitorPlay size={18} />
+            {t("site.home.seeDemo")}
+          </button>
         </div>
       </div>
     </section>
+
+    {/* ---------- Demo picker ---------- */}
+    <dialog
+      id="demo-picker"
+      class="demo-picker m-auto w-[min(44rem,calc(100%-2rem))] rounded-3xl bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/70 backdrop:backdrop-blur-sm"
+      aria-labelledby="demo-picker-title"
+    >
+      <div class="relative p-6 sm:p-8">
+        <form method="dialog" class="absolute top-4 right-4">
+          <button
+            class="rounded-lg p-2 text-stone-400 hover:bg-stone-100 hover:text-ink"
+            aria-label={t("common.close")}
+          >
+            <X size={18} />
+          </button>
+        </form>
+        <h2 id="demo-picker-title" class="pr-10 font-display text-4xl font-extrabold tracking-tight uppercase">
+          {t("site.home.pickTitle")}
+        </h2>
+        <p class="mt-2 max-w-lg text-stone-600">{t("site.home.pickText")}</p>
+        <form method="post" action="/demo" class="mt-6 grid gap-4 sm:grid-cols-2" data-demo-form>
+          {demoViews.map((v) => (
+            <button
+              name="as"
+              value={v.role}
+              class="group flex flex-col overflow-hidden rounded-2xl text-left ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:ring-2 hover:ring-ink focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-60"
+            >
+              <span
+                class:list={[
+                  "flex h-36 items-start justify-center overflow-hidden px-5 pt-5",
+                  v.role === "coach" ? "bg-ink" : "bg-volt",
+                ]}
+              >
+                <Image
+                  src={v.shot}
+                  alt=""
+                  widths={[400, 800]}
+                  sizes="20rem"
+                  loading="lazy"
+                  class:list={[
+                    "rounded-t-lg shadow-xl transition group-hover:-translate-y-1",
+                    v.role === "coach" ? "h-auto w-full" : "h-auto w-[46%] rounded-t-xl",
+                  ]}
+                />
+              </span>
+              <span class="flex flex-1 flex-col p-5">
+                <span class="flex items-center justify-between gap-2 text-lg font-semibold">
+                  <span class="flex items-center gap-2">
+                    <v.icon size={18} />
+                    {v.title}
+                  </span>
+                  <ArrowRight
+                    size={18}
+                    class="text-stone-400 transition group-hover:translate-x-0.5 group-hover:text-ink"
+                  />
+                </span>
+                <span class="mt-1.5 text-sm text-stone-600">{v.text}</span>
+              </span>
+            </button>
+          ))}
+        </form>
+        <p class="mt-5 hidden text-sm font-medium text-ink" data-demo-wait aria-live="polite">
+          <span class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-ink/20 border-t-ink align-[-1px]" />
+          {t("site.home.preparing")}
+        </p>
+        <p class="mt-5 text-sm text-stone-500" data-demo-note>
+          {t("site.home.demoNote")}
+        </p>
+      </div>
+    </dialog>
   </Landing>
 )}
 
@@ -366,6 +460,20 @@ const classTypes = t("site.home.classTypes").split(" · ");
     width: 0.5rem;
     border-radius: 9999px;
   }
+  .struck {
+    text-decoration-line: line-through;
+    text-decoration-color: var(--color-volt);
+    text-decoration-thickness: 0.11em;
+  }
+  .demo-picker[open] {
+    animation: pop 0.18s ease-out;
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
   .marquee {
     animation: marquee 40s linear infinite;
   }
@@ -375,21 +483,34 @@ const classTypes = t("site.home.classTypes").split(" · ");
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .marquee {
+    .marquee,
+    .demo-picker[open] {
       animation: none;
     }
   }
 </style>
 
 <script>
+  const picker = document.querySelector<HTMLDialogElement>("#demo-picker");
+  for (const button of document.querySelectorAll("[data-demo-open]")) {
+    button.addEventListener("click", () => picker?.showModal());
+  }
+  // A click on the dimmed backdrop closes the picker.
+  picker?.addEventListener("click", (e) => {
+    if (e.target === picker && !picker.dataset.busy) picker.close();
+  });
+  picker?.addEventListener("cancel", (e) => {
+    if (picker.dataset.busy) e.preventDefault();
+  });
+
   // Building a demo takes a few seconds: show progress and stop double submits.
   for (const form of document.querySelectorAll<HTMLFormElement>("[data-demo-form]")) {
     form.addEventListener("submit", () => {
+      if (picker) picker.dataset.busy = "1";
       // Disabled after the browser has read the pressed button, so its value is still sent.
-      setTimeout(() =>
-        document.querySelectorAll<HTMLButtonElement>("[data-demo-form] button").forEach((b) => (b.disabled = true)),
-      );
+      setTimeout(() => form.querySelectorAll("button").forEach((b) => (b.disabled = true)));
       document.querySelector("[data-demo-wait]")?.classList.remove("hidden");
+      document.querySelector("[data-demo-note]")?.classList.add("hidden");
     });
   }
 </script>

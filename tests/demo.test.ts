@@ -38,6 +38,25 @@ describe("public demo", () => {
     await demo.removeDemo(tokenOf(b.slug));
   }, 60_000);
 
+  it("lands members on the invite page and switches sides inside the same demo", async () => {
+    const m = await demo.startDemo("member");
+    const token = tokenOf(m.slug);
+    const [settings] = await db
+      .select({ code: schema.studioSettings.joinCode })
+      .from(schema.studioSettings)
+      .innerJoin(schema.organization, eq(schema.organization.id, schema.studioSettings.studioId))
+      .where(eq(schema.organization.slug, m.slug));
+    expect(m.landing).toBe(`/join/${m.slug}/${settings!.code}`);
+    expect(m.signIn.ok).toBe(true);
+
+    const coach = await demo.enterDemo(token, "coach");
+    expect(coach.signIn.ok).toBe(true);
+    expect(coach.landing).toBe(`/s/${m.slug}`);
+    const session = (await coach.signIn.json()) as { user: { email: string } };
+    expect(session.user.email).toBe(`owner.${token}@demo.fitmanager.invalid`);
+    await demo.removeDemo(token);
+  }, 60_000);
+
   it("removes expired demos", async () => {
     const a = await demo.startDemo("coach");
     await db

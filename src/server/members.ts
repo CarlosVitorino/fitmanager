@@ -434,12 +434,13 @@ export async function findStudioByInvite(slug: string, code: string) {
       name: organization.name,
       slug: organization.slug,
       joinCode: studioSettings.joinCode,
+      timezone: studioSettings.timezone,
     })
     .from(organization)
     .innerJoin(studioSettings, eq(studioSettings.studioId, organization.id))
     .where(eq(organization.slug, slug));
   if (!row || row.joinCode !== code) return null;
-  return { id: row.id, name: row.name, slug: row.slug };
+  return { id: row.id, name: row.name, slug: row.slug, timezone: row.timezone };
 }
 
 /** Adds the user to the studio as a member. Already in it: nothing changes. */

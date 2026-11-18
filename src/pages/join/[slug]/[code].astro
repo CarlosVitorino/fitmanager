@@ -48,7 +48,7 @@ const hasContact = page && (page.address || page.phone || page.email || page.web
 const websiteLabel = page?.website?.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 ---
 
-<Base title={studio ? studio.name : t("auth.inviteInvalidTitle")} narrow={!studio}>
+<Base title={studio ? studio.name : t("auth.inviteInvalidTitle")} narrow={!studio} demoTimezone={studio?.timezone}>
   {studio && info && page ? (
     <div class="space-y-8">
       <header class="relative overflow-hidden rounded-3xl bg-stone-900 px-6 py-10 text-white sm:px-10 sm:py-14">
@@ -145,6 +145,11 @@ const websiteLabel = page?.website?.replace(/^https?:\/\/(www\.)?/i, "").replace
           <div class="card space-y-4 p-6">
             {alreadyIn ? (
               <>
+                {Astro.locals.demo && (
+                  <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200">
+                    {t("site.demo.inviteHint")}
+                  </p>
+                )}
                 <p class="text-sm text-stone-600">{t("site.studio.alreadyMember", { studio: studio.name })}</p>
                 <a href={`/s/${slug}`} class="btn btn-primary w-full justify-center py-2.5">
                   {t("site.studio.open")}

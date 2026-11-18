@@ -11,8 +11,14 @@ const en = {
     titleA: "Run your classes.",
     titleB: "Not a spreadsheet.",
     text: "Sell class packs, let members book their own spots, and stop answering “how many classes do I have left?”. FitManager keeps the count and shows it to your members, so you don't have to.",
-    demoCoach: "Try it as a coach",
-    demoMember: "Try it as a member",
+    tryIt: "Try it",
+    seeDemo: "See the demo",
+    pickTitle: "See it from both sides",
+    pickText: "A sample studio full of real-looking data, just for you. Switch sides any time from the bar at the top.",
+    pickCoachTitle: "As the coach",
+    pickCoachText: "Your dashboard, the week's classes, members running low and every credit accounted for.",
+    pickMemberTitle: "As a member",
+    pickMemberText: "Start where your members do: the invite link. Then book a class and check what's left.",
     demoNote: "Opens a sample studio full of data. No sign-up, and everything resets when you leave.",
     preparing: "Setting up your studio…",
     chipLeft: "3 of 10 classes left",
@@ -63,11 +69,13 @@ const en = {
       alt: "A studio's public page",
     },
     classTypes: "Strength · HIIT · Mobility · Pilates · Boxing · Yoga · Bootcamp · Spin · Personal training",
-    stats: {
-      plans: "kinds of plans",
-      languages: "languages",
-      apps: "apps to install",
-      link: "link to invite everyone",
+    proof: {
+      question: "“How many classes do I have left?”",
+      answer: "Nobody asks anymore.",
+      text: "Members see their own credits, expiry dates and bookings on their phone. It's the same count you see, always.",
+      noApp: "Nothing to install",
+      languages: "Five languages",
+      link: "One link to invite everyone",
     },
     howTitle: "Set up in an afternoon",
     steps: {
@@ -101,6 +109,11 @@ const en = {
     footer: "Made for small studios and independent coaches.",
   },
   demo: {
+    viewCoach: "Coach",
+    viewMember: "Member",
+    switchLabel: "View the demo as",
+    switchHint: "Switch sides in the same demo studio",
+    inviteHint: "This is the page people see when they open your invite link. As Mia, you've already joined.",
     banner: "You're in a demo studio, a private copy just for you. Try anything: it's all deleted when you log out.",
     expires: "Ends at {time} at the latest.",
     end: "End demo",
@@ -174,8 +187,17 @@ const de: Shape<typeof en> = {
     titleA: "Mehr Training.",
     titleB: "Weniger Tabelle.",
     text: "Verkaufe Kurskarten, lass Mitglieder ihre Plätze selbst buchen und beantworte nie wieder „Wie viele Stunden habe ich noch?“. FitManager zählt mit und zeigt es deinen Mitgliedern – damit du es nicht musst.",
-    demoCoach: "Als Coach ausprobieren",
-    demoMember: "Als Mitglied ausprobieren",
+    tryIt: "Ausprobieren",
+    seeDemo: "Demo ansehen",
+    pickTitle: "Sieh dir beide Seiten an",
+    pickText:
+      "Ein Beispielstudio voller realistischer Daten, nur für dich. Über die Leiste oben wechselst du jederzeit die Seite.",
+    pickCoachTitle: "Als Coach",
+    pickCoachText:
+      "Dein Dashboard, die Kurse der Woche, Mitglieder mit wenig Guthaben und jede Stunde nachvollziehbar.",
+    pickMemberTitle: "Als Mitglied",
+    pickMemberText:
+      "Starte da, wo deine Mitglieder starten: beim Einladungslink. Dann buch einen Kurs und schau, was übrig ist.",
     demoNote:
       "Öffnet ein Beispielstudio voller Daten. Ohne Registrierung, und beim Verlassen wird alles zurückgesetzt.",
     preparing: "Dein Studio wird eingerichtet…",
@@ -227,11 +249,13 @@ const de: Shape<typeof en> = {
       alt: "Die öffentliche Seite eines Studios",
     },
     classTypes: "Kraft · HIIT · Mobility · Pilates · Boxen · Yoga · Bootcamp · Spinning · Personal Training",
-    stats: {
-      plans: "Arten von Tarifen",
-      languages: "Sprachen",
-      apps: "Apps zu installieren",
-      link: "Link für alle Einladungen",
+    proof: {
+      question: "„Wie viele Stunden habe ich noch?“",
+      answer: "Fragt keiner mehr.",
+      text: "Mitglieder sehen ihr Guthaben, Ablaufdaten und Buchungen selbst auf dem Handy. Immer dieselbe Zahl wie bei dir.",
+      noApp: "Nichts zu installieren",
+      languages: "Fünf Sprachen",
+      link: "Ein Link, um alle einzuladen",
     },
     howTitle: "An einem Nachmittag eingerichtet",
     steps: {
@@ -267,6 +291,11 @@ const de: Shape<typeof en> = {
     footer: "Gemacht für kleine Studios und selbstständige Coaches.",
   },
   demo: {
+    viewCoach: "Coach",
+    viewMember: "Mitglied",
+    switchLabel: "Demo ansehen als",
+    switchHint: "Im selben Demo-Studio die Seite wechseln",
+    inviteHint: "Diese Seite sehen Leute, wenn sie deinen Einladungslink öffnen. Als Mia bist du schon dabei.",
     banner:
       "Du bist in einem Demo-Studio, einer privaten Kopie nur für dich. Probier alles aus: Beim Abmelden wird alles gelöscht.",
     expires: "Endet spätestens um {time}.",
@@ -341,8 +370,17 @@ const es: Shape<typeof en> = {
     titleA: "Dirige tus clases.",
     titleB: "No una hoja de cálculo.",
     text: "Vende bonos de clases, deja que tus socios reserven su plaza y olvídate de responder «¿cuántas clases me quedan?». FitManager lleva la cuenta y se la enseña a tus socios, para que no tengas que hacerlo tú.",
-    demoCoach: "Pruébalo como entrenador",
-    demoMember: "Pruébalo como socio",
+    tryIt: "Pruébalo",
+    seeDemo: "Ver la demo",
+    pickTitle: "Míralo desde los dos lados",
+    pickText:
+      "Un estudio de ejemplo lleno de datos realistas, solo para ti. Cambia de lado cuando quieras desde la barra de arriba.",
+    pickCoachTitle: "Como entrenador",
+    pickCoachText:
+      "Tu panel, las clases de la semana, los socios a los que les quedan pocas clases y cada crédito justificado.",
+    pickMemberTitle: "Como socio",
+    pickMemberText:
+      "Empieza donde empiezan tus socios: el enlace de invitación. Luego reserva una clase y mira cuántas te quedan.",
     demoNote: "Abre un estudio de ejemplo lleno de datos. Sin registro, y todo se borra al salir.",
     preparing: "Preparando tu estudio…",
     chipLeft: "Te quedan 3 de 10 clases",
@@ -393,11 +431,13 @@ const es: Shape<typeof en> = {
       alt: "La página pública de un estudio",
     },
     classTypes: "Fuerza · HIIT · Movilidad · Pilates · Boxeo · Yoga · Bootcamp · Spinning · Entrenamiento personal",
-    stats: {
-      plans: "tipos de planes",
-      languages: "idiomas",
-      apps: "apps que instalar",
-      link: "enlace para invitar a todos",
+    proof: {
+      question: "«¿Cuántas clases me quedan?»",
+      answer: "Ya nadie lo pregunta.",
+      text: "Los socios ven sus créditos, fechas de caducidad y reservas en su móvil. Siempre la misma cuenta que ves tú.",
+      noApp: "Nada que instalar",
+      languages: "Cinco idiomas",
+      link: "Un enlace para invitar a todos",
     },
     howTitle: "Listo en una tarde",
     steps: {
@@ -432,6 +472,11 @@ const es: Shape<typeof en> = {
     footer: "Hecho para estudios pequeños y entrenadores independientes.",
   },
   demo: {
+    viewCoach: "Entrenador",
+    viewMember: "Socio",
+    switchLabel: "Ver la demo como",
+    switchHint: "Cambia de lado en el mismo estudio de demostración",
+    inviteHint: "Esta es la página que la gente ve al abrir tu enlace de invitación. Como Mia, ya te has unido.",
     banner:
       "Estás en un estudio de demostración, una copia privada solo para ti. Prueba lo que quieras: todo se borra al cerrar sesión.",
     expires: "Termina a las {time} como muy tarde.",
@@ -506,8 +551,17 @@ const fr: Shape<typeof en> = {
     titleA: "Coachez vos cours.",
     titleB: "Pas un tableur.",
     text: "Vendez des cartes de cours, laissez vos adhérents réserver leur place et ne répondez plus jamais à « Il me reste combien de séances ? ». FitManager tient le compte et le montre à vos adhérents, pour que vous n’ayez plus à le faire.",
-    demoCoach: "Essayer en tant que coach",
-    demoMember: "Essayer en tant qu’adhérent",
+    tryIt: "Essayer",
+    seeDemo: "Voir la démo",
+    pickTitle: "Voyez les deux côtés",
+    pickText:
+      "Un studio d’exemple rempli de données réalistes, rien que pour vous. Changez de côté à tout moment depuis la barre en haut.",
+    pickCoachTitle: "Côté coach",
+    pickCoachText:
+      "Votre tableau de bord, les cours de la semaine, les adhérents à court de séances et chaque crédit justifié.",
+    pickMemberTitle: "Côté adhérent",
+    pickMemberText:
+      "Commencez là où vos adhérents commencent : le lien d’invitation. Puis réservez un cours et voyez ce qu’il reste.",
     demoNote:
       "Ouvre un studio d’exemple rempli de données. Sans inscription, et tout est réinitialisé quand vous partez.",
     preparing: "Préparation de votre studio…",
@@ -559,11 +613,13 @@ const fr: Shape<typeof en> = {
       alt: "La page publique d’un studio",
     },
     classTypes: "Renforcement · HIIT · Mobilité · Pilates · Boxe · Yoga · Bootcamp · Spinning · Coaching individuel",
-    stats: {
-      plans: "types de formules",
-      languages: "langues",
-      apps: "application à installer",
-      link: "lien pour inviter tout le monde",
+    proof: {
+      question: "« Il me reste combien de séances ? »",
+      answer: "Plus personne ne demande.",
+      text: "Les adhérents voient leurs crédits, leurs dates d’expiration et leurs réservations sur leur téléphone. Toujours le même compte que le vôtre.",
+      noApp: "Rien à installer",
+      languages: "Cinq langues",
+      link: "Un seul lien pour inviter tout le monde",
     },
     howTitle: "Prêt en un après-midi",
     steps: {
@@ -598,6 +654,12 @@ const fr: Shape<typeof en> = {
     footer: "Conçu pour les petits studios et les coachs indépendants.",
   },
   demo: {
+    viewCoach: "Coach",
+    viewMember: "Adhérent",
+    switchLabel: "Voir la démo en tant que",
+    switchHint: "Changer de côté dans le même studio de démo",
+    inviteHint:
+      "C’est la page que les gens voient en ouvrant votre lien d’invitation. En tant que Mia, vous l’avez déjà rejoint.",
     banner:
       "Vous êtes dans un studio de démonstration, une copie privée rien que pour vous. Testez tout : tout est supprimé à la déconnexion.",
     expires: "Se termine au plus tard à {time}.",
@@ -672,8 +734,16 @@ const pt: Shape<typeof en> = {
     titleA: "Dê as suas aulas.",
     titleB: "Não uma folha de cálculo.",
     text: "Venda packs de aulas, deixe os membros reservarem o seu lugar e deixe de responder a «quantas aulas me restam?». O FitManager faz as contas e mostra-as aos seus membros, para que não tenha de ser você.",
-    demoCoach: "Experimentar como treinador",
-    demoMember: "Experimentar como membro",
+    tryIt: "Experimentar",
+    seeDemo: "Ver a demo",
+    pickTitle: "Veja dos dois lados",
+    pickText:
+      "Um estúdio de exemplo cheio de dados realistas, só para si. Troque de lado quando quiser na barra no topo.",
+    pickCoachTitle: "Como treinador",
+    pickCoachText: "O seu painel, as aulas da semana, os membros com poucas aulas e cada crédito justificado.",
+    pickMemberTitle: "Como membro",
+    pickMemberText:
+      "Comece onde os seus membros começam: o link de convite. Depois reserve uma aula e veja quantas restam.",
     demoNote: "Abre um estúdio de exemplo cheio de dados. Sem registo, e tudo é reposto quando sair.",
     preparing: "A preparar o seu estúdio…",
     chipLeft: "Restam 3 de 10 aulas",
@@ -724,11 +794,13 @@ const pt: Shape<typeof en> = {
       alt: "A página pública de um estúdio",
     },
     classTypes: "Força · HIIT · Mobilidade · Pilates · Boxe · Yoga · Bootcamp · Spinning · Treino personalizado",
-    stats: {
-      plans: "tipos de planos",
-      languages: "línguas",
-      apps: "apps para instalar",
-      link: "link para convidar todos",
+    proof: {
+      question: "«Quantas aulas me restam?»",
+      answer: "Já ninguém pergunta.",
+      text: "Os membros veem os seus créditos, datas de validade e reservas no telemóvel. Sempre a mesma conta que a sua.",
+      noApp: "Nada para instalar",
+      languages: "Cinco idiomas",
+      link: "Um link para convidar todos",
     },
     howTitle: "Pronto numa tarde",
     steps: {
@@ -762,6 +834,11 @@ const pt: Shape<typeof en> = {
     footer: "Feito para pequenos estúdios e treinadores independentes.",
   },
   demo: {
+    viewCoach: "Treinador",
+    viewMember: "Membro",
+    switchLabel: "Ver a demo como",
+    switchHint: "Trocar de lado no mesmo estúdio de demonstração",
+    inviteHint: "Esta é a página que as pessoas veem ao abrir o seu link de convite. Como Mia, já aderiu.",
     banner:
       "Está num estúdio de demonstração, uma cópia privada só para si. Experimente tudo: é tudo apagado quando terminar a sessão.",
     expires: "Termina o mais tardar às {time}.",

@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { LogOut } from "@lucide/astro";
+import DemoBanner from "../components/DemoBanner.astro";
 import Logo from "../components/brand/Logo.astro";
 import LanguageMenu from "../components/LanguageMenu.astro";
 import { getLocale, t } from "../i18n";
@@ -9,8 +10,11 @@ interface Props {
   title: string;
   narrow?: boolean;
   wide?: boolean;
+  /** On a demo visitor's page: which side of the demo studio they're on, for the demo strip. */
+  demoView?: "coach" | "member";
+  demoTimezone?: string | undefined;
 }
-const { title, narrow = false, wide = false } = Astro.props;
+const { title, narrow = false, wide = false, demoView = "member", demoTimezone } = Astro.props;
 const width = wide ? "max-w-6xl" : "max-w-5xl";
 const { user } = Astro.locals;
 ---
@@ -24,6 +28,7 @@ const { user } = Astro.locals;
     <title>{title} · {t("common.appName")}</title>
   </head>
   <body class="min-h-screen font-sans text-stone-900 antialiased">
+    <DemoBanner view={demoView} timezone={demoTimezone} width={width} />
     <header class="border-b border-stone-200/80 bg-white/90">
       <nav class:list={["mx-auto flex h-14 items-center", width, " justify-between gap-4 px-4"]}>
         <a href="/" aria-label={t("common.appName")}>

@@ -57,8 +57,12 @@ async function demo(browser, locale, role, viewport) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/?lang=${locale}`);
-  await Promise.all([page.waitForURL(/\/s\/demo-/, { timeout: 60000 }), page.click(`button[value=${role}]`)]);
-  return { ctx, page, slug: page.url().match(/\/s\/(demo-[a-f0-9]+)/)[1] };
+  await page.click("[data-demo-open]");
+  await Promise.all([
+    page.waitForURL(/\/(s|join)\/demo-/, { timeout: 60000 }),
+    page.click(`#demo-picker button[value=${role}]`),
+  ]);
+  return { ctx, page, slug: page.url().match(/\/(?:s|join)\/(demo-[a-f0-9]+)/)[1] };
 }
 
 async function end(page) {

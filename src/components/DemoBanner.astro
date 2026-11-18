@@ -1,0 +1,69 @@
+---
+/**
+ * The strip on top of every demo page: what the demo is, a switch between the coach's and the
+ * member's view of the same studio, and the ways out.
+ */
+import { FlaskConical } from "@lucide/astro";
+import { t } from "../i18n";
+import { formatTime } from "../lib/format";
+
+interface Props {
+  /** Whose eyes the visitor is looking through right now. */
+  view: "coach" | "member";
+  /** The studio's time zone, to show when the demo ends. Left out: the end time isn't shown. */
+  timezone?: string | undefined;
+  width?: string;
+}
+const { view, timezone, width = "max-w-6xl" } = Astro.props;
+const demo = Astro.locals.demo;
+const views = [
+  { role: "coach", label: t("site.demo.viewCoach") },
+  { role: "member", label: t("site.demo.viewMember") },
+] as const;
+---
+
+{demo && (
+  <div class="bg-amber-100 text-amber-950" data-demo-banner>
+    <div class:list={["mx-auto flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-sm", width]}>
+      <FlaskConical size={16} class="shrink-0 text-amber-700" />
+      <p class="min-w-0 flex-[1_1_14rem]">
+        {t("site.demo.banner")}{" "}
+        {demo.expiresAt && timezone && (
+          <span class="text-amber-800">{t("site.demo.expires", { time: formatTime(demo.expiresAt, timezone) })}</span>
+        )}
+      </p>
+      <form
+        method="post"
+        action="/demo"
+        class="flex items-center gap-0.5 rounded-lg bg-amber-200/70 p-0.5"
+        role="group"
+        aria-label={t("site.demo.switchLabel")}
+      >
+        {views.map((v) =>
+          v.role === view ? (
+            <span class="rounded-md bg-white px-2.5 py-1 font-semibold shadow-sm" aria-current="true">
+              {v.label}
+            </span>
+          ) : (
+            <button
+              name="as"
+              value={v.role}
+              class="rounded-md px-2.5 py-1 font-medium text-amber-900 hover:bg-white/60"
+              title={t("site.demo.switchHint")}
+            >
+              {v.label}
+            </button>
+          ),
+        )}
+      </form>
+      <form method="post" action="/logout" class="flex items-center gap-2">
+        <button name="next" value="/signup" class="font-medium underline underline-offset-2 hover:text-amber-700">
+          {t("site.demo.createOwn")}
+        </button>
+        <button class="rounded-lg bg-amber-950 px-3 py-1 font-medium text-amber-50 hover:bg-amber-800">
+          {t("site.demo.end")}
+        </button>
+      </form>
+    </div>
+  </div>
+)}
