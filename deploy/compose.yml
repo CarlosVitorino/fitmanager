@@ -1,0 +1,116 @@
+# FitManager on the shared host (the one running huntingapps.io, huntingApps/docs/18-the-shared-host.md).
+# The edge Caddy (huntingApps/deploy/edge) terminates TLS for fit.huntingapps.io and dials this
+# project's web container as `fitmanager-web:4321`. Nothing is published on the host.
+#
+#   cp deploy/.env.example deploy/.env      # then fill it in
+#   docker compose -f deploy/compose.yml --env-file deploy/.env up -d --build
+#
+# `migrate` runs to completion before `web` and `settle` start, so a deploy never serves a schema the
+# code does not expect. See docs/deploy.md.
+
+name: fitmanager
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://fitmanager:${POSTGRES_PASSWORD}@postgres:5432/fitmanager
+  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in deploy/.env}
+  BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in deploy/.env}
+  NODE_ENV: production
+
+x-hardened: &hardened
+  restart: unless-stopped
+  init: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: "5" }
+
+services:
+  postgres:
+    # Same major version as local dev and CI.
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fitmanager
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: fitmanager
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U fitmanager -d fitmanager]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+    shm_size: 128m
+    mem_limit: 512m
+    networks: [internal]
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "5" }
+
+  migrate:
+    <<: *hardened
+    build: { context: .., target: jobs, args: { PUBLIC_HOSTNAME: "${PUBLIC_HOSTNAME:-fit.huntingapps.io}" } }
+    image: fitmanager-jobs
+    restart: "no"
+    command: [node_modules/.bin/tsx, scripts/migrate.ts]
+    environment: *app-env
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+
+  web:
+    <<: *hardened
+    build: { context: .., target: web, args: { PUBLIC_HOSTNAME: "${PUBLIC_HOSTNAME:-fit.huntingapps.io}" } }
+    image: fitmanager-web
+    environment: *app-env
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    # Astro SSR plus a 10-connection Postgres pool. Small next to the host's other tenants (docs/18 §3).
+    mem_limit: 384m
+    cpus: 1
+    stop_grace_period: 20s
+    # The alias is what Caddy dials; prefixed because every project on `edge` has a `web`.
+    networks:
+      internal: {}
+      edge:
+        aliases: [fitmanager-web]
+
+  # The sidecar: settles started classes, expires packs, generates upcoming classes from recurring slots
+  # and removes expired demo studios (scripts/settle.ts), once an hour. Pages also settle their studio
+  # before showing balances, so a missed run never shows wrong counts; this covers quiet studios.
+  # `sleep & wait` so SIGTERM stops it at once instead of after the sleep.
+  settle:
+    <<: *hardened
+    image: fitmanager-jobs
+    environment:
+      <<: *app-env
+      SETTLE_EVERY_SECONDS: ${SETTLE_EVERY_SECONDS:-3600}
+    entrypoint: [/bin/sh, -c]
+    command:
+      - |
+        trap 'exit 0' TERM INT
+        while :; do
+          node_modules/.bin/tsx scripts/settle.ts || echo "settle failed with $$?"
+          sleep "$${SETTLE_EVERY_SECONDS}" & wait $$!
+        done
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [internal]
+
+volumes:
+  postgres:
+
+networks:
+  internal:
+  edge:
+    external: true

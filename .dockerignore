@@ -1,0 +1,19 @@
+# The image builds from source only; nothing local, generated or secret goes in.
+node_modules
+dist
+.astro
+.vite
+coverage
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+deploy/.env
+deploy/backups
+.git
+.github
+.cursor
+.claude
+docs
+tests
+*.log

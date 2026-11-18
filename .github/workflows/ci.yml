@@ -36,3 +36,30 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # The server builds the images itself; GitHub holds a key that can only run deploy/deploy.sh with this
+  # commit's sha (docs/deploy.md). Until the three secrets exist the job warns and skips, so CI stays green.
+  deploy:
+    name: Deploy
+    needs: [check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-fitmanager
+      cancel-in-progress: false
+    steps:
+      - name: Deploy over SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          TARGET: ${{ secrets.DEPLOY_TARGET }}
+        run: |
+          if [ -z "$SSH_KEY" ] || [ -z "$KNOWN_HOSTS" ] || [ -z "$TARGET" ]; then
+            echo "::warning::Deploy secrets are not set; skipping the deploy."
+            exit 0
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "$TARGET" "$GITHUB_SHA"
