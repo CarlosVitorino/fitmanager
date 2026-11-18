@@ -9,13 +9,13 @@ The feature list below is the founder's scope (2026-11-18). Where it differs fro
 - [x] Agree the first-version scope with the founder.
 - Done when: the founder has read this plan and agreed.
 
-## 2. Foundation
-- [ ] Astro (SSR, Node adapter) + React islands, TypeScript strict.
-- [ ] Postgres in Docker Compose for local dev; Drizzle schema and migrations.
-- [ ] Better Auth with the organization plugin: a studio is an organization; roles `owner`, `coach`, `member`. One user account can belong to several studios.
-- [ ] Tenant scoping: every studio-owned table has `studio_id`; all data access goes through a repository layer that requires a studio context. Studio is addressed by path (`/s/{studio-slug}/...`).
-- [ ] `packages/domain`: framework-free TypeScript module for the rules, with Vitest.
-- [ ] ESLint, Prettier, GitHub Actions CI (typecheck, lint, test, build). Seed script with a demo studio.
+## 2. Foundation ✅
+- [x] Astro (SSR, Node adapter) + React islands, TypeScript strict.
+- [x] Postgres in Docker Compose for local dev; Drizzle schema and migrations.
+- [x] Better Auth with the organization plugin: a studio is an organization; roles `owner`, `coach`, `member`. One user account can belong to several studios.
+- [x] Tenant scoping: every studio-owned table has `studio_id`; all data access goes through a repository layer that requires a studio context. Studio is addressed by path (`/s/{studio-slug}/...`).
+- [x] `src/domain/`: framework-free TypeScript module for the rules, with Vitest. ESLint blocks framework, database and server imports there.
+- [x] ESLint, Prettier, GitHub Actions CI (typecheck, lint, test, build). Seed script with a demo studio.
 - Done when: `npm run dev` brings up the database and the app with seeded data, and CI is green.
 
 ## 3. Core
@@ -75,6 +75,12 @@ Built in milestones, each one usable and committed before the next.
 - **No-show:** the coach can flag a no-show and decide whether the credit is consumed. Default is consumed, unless the member cancelled inside the window.
 - **Credits are reserved at booking** so members can't book more classes than they hold; the pack is chosen at booking (closest to expiry still valid on the class date).
 - **Stack:** Astro + React islands, Postgres + Drizzle, Better Auth (organization plugin for studios and roles), Vitest, Playwright.
+
+- **Domain rules live in `src/domain/`, not a separate `packages/domain`.** A lint rule keeps it framework-free, which gives the same independence without the overhead of a workspace setup.
+- **Better Auth tables are written by hand** in `src/db/schema/auth.ts`, based on the installed package's own table definitions, because the schema generator CLI couldn't run here. Re-check them when upgrading better-auth.
+- **Studio settings are kept in their own table** (`studio_settings`), not on Better Auth's organization table, so auth upgrades never touch them. Timezone is chosen when the studio is created.
+- **Logins are server-rendered forms**, so login and signup work without JavaScript. Astro's origin check blocks cross-site form posts.
+- **Not a member and no such studio both return 404**, so studio addresses can't be probed.
 
 ## Open decisions
 
