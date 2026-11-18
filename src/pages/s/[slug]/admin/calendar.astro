@@ -1,0 +1,179 @@
+---
+import Studio from "../../../../layouts/Studio.astro";
+import { addDays, isLocalDate, localDateOf, startOfWeek } from "../../../../domain/dates";
+import { formatDay, formatDate, formatTimeRange } from "../../../../lib/format";
+import { handleActions, int, optStr, str } from "../../../../server/actions";
+import { listCalendars, listTemplates } from "../../../../server/catalog";
+import { createOneOffSession, listCoaches, listSessions, oneOffInput } from "../../../../server/schedule";
+
+const ctx = Astro.locals.studio!;
+const today = localDateOf(new Date(), ctx.timezone);
+const weekParam = Astro.url.searchParams.get("week");
+const weekStart = startOfWeek(weekParam && isLocalDate(weekParam) ? weekParam : today);
+const calendarId = Astro.url.searchParams.get("calendar") || undefined;
+
+const result = await handleActions(Astro, {
+  oneOff: async (f) => {
+    const s = await createOneOffSession(
+      ctx,
+      oneOffInput.parse({
+        calendarId: str(f, "calendarId"),
+        templateId: str(f, "templateId"),
+        date: str(f, "date"),
+        startTime: str(f, "startTime"),
+        durationMinutes: int(f, "durationMinutes", "duration"),
+        capacity: int(f, "capacity", "spots"),
+        coachId: optStr(f, "coachId"),
+      }),
+    );
+    return Astro.redirect(`/s/${ctx.slug}/admin/sessions/${s.id}`, 303);
+  },
+});
+if (result instanceof Response) return result;
+
+const [sessions, calendars, templates, coaches] = await Promise.all([
+  listSessions(ctx, weekStart, addDays(weekStart, 6), { calendarId, includeCancelled: true }),
+  listCalendars(ctx),
+  listTemplates(ctx),
+  listCoaches(ctx),
+]);
+const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+const link = (week: string, cal = calendarId) => `?week=${week}${cal ? `&calendar=${cal}` : ""}`;
+const base = `/s/${ctx.slug}/admin`;
+---
+
+<Studio title="Calendar" flash={result.flash} error={result.error} wide>
+  <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <a href={link(addDays(weekStart, -7))} class="btn btn-sm" aria-label="Previous week">
+        ←
+      </a>
+      <a href={link(startOfWeek(today))} class="btn btn-sm">
+        This week
+      </a>
+      <a href={link(addDays(weekStart, 7))} class="btn btn-sm" aria-label="Next week">
+        →
+      </a>
+      <h1 class="ml-2 text-xl font-semibold">
+        {formatDate(weekStart)} – {formatDate(addDays(weekStart, 6))}
+      </h1>
+    </div>
+    <div class="flex flex-wrap gap-1">
+      <a href={link(weekStart, "")} class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
+        All calendars
+      </a>
+      {calendars.map((c) => (
+        <a href={link(weekStart, c.id)} class:list={["btn btn-sm", calendarId === c.id && "btn-primary"]}>
+          {c.name}
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <div class="grid gap-3 md:grid-cols-7">
+    {days.map((d) => {
+      const list = sessions.filter((s) => s.localDate === d);
+      return (
+        <div
+          class:list={[
+            "min-h-32 rounded-xl border bg-white p-2",
+            d === today ? "border-stone-900" : "border-stone-200",
+          ]}
+        >
+          <div class:list={["mb-2 px-1 text-sm font-semibold", d === today ? "text-stone-900" : "text-stone-500"]}>
+            {formatDay(d)} {d === today && <span class="badge ml-1 bg-stone-900 text-white">Today</span>}
+          </div>
+          <div class="space-y-2">
+            {list.length === 0 && <p class="px-1 text-xs text-stone-400">No classes</p>}
+            {list.map((s) => {
+              const full = s.booked >= s.capacity;
+              return (
+                <a
+                  href={`${base}/sessions/${s.id}`}
+                  class:list={[
+                    "block rounded-lg border-l-4 p-2 text-xs hover:brightness-95",
+                    s.cancelled && "line-through opacity-50",
+                  ]}
+                  style={`border-left-color:${s.color};background:${s.color}12`}
+                >
+                  <div class="font-semibold text-stone-900">{formatTimeRange(s.startsAt, s.endsAt, ctx.timezone)}</div>
+                  <div class="font-medium" style={`color:${s.color}`}>
+                    {s.icon} {s.templateName}
+                  </div>
+                  <div class="mt-1 flex items-center justify-between text-stone-600">
+                    <span>{s.coachName ?? s.calendarName}</span>
+                    <span class:list={["badge", full ? "bg-amber-100 text-amber-800" : "bg-white text-stone-700"]}>
+                      {s.booked}/{s.capacity}
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  <details class="card mt-6 max-w-xl p-5">
+    <summary class="cursor-pointer font-medium">Add a one-off class</summary>
+    <p class="muted mt-1">
+      For a class that doesn't repeat. Weekly classes are set up in{" "}
+      <a class="underline" href={`${base}/calendars`}>
+        Calendars
+      </a>
+      .
+    </p>
+    <form method="post" class="mt-4 grid grid-cols-2 gap-3">
+      <input type="hidden" name="_action" value="oneOff" />
+      <label class="block space-y-1">
+        <span class="label">Calendar</span>
+        <select name="calendarId" class="input">
+          {calendars.map((c) => (
+            <option value={c.id} selected={c.id === calendarId}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="block space-y-1">
+        <span class="label">Class type</span>
+        <select name="templateId" class="input">
+          {templates.map((t) => (
+            <option value={t.id}>
+              {t.icon} {t.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="block space-y-1">
+        <span class="label">Date</span>
+        <input name="date" type="date" required class="input" value={today} />
+      </label>
+      <label class="block space-y-1">
+        <span class="label">Starts at</span>
+        <input name="startTime" type="time" required class="input" value="18:00" />
+      </label>
+      <label class="block space-y-1">
+        <span class="label">Minutes</span>
+        <input name="durationMinutes" type="number" min="5" required class="input" value="60" />
+      </label>
+      <label class="block space-y-1">
+        <span class="label">Spots</span>
+        <input name="capacity" type="number" min="1" required class="input" value="1" />
+      </label>
+      <label class="col-span-2 block space-y-1">
+        <span class="label">Coach</span>
+        <select name="coachId" class="input">
+          <option value="">No coach shown</option>
+          {coaches.map((c) => (
+            <option value={c.id} selected={c.id === ctx.userId}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button class="btn btn-primary col-span-2">Add class</button>
+    </form>
+  </details>
+</Studio>

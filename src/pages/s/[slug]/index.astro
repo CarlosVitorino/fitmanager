@@ -1,35 +1,144 @@
 ---
-import Base from "../../../layouts/Base.astro";
+import Section from "../../../components/Section.astro";
+import Studio from "../../../layouts/Studio.astro";
+import { addDays, daysBetween, localDateOf } from "../../../domain/dates";
+import { formatDate, formatDayLong, formatTimeRange, plural } from "../../../lib/format";
 import { isStaff } from "../../../server/authz";
+import { listMembers, packsExpiringSoon } from "../../../server/members";
+import { listSessions } from "../../../server/schedule";
 
-const studio = Astro.locals.studio!;
-const staff = isStaff(studio.role);
+const ctx = Astro.locals.studio!;
+if (!isStaff(ctx.role)) return Astro.redirect(`/s/${ctx.slug}/book`);
+
+const today = localDateOf(new Date(), ctx.timezone);
+const [todays, tomorrow, expiring, members] = await Promise.all([
+  listSessions(ctx, today, today),
+  listSessions(ctx, addDays(today, 1), addDays(today, 1)),
+  packsExpiringSoon(ctx, 14),
+  listMembers(ctx),
+]);
+const memberRows = members.filter((m) => m.role === "member");
+const lowCredits = memberRows.filter((m) => m.activePacks > 0 && m.available <= 2);
+const noPlan = memberRows.filter((m) => m.activePacks === 0);
+const expiringWithCredits = expiring.filter((p) => p.available > 0);
+const base = `/s/${ctx.slug}/admin`;
+const now = new Date();
 ---
 
-<Base title={studio.name}>
-  <div class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-semibold">{studio.name}</h1>
-      <p class="text-sm capitalize text-stone-500">
-        You are {studio.role === "owner" ? "the owner" : `a ${studio.role}`} · {studio.timezone}
-      </p>
-    </div>
-    {staff ? (
-      <section class="grid gap-3 sm:grid-cols-2">
-        {["Members", "Calendars", "Class templates", "Plans", "Settings"].map((label) => (
-          <div class="rounded border border-dashed border-stone-300 bg-white px-4 py-6 text-stone-500">
-            {label} — coming in Phase 3
-          </div>
-        ))}
-      </section>
-    ) : (
-      <section class="grid gap-3 sm:grid-cols-2">
-        {["Book a class", "My plans", "Progress"].map((label) => (
-          <div class="rounded border border-dashed border-stone-300 bg-white px-4 py-6 text-stone-500">
-            {label} — coming in Phase 3
-          </div>
-        ))}
-      </section>
-    )}
+<Studio title="Today">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold">{formatDayLong(today)}</h1>
+    <p class="muted">
+      {plural(todays.length, "class", "classes")} today · {plural(memberRows.length, "member")}
+    </p>
   </div>
-</Base>
+
+  <div class="mb-6 grid gap-3 sm:grid-cols-3">
+    <a href={`${base}/members?filter=expiring`} class="card p-4 hover:border-stone-400">
+      <div class="text-3xl font-semibold tabular-nums">{expiringWithCredits.length}</div>
+      <div class="muted">plans expiring in 14 days with credits left</div>
+    </a>
+    <a href={`${base}/members?filter=low`} class="card p-4 hover:border-stone-400">
+      <div class="text-3xl font-semibold tabular-nums">{lowCredits.length}</div>
+      <div class="muted">members with 2 or fewer credits</div>
+    </a>
+    <a href={`${base}/members?filter=none`} class="card p-4 hover:border-stone-400">
+      <div class="text-3xl font-semibold tabular-nums">{noPlan.length}</div>
+      <div class="muted">members without an active plan</div>
+    </a>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+    <div class="space-y-6">
+      <Section title="Today's classes">
+        {todays.length === 0 && <p class="muted">No classes today.</p>}
+        <ul class="space-y-2">
+          {todays.map((s) => (
+            <li>
+              <a
+                href={`${base}/sessions/${s.id}`}
+                class:list={[
+                  "flex items-center justify-between rounded-lg border-l-4 p-3 hover:brightness-95",
+                  s.endsAt < now && "opacity-60",
+                ]}
+                style={`border-left-color:${s.color};background:${s.color}10`}
+              >
+                <span>
+                  <span class="font-semibold">{formatTimeRange(s.startsAt, s.endsAt, ctx.timezone)}</span>
+                  <span class="ml-2 font-medium" style={`color:${s.color}`}>
+                    {s.icon} {s.templateName}
+                  </span>
+                  <span class="muted block">
+                    {s.calendarName}
+                    {s.coachName && ` · ${s.coachName}`}
+                  </span>
+                </span>
+                <span class="text-right">
+                  <span class="text-lg font-semibold tabular-nums">
+                    {s.booked}/{s.capacity}
+                  </span>
+                  <span class="muted block text-xs">
+                    {s.endsAt < now ? "done" : s.startsAt < now ? "in progress" : "booked"}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+        {tomorrow.length > 0 && (
+          <p class="muted mt-4">
+            Tomorrow:{" "}
+            {tomorrow
+              .map(
+                (s) =>
+                  `${formatTimeRange(s.startsAt, s.endsAt, ctx.timezone).split("–")[0]} ${s.templateName} (${s.booked}/${s.capacity})`,
+              )
+              .join(" · ")}
+          </p>
+        )}
+      </Section>
+    </div>
+
+    <div class="space-y-6">
+      <Section title="Expiring soon" description="Plans ending in the next 14 days.">
+        {expiring.length === 0 && <p class="muted">Nothing expiring.</p>}
+        <ul class="space-y-2">
+          {expiring.map((p) => {
+            const days = daysBetween(today, p.expiresOn!);
+            return (
+              <li class="flex items-center justify-between gap-2 text-sm">
+                <a href={`${base}/members/${p.memberId}`} class="hover:underline">
+                  <span class="font-medium">{p.memberName}</span>
+                  <span class="muted block text-xs">
+                    {p.name} · {days === 0 ? "last day today" : `ends ${formatDate(p.expiresOn!)}`}
+                  </span>
+                </a>
+                <span
+                  class:list={[
+                    "badge",
+                    p.available > 0 ? "bg-amber-100 text-amber-800" : "bg-stone-100 text-stone-600",
+                  ]}
+                >
+                  {plural(p.available, "credit")} left
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
+      <Section title="Running low">
+        {lowCredits.length === 0 && <p class="muted">Everyone has credits.</p>}
+        <ul class="space-y-2">
+          {lowCredits.map((m) => (
+            <li class="flex items-center justify-between text-sm">
+              <a href={`${base}/members/${m.userId}`} class="font-medium hover:underline">
+                {m.name}
+              </a>
+              <span class="badge bg-red-50 text-red-700">{plural(m.available, "credit")}</span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </div>
+  </div>
+</Studio>

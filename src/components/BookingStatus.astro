@@ -1,0 +1,31 @@
+---
+interface Props {
+  status: "booked" | "cancelled" | "late_cancelled";
+  charged: boolean;
+  noShow: boolean;
+  settled: boolean;
+  sessionCancelled?: boolean;
+}
+const { status, charged, noShow, settled, sessionCancelled = false } = Astro.props;
+let label: string;
+let cls: string;
+if (sessionCancelled) [label, cls] = ["Class cancelled", "bg-stone-100 text-stone-600"];
+else if (status === "cancelled") [label, cls] = ["Cancelled", "bg-stone-100 text-stone-600"];
+else if (status === "late_cancelled") [label, cls] = ["Late cancel", "bg-amber-100 text-amber-800"];
+else if (!settled) [label, cls] = ["Booked", "bg-sky-100 text-sky-800"];
+else if (noShow) [label, cls] = ["No-show", "bg-amber-100 text-amber-800"];
+else [label, cls] = ["Attended", "bg-emerald-100 text-emerald-800"];
+const creditNote =
+  status === "cancelled" || sessionCancelled
+    ? "credit returned"
+    : !charged
+      ? "credit waived"
+      : settled || status === "late_cancelled"
+        ? "credit used"
+        : "credit reserved";
+---
+
+<span class="inline-flex flex-wrap items-center gap-1.5">
+  <span class:list={["badge", cls]}>{label}</span>
+  <span class="text-xs text-stone-500">{creditNote}</span>
+</span>

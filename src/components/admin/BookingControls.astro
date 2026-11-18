@@ -1,0 +1,65 @@
+---
+/** Coach controls for one booking: no-show, whether the credit is used, remove, move. */
+interface Props {
+  bookingId: string;
+  status: "booked" | "cancelled" | "late_cancelled";
+  charged: boolean;
+  noShow: boolean;
+  started: boolean;
+  moveTargets?: { id: string; label: string }[];
+}
+const { bookingId, status, charged, noShow, started, moveTargets = [] } = Astro.props;
+---
+
+<div class="flex flex-wrap items-center justify-end gap-1.5">
+  {status === "booked" && started && (
+    <form method="post">
+      <input type="hidden" name="_action" value="noShow" />
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <input type="hidden" name="value" value={noShow ? "0" : "1"} />
+      <button
+        class:list={["btn btn-sm", noShow && "border-amber-300 bg-amber-50 text-amber-800"]}
+        title="Mark whether the member came"
+      >
+        {noShow ? "No-show ✓" : "Mark no-show"}
+      </button>
+    </form>
+  )}
+  {status !== "cancelled" && (started || status === "late_cancelled") && (
+    <form method="post">
+      <input type="hidden" name="_action" value="charge" />
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <input type="hidden" name="value" value={charged ? "0" : "1"} />
+      <button class="btn btn-sm" title={charged ? "Give the credit back" : "Use the credit after all"}>
+        {charged ? "Waive credit" : "Charge credit"}
+      </button>
+    </form>
+  )}
+  {status === "booked" && !started && moveTargets.length > 0 && (
+    <details class="relative">
+      <summary class="btn btn-sm list-none">Move…</summary>
+      <form method="post" class="card absolute right-0 z-10 mt-1 w-72 space-y-2 p-3">
+        <input type="hidden" name="_action" value="move" />
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <select name="toSessionId" class="input">
+          {moveTargets.map((t) => (
+            <option value={t.id}>{t.label}</option>
+          ))}
+        </select>
+        <button class="btn btn-primary w-full">Move booking</button>
+      </form>
+    </details>
+  )}
+  {status !== "cancelled" && (
+    <form method="post">
+      <input type="hidden" name="_action" value="remove" />
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <button
+        class="btn btn-sm btn-danger"
+        onclick="return confirm('Remove this booking? The credit goes back to the member.')"
+      >
+        Remove
+      </button>
+    </form>
+  )}
+</div>
