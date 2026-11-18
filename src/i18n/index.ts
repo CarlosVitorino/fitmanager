@@ -16,8 +16,10 @@ import errors from "./messages/errors";
 import booking from "./messages/booking";
 import members from "./messages/members";
 import profile from "./messages/profile";
+import site from "./messages/site";
+import demo from "./messages/demo";
 
-const namespaces = { common, nav, setup, auth, errors, booking, members, profile };
+const namespaces = { common, nav, setup, auth, errors, booking, members, profile, site, demo };
 
 type Namespaces = typeof namespaces;
 export type Messages = { [N in keyof Namespaces]: Namespaces[N]["en"] };

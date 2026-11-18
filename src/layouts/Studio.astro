@@ -6,6 +6,8 @@ import Flash from "../components/Flash.astro";
 import LanguageMenu from "../components/LanguageMenu.astro";
 import { getLocale, t } from "../i18n";
 import { isStaff } from "../server/authz";
+import { formatTime } from "../lib/format";
+import { FlaskConical } from "@lucide/astro";
 
 interface Props {
   title: string;
@@ -25,7 +27,9 @@ const setup = [
   `${base}/admin/classes`,
   `${base}/admin/calendars`,
   `${base}/admin/settings`,
+  `${base}/admin/page`,
 ];
+const demo = Astro.locals.demo;
 
 const nav = staff
   ? [
@@ -65,6 +69,29 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
     <title>{title} · {studio.name}</title>
   </head>
   <body class="min-h-screen font-sans text-stone-900 antialiased">
+    {demo && (
+      <div class="bg-amber-100 text-amber-950">
+        <div class:list={["mx-auto flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-sm", width]}>
+          <FlaskConical size={16} class="shrink-0 text-amber-700" />
+          <p class="min-w-0 flex-[1_1_14rem]">
+            {t("site.demo.banner")}{" "}
+            {demo.expiresAt && (
+              <span class="text-amber-800">
+                {t("site.demo.expires", { time: formatTime(demo.expiresAt, studio.timezone) })}
+              </span>
+            )}
+          </p>
+          <form method="post" action="/logout" class="flex items-center gap-2">
+            <button name="next" value="/signup" class="font-medium underline underline-offset-2 hover:text-amber-700">
+              {t("site.demo.createOwn")}
+            </button>
+            <button class="rounded-lg bg-amber-950 px-3 py-1 font-medium text-amber-50 hover:bg-amber-800">
+              {t("site.demo.end")}
+            </button>
+          </form>
+        </div>
+      </div>
+    )}
     <header class="sticky top-0 z-40 border-b border-stone-200/80 bg-white/90 backdrop-blur">
       <div class:list={["mx-auto flex h-14 items-center gap-6 px-4", width]}>
         <a href={staff ? base : `${base}/me`} class="flex shrink-0 items-center gap-2.5">

@@ -7,7 +7,18 @@ import { auth } from "../lib/auth";
 import { seedStudioDefaults } from "./catalog";
 import { badRequest } from "./errors";
 
-export const RESERVED_SLUGS = new Set(["api", "admin", "login", "logout", "signup", "studios", "s", "new", "settings"]);
+export const RESERVED_SLUGS = new Set([
+  "api",
+  "admin",
+  "login",
+  "logout",
+  "signup",
+  "studios",
+  "s",
+  "new",
+  "settings",
+  "demo",
+]);
 
 export const createStudioInput = z.object({
   name: z.string().trim().min(2, msg("errors.nameTooShort")).max(80),
@@ -18,7 +29,7 @@ export const createStudioInput = z.object({
     .min(3, msg("errors.slugLength"))
     .max(40)
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, msg("errors.slugChars"))
-    .refine((s) => !RESERVED_SLUGS.has(s), msg("errors.slugReserved")),
+    .refine((s) => !RESERVED_SLUGS.has(s) && !s.startsWith("demo-"), msg("errors.slugReserved")),
   timezone: z.string().refine(isValidTimezone, msg("errors.unknownTimezone")),
 });
 

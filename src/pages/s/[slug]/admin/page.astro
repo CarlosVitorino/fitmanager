@@ -1,0 +1,150 @@
+---
+import { AtSign, ExternalLink, Eye, Globe, Mail, MapPin, Phone, Type } from "@lucide/astro";
+import RichText from "../../../../components/RichText.astro";
+import Section from "../../../../components/Section.astro";
+import Setup from "../../../../layouts/Setup.astro";
+import { t } from "../../../../i18n";
+import { bool, optStr, str } from "../../../../server/actions";
+import { handleActions } from "../../../../server/actions";
+import { getSettings } from "../../../../server/members";
+import { requireCapability } from "../../../../server/studio-context";
+import { getStudioPage, saveStudioPage, studioPageInput } from "../../../../server/studio-page";
+
+const ctx = Astro.locals.studio!;
+requireCapability(ctx, "studio:settings");
+
+const result = await handleActions(Astro, {
+  save: async (f) => {
+    await saveStudioPage(
+      ctx,
+      studioPageInput.parse({
+        tagline: str(f, "tagline"),
+        about: optStr(f, "about"),
+        address: str(f, "address"),
+        phone: str(f, "phone"),
+        email: str(f, "email"),
+        website: str(f, "website"),
+        instagram: str(f, "instagram"),
+        showSchedule: bool(f, "showSchedule"),
+        showPlans: bool(f, "showPlans"),
+      }),
+    );
+    return t("site.editor.saved");
+  },
+});
+if (result instanceof Response) return result;
+
+const [page, settings] = await Promise.all([getStudioPage(ctx.studioId), getSettings(ctx)]);
+const previewUrl = `/join/${ctx.slug}/${settings.joinCode}`;
+const toggles = [
+  ["showSchedule", page.showSchedule, t("site.editor.showSchedule"), t("site.editor.showScheduleHint")],
+  ["showPlans", page.showPlans, t("site.editor.showPlans"), t("site.editor.showPlansHint")],
+] as const;
+---
+
+<Setup title={t("site.editor.title")} subtitle={t("site.editor.subtitle")} flash={result.flash} error={result.error}>
+  <div class="max-w-3xl">
+    <div class="card mb-6 flex flex-wrap items-center justify-between gap-3 p-4">
+      <p class="flex items-center gap-2.5 text-sm text-stone-600">
+        <Eye size={18} class="shrink-0 text-stone-400" />
+        {t("site.editor.previewHint")}
+      </p>
+      <a href={previewUrl} target="_blank" rel="noopener" class="btn btn-sm">
+        {t("site.editor.preview")}
+        <ExternalLink size={14} />
+      </a>
+    </div>
+
+    <form method="post" class="space-y-6">
+      <input type="hidden" name="_action" value="save" />
+
+      <Section title={t("site.editor.intro")}>
+        <Type slot="icon" size={18} />
+        <div class="space-y-4">
+          <label class="block space-y-1">
+            <span class="label">{t("site.editor.tagline")}</span>
+            <input
+              name="tagline"
+              maxlength="140"
+              class="input"
+              value={page.tagline ?? ""}
+              placeholder={t("site.editor.taglinePlaceholder")}
+            />
+            <span class="block text-xs text-stone-500">{t("site.editor.taglineHint")}</span>
+          </label>
+          <div class="space-y-1">
+            <span class="label">{t("site.editor.about")}</span>
+            <RichText
+              name="about"
+              value={page.about}
+              placeholder={t("site.editor.aboutPlaceholder")}
+              minHeight={10}
+              ariaLabel={t("site.editor.about")}
+            />
+          </div>
+        </div>
+      </Section>
+
+      <Section title={t("site.editor.contact")}>
+        <MapPin slot="icon" size={18} />
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="block space-y-1 sm:col-span-2">
+            <span class="label">{t("site.editor.address")}</span>
+            <input name="address" maxlength="200" class="input" value={page.address ?? ""} autocomplete="off" />
+          </label>
+          <label class="block space-y-1">
+            <span class="label flex items-center gap-1.5">
+              <Phone size={13} /> {t("site.editor.phone")}
+            </span>
+            <input name="phone" type="tel" maxlength="40" class="input" value={page.phone ?? ""} />
+          </label>
+          <label class="block space-y-1">
+            <span class="label flex items-center gap-1.5">
+              <Mail size={13} /> {t("site.editor.email")}
+            </span>
+            <input name="email" type="email" maxlength="120" class="input" value={page.email ?? ""} />
+          </label>
+          <label class="block space-y-1">
+            <span class="label flex items-center gap-1.5">
+              <Globe size={13} /> {t("site.editor.website")}
+            </span>
+            <input
+              name="website"
+              maxlength="200"
+              class="input"
+              value={page.website ?? ""}
+              placeholder="www.example.com"
+            />
+          </label>
+          <label class="block space-y-1">
+            <span class="label flex items-center gap-1.5">
+              <AtSign size={13} /> {t("site.editor.instagram")}
+            </span>
+            <input name="instagram" maxlength="60" class="input" value={page.instagram ?? ""} />
+            <span class="block text-xs text-stone-500">{t("site.editor.instagramHint")}</span>
+          </label>
+        </div>
+      </Section>
+
+      <Section title={t("site.editor.show")}>
+        <Eye slot="icon" size={18} />
+        <div class="space-y-3">
+          {toggles.map(([name, checked, label, hint]) => (
+            <label class="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" name={name} checked={checked} class="peer sr-only" />
+              <span class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-stone-300 transition peer-checked:bg-stone-900 peer-focus-visible:ring-2 peer-focus-visible:ring-stone-400 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-4" />
+              <span>
+                <span class="block text-sm font-medium">{label}</span>
+                <span class="block text-xs text-stone-500">{hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </Section>
+
+      <div class="sticky bottom-4 z-10 flex justify-end">
+        <button class="btn btn-primary shadow-lg">{t("site.editor.save")}</button>
+      </div>
+    </form>
+  </div>
+</Setup>

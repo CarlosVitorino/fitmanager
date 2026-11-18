@@ -7,8 +7,10 @@ import { getLocale, t } from "../i18n";
 interface Props {
   title: string;
   narrow?: boolean;
+  wide?: boolean;
 }
-const { title, narrow = false } = Astro.props;
+const { title, narrow = false, wide = false } = Astro.props;
+const width = wide ? "max-w-6xl" : "max-w-5xl";
 const { user } = Astro.locals;
 ---
 
@@ -21,7 +23,7 @@ const { user } = Astro.locals;
   </head>
   <body class="min-h-screen font-sans text-stone-900 antialiased">
     <header class="border-b border-stone-200/80 bg-white/90">
-      <nav class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+      <nav class:list={["mx-auto flex h-14 items-center", width, " justify-between gap-4 px-4"]}>
         <a href="/" class="flex items-center gap-2.5 font-semibold tracking-tight">
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-sm font-bold text-white">
             F
@@ -44,14 +46,19 @@ const { user } = Astro.locals;
               </form>
             </>
           ) : (
-            <a href="/login" class="rounded-lg px-3 py-1.5 font-medium hover:bg-stone-100">
-              {t("common.logIn")}
-            </a>
+            <>
+              <a href="/login" class="rounded-lg px-3 py-1.5 font-medium hover:bg-stone-100">
+                {t("common.logIn")}
+              </a>
+              <a href="/signup" class="btn btn-sm btn-primary">
+                {t("site.home.signUp")}
+              </a>
+            </>
           )}
         </div>
       </nav>
     </header>
-    <main class:list={["mx-auto px-4", narrow ? "max-w-md py-12" : "max-w-5xl py-10"]}>
+    <main class:list={["mx-auto px-4", narrow ? "max-w-md py-12" : `${width} py-10`]}>
       <slot />
     </main>
   </body>

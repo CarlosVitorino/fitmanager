@@ -12,12 +12,13 @@ import { can } from "../../../../server/authz";
 import { listCalendars, listPackTypes, listTemplates } from "../../../../server/catalog";
 import { validityLabel } from "../../../../server/labels";
 import { validityOf } from "../../../../server/packs";
+import { getStudioPage } from "../../../../server/studio-page";
 
 const ctx = Astro.locals.studio!;
 const base = `/s/${ctx.slug}/admin`;
 const owner = can(ctx.role, "studio:settings");
 const today = localDateOf(new Date(), ctx.timezone);
-const [plans, templates, calendars, slotCounts, [memberCount]] = await Promise.all([
+const [plans, templates, calendars, slotCounts, [memberCount], page] = await Promise.all([
   listPackTypes(ctx),
   listTemplates(ctx),
   listCalendars(ctx),
@@ -30,6 +31,7 @@ const [plans, templates, calendars, slotCounts, [memberCount]] = await Promise.a
     .select({ n: sql<number>`count(*)::int` })
     .from(member)
     .where(and(eq(member.organizationId, ctx.studioId), eq(member.role, "member"))),
+  getStudioPage(ctx.studioId),
 ]);
 const slotsBy = new Map(slotCounts.map((s) => [s.calendarId, s.n]));
 const totalSlots = slotCounts.reduce((n, s) => n + s.n, 0);
@@ -63,6 +65,13 @@ const steps = [
     href: `${base}/settings`,
     show: owner,
     neutral: true,
+  },
+  {
+    done: Boolean(page.tagline || page.about),
+    title: t("site.editor.step"),
+    hint: t("site.editor.stepHint"),
+    href: `${base}/page`,
+    show: owner,
   },
   {
     done: (memberCount?.n ?? 0) > 0,

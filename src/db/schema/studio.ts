@@ -403,3 +403,39 @@ export const auditLog = pgTable(
   },
   (t) => [index().on(t.studioId, t.createdAt), index().on(t.studioId, t.memberId)],
 );
+
+/**
+ * The public studio page people see when they open the coach's invite link. Everything is optional;
+ * an empty page still shows the studio name, the weekly classes and the plans.
+ */
+export const studioPage = pgTable("studio_page", {
+  studioId: text()
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  tagline: text(),
+  /** Sanitized HTML from the rich text editor. */
+  about: text(),
+  address: text(),
+  phone: text(),
+  email: text(),
+  website: text(),
+  instagram: text(),
+  showSchedule: boolean().notNull().default(true),
+  showPlans: boolean().notNull().default(true),
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  updatedBy: userRef(),
+});
+
+/**
+ * A throwaway studio built for one visitor of the public demo. Its users have addresses ending in
+ * `.<token>@demo.fitmanager.invalid`; the studio and those users are deleted when the visitor logs
+ * out or the sandbox expires, whichever comes first.
+ */
+export const demoSandbox = pgTable("demo_sandbox", {
+  studioId: text()
+    .primaryKey()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  token: text().notNull().unique(),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+  createdAt: createdAt(),
+});

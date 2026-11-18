@@ -10,6 +10,10 @@ const { db } = await import("../src/db/client");
 const { studioSettings } = await import("../src/db/schema");
 const { settleStudio } = await import("../src/server/settlement");
 const { ensureSessions } = await import("../src/server/schedule");
+const { removeExpiredDemos } = await import("../src/server/demo");
+
+const removed = await removeExpiredDemos();
+if (removed) console.log(`Removed ${removed} expired demo studios.`);
 
 const studios = await db
   .select({ studioId: studioSettings.studioId, timezone: studioSettings.timezone })

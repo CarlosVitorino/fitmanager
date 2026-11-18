@@ -1,8 +1,21 @@
 ---
-import { ChevronRight } from "@lucide/astro";
+import {
+  CalendarCheck,
+  ChevronRight,
+  ClipboardCheck,
+  Flame,
+  Languages,
+  LineChart,
+  ShieldCheck,
+  Ticket,
+  UserX,
+} from "@lucide/astro";
+import Flash from "../components/Flash.astro";
 import Base from "../layouts/Base.astro";
 import { db } from "../db/client";
+import { addDays } from "../domain/dates";
 import { t } from "../i18n";
+import { formatDate, formatDay } from "../lib/format";
 import { listUserStudios } from "../server/studio-context";
 
 const { user } = Astro.locals;
@@ -10,9 +23,32 @@ const studios = user ? await listUserStudios(db, user.id) : [];
 if (user && studios.length === 1) return Astro.redirect(`/s/${studios[0]!.slug}`);
 const roleLabel = (r: string) =>
   r === "owner" ? t("auth.roleOwner") : r === "coach" ? t("auth.roleCoach") : t("auth.roleMember");
+
+const demoState = Astro.url.searchParams.get("demo");
+const notice = demoState === "ended" ? t("site.demo.ended") : null;
+const problem = demoState === "busy" ? t("site.demo.busy") : demoState === "failed" ? t("site.demo.failed") : null;
+
+const today = new Date().toISOString().slice(0, 10);
+const features = [
+  { icon: Ticket, title: t("site.home.features.plansTitle"), text: t("site.home.features.plansText") },
+  { icon: CalendarCheck, title: t("site.home.features.bookingTitle"), text: t("site.home.features.bookingText") },
+  { icon: ShieldCheck, title: t("site.home.features.creditsTitle"), text: t("site.home.features.creditsText") },
+  { icon: UserX, title: t("site.home.features.noShowTitle"), text: t("site.home.features.noShowText") },
+  { icon: LineChart, title: t("site.home.features.profileTitle"), text: t("site.home.features.profileText") },
+  { icon: Languages, title: t("site.home.features.languagesTitle"), text: t("site.home.features.languagesText") },
+];
+const steps = [
+  [t("site.home.steps.oneTitle"), t("site.home.steps.oneText")],
+  [t("site.home.steps.twoTitle"), t("site.home.steps.twoText")],
+  [t("site.home.steps.threeTitle"), t("site.home.steps.threeText")],
+];
+const mockClasses = [
+  { day: formatDay(addDays(today, 1)), time: "18:30", name: t("demo.upper"), icon: "💪", color: "#2563eb" },
+  { day: formatDay(addDays(today, 3)), time: "07:00", name: t("demo.hiit"), icon: "🔥", color: "#ea580c" },
+];
 ---
 
-<Base title={t("common.home")}>
+<Base title={t("common.home")} wide={!user}>
   {user ? (
     <div class="mx-auto max-w-lg space-y-6">
       <h1 class="text-2xl font-semibold tracking-tight">{t("auth.yourStudios")}</h1>
@@ -39,17 +75,140 @@ const roleLabel = (r: string) =>
       </a>
     </div>
   ) : (
-    <div class="max-w-2xl space-y-5 py-10">
-      <h1 class="text-4xl font-semibold tracking-tight">{t("auth.landingTitle")}</h1>
-      <p class="text-lg text-stone-600">{t("auth.landingText")}</p>
-      <div class="flex gap-3">
-        <a href="/signup" class="btn btn-primary px-5 py-2.5">
-          {t("auth.getStarted")}
-        </a>
-        <a href="/login" class="btn px-5 py-2.5">
-          {t("common.logIn")}
-        </a>
-      </div>
+    <div class="space-y-20 pb-10">
+      <Flash message={notice} error={problem} />
+
+      <section class="grid items-center gap-12 pt-4 lg:grid-cols-[1.15fr_1fr]">
+        <div class="space-y-6">
+          <p class="eyebrow">{t("site.home.eyebrow")}</p>
+          <h1 class="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{t("site.home.title")}</h1>
+          <p class="max-w-xl text-lg text-stone-600">{t("site.home.text")}</p>
+          <form method="post" action="/demo" class="flex flex-wrap gap-3" data-demo-form>
+            <button name="as" value="coach" class="btn btn-primary px-5 py-2.5">
+              <ClipboardCheck size={17} />
+              {t("site.home.demoCoach")}
+            </button>
+            <button name="as" value="member" class="btn px-5 py-2.5">
+              <CalendarCheck size={17} />
+              {t("site.home.demoMember")}
+            </button>
+          </form>
+          <p class="hidden text-sm font-medium text-stone-700" data-demo-wait aria-live="polite">
+            <span class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-stone-300 border-t-stone-900 align-[-1px]"></span>
+            {t("site.home.preparing")}
+          </p>
+          <p class="max-w-md text-sm text-stone-500">{t("site.home.demoNote")}</p>
+        </div>
+
+        <div class="relative" aria-hidden="true">
+          <div class="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-br from-amber-100 via-stone-100 to-emerald-100 blur-2xl"></div>
+          <div class="card space-y-4 p-5 shadow-xl">
+            <div class="flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-sm font-semibold text-rose-800">
+                MM
+              </span>
+              <div class="flex-1">
+                <p class="font-semibold">Mia Member</p>
+                <p class="flex items-center gap-1 text-xs text-amber-700">
+                  <Flame size={13} />
+                  {t("site.home.mock.streak")}
+                </p>
+              </div>
+            </div>
+            <div class="rounded-xl bg-stone-900 p-4 text-white">
+              <div class="flex items-baseline justify-between">
+                <p class="font-medium">{t("site.home.mock.plan")}</p>
+                <p class="text-xs text-stone-400">
+                  {t("site.home.mock.ends", { date: formatDate(addDays(today, 38)) })}
+                </p>
+              </div>
+              <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
+                <div class="h-full w-[60%] rounded-full bg-emerald-400"></div>
+              </div>
+              <p class="mt-2 text-sm text-stone-300">{t("site.home.mock.left", { left: 6, total: 10 })}</p>
+            </div>
+            <div>
+              <p class="eyebrow mb-2">{t("site.home.mock.next")}</p>
+              <ul class="space-y-2">
+                {mockClasses.map((c) => (
+                  <li
+                    class="flex items-center justify-between rounded-lg border-l-4 px-3 py-2 text-sm"
+                    style={`border-left-color:${c.color};background:${c.color}12`}
+                  >
+                    <span>
+                      <span class="font-semibold tabular-nums">
+                        {c.day} · {c.time}
+                      </span>
+                      <span class="ml-2">
+                        {c.icon} {c.name}
+                      </span>
+                    </span>
+                    <span class="badge bg-emerald-100 text-emerald-800">✓ {t("site.home.mock.booked")}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="mb-8 text-2xl font-semibold tracking-tight">{t("site.home.featuresTitle")}</h2>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f) => (
+            <div class="card p-5">
+              <span class="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100 text-stone-700">
+                <f.icon size={18} />
+              </span>
+              <h3 class="font-semibold">{f.title}</h3>
+              <p class="mt-1 text-sm text-stone-600">{f.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 class="mb-8 text-2xl font-semibold tracking-tight">{t("site.home.howTitle")}</h2>
+        <ol class="grid gap-6 md:grid-cols-3">
+          {steps.map(([title, text], i) => (
+            <li class="flex gap-4">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-white">
+                {i + 1}
+              </span>
+              <span>
+                <span class="block font-semibold">{title}</span>
+                <span class="mt-1 block text-sm text-stone-600">{text}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="rounded-3xl bg-stone-900 px-6 py-10 text-center text-white sm:px-10">
+        <h2 class="text-2xl font-semibold tracking-tight">{t("site.home.ctaTitle")}</h2>
+        <p class="mx-auto mt-2 max-w-lg text-stone-300">{t("site.home.ctaText")}</p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a
+            href="/signup?next=/studios/new"
+            class="btn border-white bg-white px-5 py-2.5 text-stone-900 hover:bg-stone-100"
+          >
+            {t("site.home.createStudio")}
+          </a>
+          <a href="/login" class="btn border-stone-600 bg-transparent px-5 py-2.5 text-white hover:bg-stone-800">
+            {t("common.logIn")}
+          </a>
+        </div>
+      </section>
     </div>
   )}
 </Base>
+
+<script>
+  // Building a demo takes a few seconds: show progress and stop double submits.
+  const form = document.querySelector<HTMLFormElement>("[data-demo-form]");
+  form?.addEventListener("submit", () => {
+    // Disabled after the browser has read the pressed button, so its value is still sent.
+    setTimeout(() => form.querySelectorAll("button").forEach((b) => (b.disabled = true)));
+    document.querySelector("[data-demo-wait]")?.classList.remove("hidden");
+  });
+</script>

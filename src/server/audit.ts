@@ -17,7 +17,8 @@ export type AuditAction =
   | "payment.recorded"
   | "payment.deleted"
   | "settings.updated"
-  | "invite.regenerated";
+  | "invite.regenerated"
+  | "studio_page.updated";
 
 export async function audit(
   tx: Executor,

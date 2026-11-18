@@ -4,6 +4,7 @@ import { organization } from "better-auth/plugins";
 import { adminAc, memberAc, ownerAc } from "better-auth/plugins/organization/access";
 import { db } from "../db/client";
 import * as schema from "../db/schema";
+import { mayCreateUser } from "../server/demo-guard";
 import { env } from "./env";
 
 /**
@@ -19,6 +20,14 @@ export const auth = betterAuth({
   secret: env().BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema, camelCase: false }),
   emailAndPassword: { enabled: true, minPasswordLength: 8 },
+  databaseHooks: {
+    user: {
+      create: {
+        // Returning false refuses the sign-up.
+        before: async (u) => (mayCreateUser(u.email) ? { data: u } : false),
+      },
+    },
+  },
   plugins: [
     organization({
       creatorRole: "owner",

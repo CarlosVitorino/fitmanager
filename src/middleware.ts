@@ -4,6 +4,7 @@ import { getLocale, runWithLocale, t } from "./i18n";
 import { isLocale } from "./i18n/locales";
 import { auth } from "./lib/auth";
 import { isStaff } from "./server/authz";
+import { demoExpiry, demoSlug, demoToken, removeExpiredDemos } from "./server/demo";
 import { HttpError } from "./server/errors";
 import { resolveLocale, saveUserLocale, setLangCookie } from "./server/locale";
 import { ensureSessions } from "./server/schedule";
@@ -26,11 +27,34 @@ async function refreshStudio(studioId: string, timezone: string) {
   await ensureSessions({ studioId, timezone });
 }
 
+/** Expired demo studios are removed every few minutes; the scheduled job does it too. */
+let lastDemoSweep = 0;
+function sweepDemos() {
+  if (Date.now() - lastDemoSweep < 5 * 60_000) return;
+  lastDemoSweep = Date.now();
+  removeExpiredDemos().catch((e) => console.error("Removing expired demos failed", e));
+}
+
+/** Demo visitors stay inside their own sandbox: no new studios, no joining others, no account changes. */
+const DEMO_BLOCKED = /^\/(studios\/new|join\/)/;
+const DEMO_AUTH_ALLOWED = /^\/api\/auth\/(get-session|sign-out)$/;
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const result = await auth.api.getSession({ headers: context.request.headers });
   const user = result?.user ?? null;
   context.locals.user = user;
   context.locals.session = result?.session ?? null;
+  sweepDemos();
+
+  const token = demoToken(user?.email);
+  if (token) {
+    const slug = demoSlug(token);
+    context.locals.demo = { token, slug, expiresAt: await demoExpiry(token) };
+    const path = context.url.pathname;
+    if (DEMO_BLOCKED.test(path)) return context.redirect(`/s/${slug}`);
+    if (path.startsWith("/api/auth/") && !DEMO_AUTH_ALLOWED.test(path))
+      return new Response("Not available in the demo", { status: 403 });
+  }
 
   // Language picked from the switcher: remember it and drop it from the address.
   const lang = context.url.searchParams.get("lang");

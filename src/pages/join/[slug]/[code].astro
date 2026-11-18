@@ -1,8 +1,20 @@
 ---
+/**
+ * The studio's public page, reached through the coach's invite link. Shows what the owner chose to
+ * publish (introduction, weekly classes, plans, contact) and lets a visitor sign up and join.
+ */
+import { AtSign, CalendarDays, Globe, Mail, MapPin, Phone, Ticket, Users } from "@lucide/astro";
 import Base from "../../../layouts/Base.astro";
-import { HttpError } from "../../../server/errors";
+import { db } from "../../../db/client";
 import { t } from "../../../i18n";
+import { weekdayNames } from "../../../i18n/weekdays";
+import { formatMoney } from "../../../lib/format";
+import { HttpError } from "../../../server/errors";
+import { validityLabel } from "../../../server/labels";
 import { findStudioByInvite, joinStudio } from "../../../server/members";
+import { validityOf } from "../../../server/packs";
+import { resolveStudioContext } from "../../../server/studio-context";
+import { publicStudioInfo, type PublicClass } from "../../../server/studio-page";
 
 const { slug, code } = Astro.params as { slug: string; code: string };
 const studio = await findStudioByInvite(slug, code);
@@ -19,47 +31,221 @@ if (Astro.request.method === "POST" && user && studio) {
   }
 }
 if (!studio) Astro.response.status = 404;
+const info = studio ? await publicStudioInfo(studio.id) : null;
+const alreadyIn = studio && user ? Boolean(await resolveStudioContext(db, slug, user.id)) : false;
 const here = encodeURIComponent(Astro.url.pathname);
+
+const days = weekdayNames("long");
+const byDay = new Map<number, PublicClass[]>();
+for (const c of info?.classes ?? []) byDay.set(c.weekday, [...(byDay.get(c.weekday) ?? []), c]);
+const endTime = (start: string, minutes: number) => {
+  const [h, m] = start.split(":").map(Number) as [number, number];
+  const total = (h * 60 + m + minutes) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+const page = info?.page;
+const hasContact = page && (page.address || page.phone || page.email || page.website || page.instagram);
+const websiteLabel = page?.website?.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 ---
 
-<Base title={studio ? t("auth.joinTitle", { studio: studio.name }) : t("auth.inviteInvalidTitle")} narrow>
-  <div class="card space-y-5 p-7 text-center">
-    {studio ? (
-      <>
-        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-900 text-2xl font-bold text-white">
-          {studio.name.slice(0, 1)}
-        </div>
-        <h1 class="text-2xl font-semibold">{t("auth.joinTitle", { studio: studio.name })}</h1>
-        <p class="text-stone-600">{t("auth.joinText")}</p>
-        {error && <p class="text-sm text-red-700">{error}</p>}
-        {user ? (
-          <form method="post">
-            <button class="w-full rounded bg-stone-900 px-4 py-2.5 font-medium text-white hover:bg-stone-700">
-              {t("auth.joinAs", { name: user.name })}
-            </button>
-          </form>
-        ) : (
-          <div class="space-y-2">
-            <a
-              href={`/signup?next=${here}`}
-              class="block rounded bg-stone-900 px-4 py-2.5 font-medium text-white hover:bg-stone-700"
-            >
-              {t("auth.createAccount")}
-            </a>
-            <a
-              href={`/login?next=${here}`}
-              class="block rounded border border-stone-300 bg-white px-4 py-2.5 hover:bg-stone-100"
-            >
-              {t("auth.haveOne")}
-            </a>
+<Base title={studio ? studio.name : t("auth.inviteInvalidTitle")} narrow={!studio}>
+  {studio && info && page ? (
+    <div class="space-y-8">
+      <header class="relative overflow-hidden rounded-3xl bg-stone-900 px-6 py-10 text-white sm:px-10 sm:py-14">
+        <div class="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-amber-400/20 blur-3xl" />
+        <div class="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div class="relative flex flex-col gap-6 sm:flex-row sm:items-center">
+          <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-stone-900">
+            {studio.name.slice(0, 1).toUpperCase()}
+          </span>
+          <div class="min-w-0">
+            <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{studio.name}</h1>
+            {page.tagline && <p class="mt-2 max-w-2xl text-lg text-stone-300">{page.tagline}</p>}
           </div>
-        )}
-      </>
-    ) : (
-      <>
-        <h1 class="text-2xl font-semibold">{t("auth.inviteInvalidTitle")}</h1>
-        <p class="text-stone-600">{t("auth.inviteInvalidText")}</p>
-      </>
-    )}
-  </div>
+        </div>
+      </header>
+
+      <div class="grid gap-8 lg:grid-cols-[1fr_20rem]">
+        <div class="min-w-0 space-y-8">
+          {page.about && (
+            <section>
+              <h2 class="eyebrow mb-3">{t("site.studio.about")}</h2>
+              <div class="fm-prose text-[15px] leading-relaxed text-stone-700" set:html={page.about} />
+            </section>
+          )}
+
+          {page.showSchedule && (
+            <section>
+              <h2 class="eyebrow mb-3 flex items-center gap-2">
+                <CalendarDays size={14} /> {t("site.studio.schedule")}
+              </h2>
+              {byDay.size === 0 ? (
+                <p class="muted">{t("site.studio.noClasses")}</p>
+              ) : (
+                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {[...byDay.entries()].map(([weekday, list]) => (
+                    <div class="card p-4">
+                      <h3 class="mb-2.5 text-sm font-semibold">{days[weekday - 1]}</h3>
+                      <ul class="space-y-2">
+                        {list.map((c) => (
+                          <li class="flex gap-3 rounded-lg p-2" style={`background:${c.color}12`}>
+                            <span class="w-1 shrink-0 rounded-full" style={`background:${c.color}`} />
+                            <span class="min-w-0 flex-1 text-sm">
+                              <span class="block text-xs font-semibold text-stone-600 tabular-nums">
+                                {c.startTime}–{endTime(c.startTime, c.durationMinutes)}
+                              </span>
+                              <span class="block font-medium">
+                                {c.icon} {c.name}
+                              </span>
+                              <span class="block text-xs text-stone-500">
+                                {c.capacity === 1
+                                  ? t("site.studio.private")
+                                  : t("site.studio.spots", { count: c.capacity })}
+                                {c.coachName && ` · ${t("site.studio.withCoach", { name: c.coachName })}`}
+                              </span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {page.showPlans && info.plans.length > 0 && (
+            <section>
+              <h2 class="eyebrow mb-3 flex items-center gap-2">
+                <Ticket size={14} /> {t("site.studio.plans")}
+              </h2>
+              <div class="grid gap-3 sm:grid-cols-3">
+                {info.plans.map((p) => (
+                  <div class="card flex flex-col p-5">
+                    <h3 class="font-semibold">{p.name}</h3>
+                    {p.description && <p class="mt-1 text-sm text-stone-500">{p.description}</p>}
+                    <p class="mt-4 text-2xl font-semibold tracking-tight">
+                      {p.priceCents === null ? (
+                        <span class="text-base font-medium text-stone-500">{t("site.studio.askPrice")}</span>
+                      ) : (
+                        formatMoney(p.priceCents, info.currency)
+                      )}
+                    </p>
+                    <p class="mt-auto pt-3 text-xs text-stone-500">
+                      {t("common.classes", { count: p.entries })} · {validityLabel(validityOf(p))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+
+        <aside class="space-y-5 lg:sticky lg:top-6 lg:self-start">
+          <div class="card space-y-4 p-6">
+            {alreadyIn ? (
+              <>
+                <p class="text-sm text-stone-600">{t("site.studio.alreadyMember", { studio: studio.name })}</p>
+                <a href={`/s/${slug}`} class="btn btn-primary w-full justify-center py-2.5">
+                  {t("site.studio.open")}
+                </a>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h2 class="text-lg font-semibold">{t("auth.joinTitle", { studio: studio.name })}</h2>
+                  <p class="mt-1 text-sm text-stone-600">{t("auth.joinText")}</p>
+                </div>
+                {error && <p class="text-sm text-red-700">{error}</p>}
+                {user ? (
+                  <form method="post">
+                    <button class="btn btn-primary w-full justify-center py-2.5">
+                      <Users size={16} /> {t("auth.joinAs", { name: user.name })}
+                    </button>
+                  </form>
+                ) : (
+                  <div class="space-y-2">
+                    <a href={`/signup?next=${here}`} class="btn btn-primary w-full justify-center py-2.5">
+                      {t("auth.createAccount")}
+                    </a>
+                    <a href={`/login?next=${here}`} class="btn w-full justify-center py-2.5">
+                      {t("auth.haveOne")}
+                    </a>
+                  </div>
+                )}
+                <p class="text-xs text-stone-500">{t("site.studio.joinHint")}</p>
+              </>
+            )}
+          </div>
+
+          {hasContact && (
+            <div class="card p-5">
+              <h2 class="eyebrow mb-3">{t("site.studio.contact")}</h2>
+              <ul class="space-y-3 text-sm">
+                {page.address && (
+                  <li class="flex gap-2.5">
+                    <MapPin size={16} class="mt-0.5 shrink-0 text-stone-400" />
+                    <span>
+                      {page.address}
+                      <a
+                        class="block text-xs text-stone-500 underline underline-offset-2 hover:text-stone-900"
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(page.address)}`}
+                        target="_blank"
+                        rel="noopener"
+                      >
+                        {t("site.studio.openMaps")}
+                      </a>
+                    </span>
+                  </li>
+                )}
+                {page.phone && (
+                  <li class="flex gap-2.5">
+                    <Phone size={16} class="mt-0.5 shrink-0 text-stone-400" />
+                    <a href={`tel:${page.phone.replace(/\s/g, "")}`} class="hover:underline">
+                      {page.phone}
+                    </a>
+                  </li>
+                )}
+                {page.email && (
+                  <li class="flex gap-2.5">
+                    <Mail size={16} class="mt-0.5 shrink-0 text-stone-400" />
+                    <a href={`mailto:${page.email}`} class="break-all hover:underline">
+                      {page.email}
+                    </a>
+                  </li>
+                )}
+                {page.website && (
+                  <li class="flex gap-2.5">
+                    <Globe size={16} class="mt-0.5 shrink-0 text-stone-400" />
+                    <a href={page.website} target="_blank" rel="noopener nofollow" class="break-all hover:underline">
+                      {websiteLabel}
+                    </a>
+                  </li>
+                )}
+                {page.instagram && (
+                  <li class="flex gap-2.5">
+                    <AtSign size={16} class="mt-0.5 shrink-0 text-stone-400" />
+                    <a
+                      href={`https://instagram.com/${page.instagram}`}
+                      target="_blank"
+                      rel="noopener nofollow"
+                      class="hover:underline"
+                    >
+                      {page.instagram}
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          <p class="px-1 text-xs text-stone-400">{t("site.studio.poweredBy", { app: t("common.appName") })}</p>
+        </aside>
+      </div>
+    </div>
+  ) : (
+    <div class="card space-y-3 p-7 text-center">
+      <h1 class="text-2xl font-semibold">{t("auth.inviteInvalidTitle")}</h1>
+      <p class="text-stone-600">{t("auth.inviteInvalidText")}</p>
+    </div>
+  )}
 </Base>

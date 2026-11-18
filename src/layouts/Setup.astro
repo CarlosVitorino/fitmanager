@@ -1,6 +1,6 @@
 ---
 /** Settings-style frame for every Setup page: side navigation on the left, the page on the right. */
-import { CalendarRange, LayoutGrid, Settings2, Tags, Ticket } from "@lucide/astro";
+import { CalendarRange, Globe, LayoutGrid, Settings2, Tags, Ticket } from "@lucide/astro";
 import Studio from "./Studio.astro";
 import { t } from "../i18n";
 import { can } from "../server/authz";
@@ -20,6 +20,7 @@ const items = [
   { href: `${base}/plans`, label: t("setup.nav.plans"), icon: Ticket, show: owner },
   { href: `${base}/classes`, label: t("setup.nav.classTypes"), icon: Tags, show: true },
   { href: `${base}/calendars`, label: t("setup.nav.calendars"), icon: CalendarRange, show: true },
+  { href: `${base}/page`, label: t("site.editor.nav"), icon: Globe, show: owner },
   { href: `${base}/settings`, label: t("setup.nav.settings"), icon: Settings2, show: owner },
 ].filter((i) => i.show);
 const path = Astro.url.pathname.replace(/\/$/, "");
