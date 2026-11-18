@@ -116,3 +116,12 @@ export const invitation = pgTable(
   },
   (t) => [index().on(t.organizationId), index().on(t.email)],
 );
+
+/** Per-person settings that aren't part of Better Auth, e.g. the chosen language. */
+export const userPreference = pgTable("user_preference", {
+  userId: text()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  locale: text(),
+  updatedAt: updatedAt(),
+});

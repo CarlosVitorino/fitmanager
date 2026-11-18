@@ -1,11 +1,16 @@
 import { defineMiddleware } from "astro:middleware";
 import { db } from "./db/client";
+import { getLocale, runWithLocale, t } from "./i18n";
+import { isLocale } from "./i18n/locales";
 import { auth } from "./lib/auth";
 import { isStaff } from "./server/authz";
 import { HttpError } from "./server/errors";
+import { resolveLocale, saveUserLocale, setLangCookie } from "./server/locale";
 import { ensureSessions } from "./server/schedule";
 import { settleStudio } from "./server/settlement";
-import { resolveStudioContext } from "./server/studio-context";
+import { resolveStudioContext, type StudioContext } from "./server/studio-context";
+
+const STUDIO_PATH = /^\/s\/([^/]+)(?:\/|$)/;
 
 /**
  * Keep each studio's credits and upcoming classes current before its pages render. Throttled per
@@ -21,45 +26,66 @@ async function refreshStudio(studioId: string, timezone: string) {
   await ensureSessions({ studioId, timezone });
 }
 
-const STUDIO_PATH = /^\/s\/([^/]+)(?:\/|$)/;
-
 export const onRequest = defineMiddleware(async (context, next) => {
   const result = await auth.api.getSession({ headers: context.request.headers });
-  context.locals.user = result?.user ?? null;
+  const user = result?.user ?? null;
+  context.locals.user = user;
   context.locals.session = result?.session ?? null;
 
-  const match = STUDIO_PATH.exec(context.url.pathname);
-  if (match) {
-    if (!context.locals.user) {
-      const nextUrl = encodeURIComponent(context.url.pathname + context.url.search);
-      return context.redirect(`/login?next=${nextUrl}`);
-    }
-    const studio = await resolveStudioContext(db, decodeURIComponent(match[1]!), context.locals.user.id);
-    // Not found and not a member look the same, so studio addresses can't be probed.
-    if (!studio) return new Response("Not found", { status: 404 });
-    // Admin pages are for staff; members get the same 404 as any unknown page.
-    if (/^\/s\/[^/]+\/admin(\/|$)/.test(context.url.pathname) && !isStaff(studio.role)) {
-      return new Response("Not found", { status: 404 });
-    }
-    context.locals.studio = studio;
-    await refreshStudio(studio.studioId, studio.timezone);
+  // Language picked from the switcher: remember it and drop it from the address.
+  const lang = context.url.searchParams.get("lang");
+  if (isLocale(lang) && context.request.method === "GET") {
+    setLangCookie(context.cookies, lang);
+    if (user) await saveUserLocale(user.id, lang);
+    const clean = new URL(context.url);
+    clean.searchParams.delete("lang");
+    return context.redirect(clean.pathname + clean.search, 303);
   }
 
-  try {
-    return await next();
-  } catch (e) {
-    // Permission and not-found errors thrown while rendering a page become a plain error page.
-    if (e instanceof HttpError) return errorPage(e.status, e.message);
-    throw e;
-  }
+  const match = STUDIO_PATH.exec(context.url.pathname);
+  let studio: StudioContext | null = null;
+  if (match && user) studio = await resolveStudioContext(db, decodeURIComponent(match[1]!), user.id);
+
+  const locale = await resolveLocale({
+    cookies: context.cookies,
+    acceptLanguage: context.request.headers.get("accept-language"),
+    userId: user?.id ?? null,
+    studioLocale: studio?.locale ?? null,
+  });
+  context.locals.locale = locale;
+
+  return runWithLocale(locale, async () => {
+    if (match) {
+      if (!user) {
+        const nextUrl = encodeURIComponent(context.url.pathname + context.url.search);
+        return context.redirect(`/login?next=${nextUrl}`);
+      }
+      // Not found and not a member look the same, so studio addresses can't be probed.
+      if (!studio) return errorPage(404, t("common.notFound"));
+      // Admin pages are for staff; members get the same 404 as any unknown page.
+      if (/^\/s\/[^/]+\/admin(\/|$)/.test(context.url.pathname) && !isStaff(studio.role)) {
+        return errorPage(404, t("common.notFound"));
+      }
+      context.locals.studio = studio;
+      await refreshStudio(studio.studioId, studio.timezone);
+    }
+
+    try {
+      return await next();
+    } catch (e) {
+      // Permission and not-found errors thrown while rendering a page become a plain error page.
+      if (e instanceof HttpError) return errorPage(e.status, e.message);
+      throw e;
+    }
+  });
 });
 
 function errorPage(status: number, message: string): Response {
-  const title = status === 404 ? "Not found" : status === 403 ? "Not allowed" : "Something's wrong";
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title></head>
-<body style="font-family:system-ui,sans-serif;background:#f5f5f4;color:#1c1917;display:grid;place-items:center;min-height:100vh;margin:0">
-<main style="text-align:center;max-width:28rem;padding:2rem"><h1 style="font-size:1.5rem">${title}</h1><p style="color:#57534e">${escapeHtml(message)}</p>
-<p><a href="javascript:history.back()" style="color:#1c1917">Go back</a> · <a href="/" style="color:#1c1917">Home</a></p></main></body></html>`;
+  const title = status === 404 ? t("common.notFound") : status === 403 ? t("common.notAllowed") : t("common.somethingWrong");
+  const html = `<!doctype html><html lang="${getLocale()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title></head>
+<body style="font-family:system-ui,sans-serif;background:#f6f5f3;color:#1c1917;display:grid;place-items:center;min-height:100vh;margin:0">
+<main style="text-align:center;max-width:28rem;padding:2rem"><h1 style="font-size:1.5rem">${escapeHtml(title)}</h1><p style="color:#57534e">${escapeHtml(message)}</p>
+<p><a href="javascript:history.back()" style="color:#1c1917">${escapeHtml(t("common.goBack"))}</a> · <a href="/" style="color:#1c1917">${escapeHtml(t("common.home"))}</a></p></main></body></html>`;
   return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 

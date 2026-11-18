@@ -1,6 +1,6 @@
 /**
- * Every date and time shown in the app goes through these helpers, so formats stay consistent and
- * instants always show in the studio's timezone (never the server's or the browser's).
+ * Every date, time and amount shown in the app goes through these helpers, so formats stay consistent,
+ * follow the request's language, and instants always show in the studio's timezone.
  *
  * Two kinds of value:
  *  - LocalDate "YYYY-MM-DD": a calendar day in the studio (class day, plan start/expiry, payment day).
@@ -9,18 +9,10 @@
  */
 import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
-import { enGB } from "date-fns/locale";
 import type { LocalDate } from "../domain/dates";
-
-/** Formats used across the app, in date-fns tokens. */
-export const FORMATS = {
-  day: "EEE d MMM", // Wed 18 Nov
-  dayLong: "EEEE d MMMM", // Wednesday 18 November
-  date: "d MMM yyyy", // 18 Nov 2026
-  dateWithDay: "EEE d MMM yyyy", // Wed 18 Nov 2026
-  monthYear: "MMMM yyyy", // November 2026
-  time: "HH:mm", // 18:30
-} as const;
+import { getLocale, t } from "../i18n";
+import { capitalizeFirst, DATE_FNS_LOCALES, DATE_PATTERNS, type DatePatterns } from "../i18n/dates";
+import { LOCALE_TAGS } from "../i18n/locales";
 
 const UTC = tz("UTC");
 
@@ -30,27 +22,31 @@ export function localDateToDate(date: LocalDate): Date {
   return new Date(Date.UTC(y, m - 1, d, 12));
 }
 
-function formatLocalDate(date: LocalDate, pattern: string): string {
-  return format(localDateToDate(date), pattern, { in: UTC, locale: enGB });
+function pattern(key: keyof DatePatterns) {
+  return DATE_PATTERNS[getLocale()][key];
 }
 
-function formatAt(instant: Date, timeZone: string, pattern: string): string {
-  return format(instant, pattern, { in: tz(timeZone), locale: enGB });
+function formatLocalDate(date: LocalDate, key: keyof DatePatterns): string {
+  return format(localDateToDate(date), pattern(key), { in: UTC, locale: DATE_FNS_LOCALES[getLocale()] });
+}
+
+function formatAt(instant: Date, timeZone: string, key: keyof DatePatterns): string {
+  return format(instant, pattern(key), { in: tz(timeZone), locale: DATE_FNS_LOCALES[getLocale()] });
 }
 
 /** "Wed 18 Nov" */
-export const formatDay = (date: LocalDate) => formatLocalDate(date, FORMATS.day);
+export const formatDay = (date: LocalDate) => capitalizeFirst(formatLocalDate(date, "day"));
 /** "Wednesday 18 November" */
-export const formatDayLong = (date: LocalDate) => formatLocalDate(date, FORMATS.dayLong);
+export const formatDayLong = (date: LocalDate) => capitalizeFirst(formatLocalDate(date, "dayLong"));
 /** "18 Nov 2026" */
-export const formatDate = (date: LocalDate) => formatLocalDate(date, FORMATS.date);
+export const formatDate = (date: LocalDate) => formatLocalDate(date, "date");
 /** "Wed 18 Nov 2026" */
-export const formatDateWithDay = (date: LocalDate) => formatLocalDate(date, FORMATS.dateWithDay);
+export const formatDateWithDay = (date: LocalDate) => capitalizeFirst(formatLocalDate(date, "dateWithDay"));
 /** "November 2026" */
-export const formatMonthYear = (date: LocalDate) => formatLocalDate(date, FORMATS.monthYear);
+export const formatMonthYear = (date: LocalDate) => capitalizeFirst(formatLocalDate(date, "monthYear"));
 
 /** "18:30" in the studio's timezone. */
-export const formatTime = (instant: Date, timeZone: string) => formatAt(instant, timeZone, FORMATS.time);
+export const formatTime = (instant: Date, timeZone: string) => formatAt(instant, timeZone, "time");
 
 /** "18:30–19:30" in the studio's timezone. */
 export function formatTimeRange(start: Date, end: Date, timeZone: string): string {
@@ -59,27 +55,29 @@ export function formatTimeRange(start: Date, end: Date, timeZone: string): strin
 
 /** "18 Nov 2026, 14:05" in the studio's timezone. */
 export function formatInstant(instant: Date, timeZone: string): string {
-  return formatAt(instant, timeZone, `${FORMATS.date}, ${FORMATS.time}`);
-}
-
-/** "18 Nov 2026" for the studio-local day of an instant. */
-export function formatInstantDate(instant: Date, timeZone: string): string {
-  return formatAt(instant, timeZone, FORMATS.date);
+  return `${formatAt(instant, timeZone, "date")}, ${formatAt(instant, timeZone, "time")}`;
 }
 
 export function formatMoney(cents: number | null | undefined, currency: string): string {
   if (cents === null || cents === undefined) return "—";
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(cents / 100);
+  return new Intl.NumberFormat(LOCALE_TAGS[getLocale()], { style: "currency", currency }).format(cents / 100);
 }
 
-export function plural(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`;
+export function formatNumber(n: number, maxDecimals = 1): string {
+  return new Intl.NumberFormat(LOCALE_TAGS[getLocale()], { maximumFractionDigits: maxDecimals }).format(n);
 }
 
+type Unit = "classes" | "credits" | "days" | "hours" | "minutes" | "weeks" | "months" | "members" | "spots" | "years";
+/** "3 classes", "1 Kurs"… */
+export function plural(n: number, unit: Unit): string {
+  return t(`common.${unit}`, { count: n });
+}
+
+/** "2 hours", "1 day" for cutoff windows. */
 export function formatMinutes(minutes: number): string {
-  if (minutes % 1440 === 0 && minutes >= 1440) return plural(minutes / 1440, "day");
-  if (minutes % 60 === 0) return plural(minutes / 60, "hour");
-  return plural(minutes, "minute");
+  if (minutes % 1440 === 0 && minutes >= 1440) return plural(minutes / 1440, "days");
+  if (minutes % 60 === 0) return plural(minutes / 60, "hours");
+  return plural(minutes, "minutes");
 }
 
 /** Initials for avatars. */
