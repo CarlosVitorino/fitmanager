@@ -1,0 +1,133 @@
+---
+import Section from "../../../../components/Section.astro";
+import Studio from "../../../../layouts/Studio.astro";
+import { formatMinutes } from "../../../../lib/format";
+import { handleActions, int, str } from "../../../../server/actions";
+import { getSettings, regenerateJoinCode, settingsInput, updateSettings } from "../../../../server/members";
+import { requireCapability } from "../../../../server/studio-context";
+
+const ctx = Astro.locals.studio!;
+requireCapability(ctx, "studio:settings");
+
+const result = await handleActions(Astro, {
+  save: async (f) => {
+    await updateSettings(
+      ctx,
+      settingsInput.parse({
+        name: str(f, "name"),
+        timezone: str(f, "timezone"),
+        currency: str(f, "currency").toUpperCase(),
+        bookingCutoffMinutes: Math.round(Number(str(f, "bookingCutoffHours")) * 60),
+        cancellationCutoffMinutes: int(f, "cancellationCutoffHours", "cancellation window") * 60,
+      }),
+    );
+    return "Settings saved.";
+  },
+  regenerate: async () => {
+    await regenerateJoinCode(ctx);
+    return "New invite link created. The old one no longer works.";
+  },
+});
+if (result instanceof Response) return result;
+
+const settings = await getSettings(ctx);
+const inviteUrl = new URL(`/join/${ctx.slug}/${settings.joinCode}`, Astro.url).toString();
+const timezones = Intl.supportedValuesOf("timeZone");
+---
+
+<Studio title="Settings" flash={result.flash} error={result.error}>
+  <a href={`/s/${ctx.slug}/admin/setup`} class="muted hover:underline">
+    ← Setup
+  </a>
+  <h1 class="mt-1 mb-6 text-2xl font-semibold">Settings</h1>
+  <div class="grid gap-6 lg:grid-cols-2">
+    <Section title="Booking rules" description="Apply to every class. Changes take effect immediately.">
+      <form method="post" class="space-y-4">
+        <input type="hidden" name="_action" value="save" />
+        <label class="block space-y-1">
+          <span class="label">Studio name</span>
+          <input name="name" required class="input" value={ctx.name} />
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block space-y-1">
+            <span class="label">Booking closes</span>
+            <div class="flex items-center gap-2">
+              <input
+                name="bookingCutoffHours"
+                type="number"
+                min="0"
+                step="0.5"
+                class="input"
+                value={settings.bookingCutoffMinutes / 60}
+              />
+              <span class="muted whitespace-nowrap">hours before</span>
+            </div>
+          </label>
+          <label class="block space-y-1">
+            <span class="label">Free cancellation until</span>
+            <div class="flex items-center gap-2">
+              <input
+                name="cancellationCutoffHours"
+                type="number"
+                min="0"
+                class="input"
+                value={settings.cancellationCutoffMinutes / 60}
+              />
+              <span class="muted whitespace-nowrap">hours before</span>
+            </div>
+          </label>
+        </div>
+        <p class="rounded-lg bg-stone-50 p-3 text-sm text-stone-600">
+          Members can book until {formatMinutes(settings.bookingCutoffMinutes)} before a class. Cancelling up to{" "}
+          {formatMinutes(settings.cancellationCutoffMinutes)} before returns the credit; later, the credit is used.
+          Credits are used automatically when the class starts, including no-shows. You can waive any of them from the
+          class or member page.
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block space-y-1">
+            <span class="label">Timezone</span>
+            <select name="timezone" class="input">
+              {timezones.map((tz) => (
+                <option value={tz} selected={tz === settings.timezone}>
+                  {tz}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label class="block space-y-1">
+            <span class="label">Currency</span>
+            <input name="currency" required maxlength="3" class="input uppercase" value={settings.currency} />
+          </label>
+        </div>
+        <button class="btn btn-primary">Save settings</button>
+      </form>
+    </Section>
+
+    <Section
+      title="Invite members"
+      description="Share this link. Anyone who opens it can create an account and join as a member."
+    >
+      <div class="flex gap-2">
+        <input readonly class="input font-mono text-xs" value={inviteUrl} id="invite" onclick="this.select()" />
+        <button
+          type="button"
+          class="btn"
+          onclick="navigator.clipboard.writeText(document.getElementById('invite').value);this.textContent='Copied'"
+        >
+          Copy
+        </button>
+      </div>
+      <form method="post" class="mt-4">
+        <button
+          class="btn btn-sm"
+          name="_action"
+          value="regenerate"
+          onclick="return confirm('Make a new link? The current one will stop working.')"
+        >
+          Make a new link
+        </button>
+        <span class="muted ml-2">if the link was shared somewhere it shouldn't be.</span>
+      </form>
+    </Section>
+  </div>
+</Studio>

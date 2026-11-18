@@ -1,0 +1,60 @@
+---
+import Studio from "../../../../layouts/Studio.astro";
+import { listCalendars, listPackTypes, listTemplates } from "../../../../server/catalog";
+import { can } from "../../../../server/authz";
+
+const ctx = Astro.locals.studio!;
+const base = `/s/${ctx.slug}/admin`;
+const [plans, templates, calendars] = await Promise.all([listPackTypes(ctx), listTemplates(ctx), listCalendars(ctx)]);
+const items = [
+  {
+    href: `${base}/plans`,
+    title: "Plans",
+    text: "What members can hold: single class, trimester, 10-class pack…",
+    count: plans.length,
+    icon: "🎟️",
+    owner: true,
+  },
+  {
+    href: `${base}/classes`,
+    title: "Class types",
+    text: "General class, Upper body, Legs day… with colour and icon.",
+    count: templates.length,
+    icon: "🏷️",
+  },
+  {
+    href: `${base}/calendars`,
+    title: "Calendars & weekly slots",
+    text: "Group and private calendars, and the classes that repeat each week.",
+    count: calendars.length,
+    icon: "🗓️",
+  },
+  {
+    href: `${base}/settings`,
+    title: "Settings",
+    text: "Booking and cancellation windows, timezone, currency, invite link.",
+    icon: "⚙️",
+    owner: true,
+  },
+].filter((i) => !i.owner || can(ctx.role, "studio:settings"));
+---
+
+<Studio title="Setup">
+  <h1 class="mb-6 text-2xl font-semibold">Setup</h1>
+  <div class="grid gap-4 sm:grid-cols-2">
+    {items.map((i) => (
+      <a href={i.href} class="card group flex gap-4 p-5 transition hover:border-stone-400">
+        <span class="text-2xl" aria-hidden="true">
+          {i.icon}
+        </span>
+        <span>
+          <span class="flex items-center gap-2 font-semibold group-hover:underline">
+            {i.title}
+            {i.count !== undefined && <span class="badge bg-stone-100 text-stone-600">{i.count}</span>}
+          </span>
+          <span class="muted mt-1 block">{i.text}</span>
+        </span>
+      </a>
+    ))}
+  </div>
+</Studio>

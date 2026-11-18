@@ -1,0 +1,68 @@
+---
+interface Props {
+  plan?: {
+    name: string;
+    description: string | null;
+    entries: number;
+    validityUnit: string | null;
+    validityAmount: number | null;
+    priceCents: number | null;
+  };
+  currency: string;
+}
+const { plan, currency } = Astro.props;
+const units = [
+  ["days", "days"],
+  ["weeks", "weeks"],
+  ["months", "months"],
+  ["never", "never expires"],
+] as const;
+---
+
+<label class="block space-y-1">
+  <span class="label">Name</span>
+  <input name="name" required class="input" value={plan?.name ?? ""} placeholder="e.g. 10-class pack" />
+</label>
+<label class="block space-y-1">
+  <span class="label">
+    Description <span class="font-normal text-stone-400">(members see this)</span>
+  </span>
+  <input name="description" class="input" value={plan?.description ?? ""} />
+</label>
+<div class="grid grid-cols-2 gap-3">
+  <label class="block space-y-1">
+    <span class="label">Classes</span>
+    <input name="entries" type="number" min="1" required class="input" value={plan?.entries ?? 10} />
+  </label>
+  <label class="block space-y-1">
+    <span class="label">Price ({currency})</span>
+    <input
+      name="price"
+      inputmode="decimal"
+      class="input"
+      placeholder="optional"
+      value={plan?.priceCents != null ? (plan.priceCents / 100).toFixed(2) : ""}
+    />
+  </label>
+</div>
+<div class="space-y-1">
+  <span class="label">Valid for</span>
+  <div class="grid grid-cols-2 gap-3">
+    <input
+      name="validityAmount"
+      type="number"
+      min="1"
+      class="input"
+      value={plan ? (plan.validityAmount ?? "") : 14}
+      aria-label="Duration"
+    />
+    <select name="validityUnit" class="input" aria-label="Unit">
+      {units.map(([v, l]) => (
+        <option value={v} selected={(plan ? (plan.validityUnit ?? "never") : "weeks") === v}>
+          {l}
+        </option>
+      ))}
+    </select>
+  </div>
+  <p class="text-xs text-stone-500">Counted from the plan's start day. Leave the number empty for “never expires”.</p>
+</div>

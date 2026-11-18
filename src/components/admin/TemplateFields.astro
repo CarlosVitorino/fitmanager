@@ -1,0 +1,57 @@
+---
+import { TEMPLATE_COLORS, TEMPLATE_ICONS } from "../../server/catalog";
+
+interface Props {
+  template?: { name: string; description: string | null; color: string; icon: string };
+  idPrefix: string;
+}
+const { template, idPrefix } = Astro.props;
+const color = template?.color ?? TEMPLATE_COLORS[1];
+const icon = template?.icon ?? TEMPLATE_ICONS[1];
+---
+
+<label class="block space-y-1">
+  <span class="label">Name</span>
+  <input name="name" required class="input" value={template?.name ?? ""} placeholder="e.g. Upper body" />
+</label>
+<label class="block space-y-1">
+  <span class="label">
+    Description <span class="font-normal text-stone-400">(shown when booking)</span>
+  </span>
+  <input name="description" class="input" value={template?.description ?? ""} />
+</label>
+<fieldset class="space-y-1">
+  <legend class="label">Colour</legend>
+  <div class="flex flex-wrap gap-2">
+    {TEMPLATE_COLORS.map((c) => (
+      <label class="cursor-pointer">
+        <input
+          type="radio"
+          name="color"
+          value={c}
+          checked={c === color}
+          class="peer sr-only"
+          id={`${idPrefix}-c-${c}`}
+        />
+        <span
+          class="block h-8 w-8 rounded-full ring-offset-2 peer-checked:ring-2 peer-checked:ring-stone-900 peer-focus-visible:ring-2"
+          style={`background:${c}`}
+          title={c}
+        />
+      </label>
+    ))}
+  </div>
+</fieldset>
+<fieldset class="space-y-1">
+  <legend class="label">Icon</legend>
+  <div class="flex flex-wrap gap-1.5">
+    {TEMPLATE_ICONS.map((i) => (
+      <label class="cursor-pointer">
+        <input type="radio" name="icon" value={i} checked={i === icon} class="peer sr-only" />
+        <span class="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-lg peer-checked:border-stone-900 peer-checked:bg-stone-100 peer-focus-visible:ring-2">
+          {i}
+        </span>
+      </label>
+    ))}
+  </div>
+</fieldset>

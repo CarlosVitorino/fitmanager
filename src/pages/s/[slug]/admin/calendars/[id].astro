@@ -1,0 +1,239 @@
+---
+import ClassBadge from "../../../../../components/ClassBadge.astro";
+import Studio from "../../../../../layouts/Studio.astro";
+import { localDateOf } from "../../../../../domain/dates";
+import { WEEKDAY_NAMES } from "../../../../../domain/schedule";
+import { formatDate, plural } from "../../../../../lib/format";
+import { handleActions, int, optStr, str } from "../../../../../server/actions";
+import {
+  archiveCalendar,
+  calendarInput,
+  getCalendar,
+  listTemplates,
+  saveCalendar,
+} from "../../../../../server/catalog";
+import { endSlot, listCoaches, listSlots, saveSlot, slotInput } from "../../../../../server/schedule";
+
+const ctx = Astro.locals.studio!;
+const calendar = await getCalendar(ctx, Astro.params.id!);
+const today = localDateOf(new Date(), ctx.timezone);
+
+const parseSlot = (f: FormData) =>
+  slotInput.parse({
+    calendarId: calendar.id,
+    templateId: str(f, "templateId"),
+    weekday: int(f, "weekday", "day"),
+    startTime: str(f, "startTime"),
+    durationMinutes: int(f, "durationMinutes", "duration"),
+    capacity: int(f, "capacity", "spots"),
+    coachId: optStr(f, "coachId"),
+    startsOn: str(f, "startsOn") || today,
+    endsOn: optStr(f, "endsOn"),
+  });
+
+const result = await handleActions(Astro, {
+  addSlot: async (f) => {
+    await saveSlot(ctx, parseSlot(f));
+    return "Weekly slot added. Its classes are now bookable.";
+  },
+  updateSlot: async (f) => {
+    await saveSlot(ctx, parseSlot(f), str(f, "id"));
+    return "Slot saved. Upcoming classes without bookings were updated.";
+  },
+  endSlot: async (f) => {
+    await endSlot(ctx, str(f, "id"));
+    return "Slot stopped. Classes people already booked stay on the calendar.";
+  },
+  rename: async (f) => {
+    await saveCalendar(
+      ctx,
+      calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }),
+      calendar.id,
+    );
+    return "Calendar saved.";
+  },
+  archive: async () => {
+    await archiveCalendar(ctx, calendar.id);
+    return Astro.redirect(`/s/${ctx.slug}/admin/calendars`, 303);
+  },
+});
+if (result instanceof Response) return result;
+
+const [slots, templates, coaches] = await Promise.all([
+  listSlots(ctx, calendar.id),
+  listTemplates(ctx),
+  listCoaches(ctx),
+]);
+const editId = Astro.url.searchParams.get("edit");
+const byDay = WEEKDAY_NAMES.map((name, i) => ({ name, slots: slots.filter((s) => s.slot.weekday === i + 1) }));
+type SlotRow = (typeof slots)[number]["slot"];
+const blank = {
+  weekday: 1,
+  startTime: "18:00",
+  durationMinutes: 60,
+  capacity: 12,
+  coachId: ctx.userId,
+  templateId: templates[0]?.id,
+  startsOn: today,
+  endsOn: null,
+} as Partial<SlotRow>;
+const editing = slots.find((s) => s.slot.id === editId)?.slot;
+const form = editing ?? blank;
+---
+
+<Studio title={calendar.name} flash={result.flash} error={result.error}>
+  <a href={`/s/${ctx.slug}/admin/calendars`} class="muted hover:underline">
+    ← Calendars
+  </a>
+  <div class="mt-1 mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">{calendar.name}</h1>
+      <p class="muted">Weekly slots repeat every week and become bookable classes 8 weeks ahead.</p>
+    </div>
+    <a href={`/s/${ctx.slug}/admin/calendar?calendar=${calendar.id}`} class="btn">
+      See this week's classes
+    </a>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+    <div class="card divide-y divide-stone-100">
+      {byDay.map((d) => (
+        <div class="flex gap-4 p-4">
+          <div class="w-24 shrink-0 pt-1 text-sm font-semibold text-stone-500">{d.name}</div>
+          <div class="flex flex-1 flex-wrap gap-2">
+            {d.slots.length === 0 && <span class="pt-1 text-sm text-stone-400">No classes</span>}
+            {d.slots.map(({ slot, template, coachName }) => (
+              <a
+                href={`?edit=${slot.id}`}
+                class:list={[
+                  "rounded-lg border border-l-4 px-3 py-2 text-sm hover:bg-stone-50",
+                  editId === slot.id ? "border-stone-900 bg-stone-50" : "border-stone-200",
+                ]}
+                style={`border-left-color:${template.color}`}
+              >
+                <div class="font-semibold">
+                  {slot.startTime} <span class="font-normal text-stone-500">· {slot.durationMinutes} min</span>
+                </div>
+                <ClassBadge name={template.name} color={template.color} icon={template.icon} size="sm" />
+                <div class="text-xs text-stone-500">
+                  {plural(slot.capacity, "spot")}
+                  {coachName && ` · ${coachName}`}
+                  {slot.startsOn > today && ` · from ${formatDate(slot.startsOn)}`}
+                  {slot.endsOn && ` · until ${formatDate(slot.endsOn)}`}
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="space-y-6">
+      <form method="post" class="card space-y-3 p-5">
+        <h2 class="h2">{editing ? "Edit weekly slot" : "Add a weekly slot"}</h2>
+        <input type="hidden" name="_action" value={editing ? "updateSlot" : "addSlot"} />
+        {editing && <input type="hidden" name="id" value={editing.id} />}
+        {editing && <input type="hidden" name="_redirect" value={Astro.url.pathname} />}
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block space-y-1">
+            <span class="label">Day</span>
+            <select name="weekday" class="input">
+              {WEEKDAY_NAMES.map((n, i) => (
+                <option value={i + 1} selected={form.weekday === i + 1}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label class="block space-y-1">
+            <span class="label">Starts at</span>
+            <input name="startTime" type="time" required class="input" value={form.startTime} />
+          </label>
+          <label class="block space-y-1">
+            <span class="label">Minutes</span>
+            <input name="durationMinutes" type="number" min="5" required class="input" value={form.durationMinutes} />
+          </label>
+          <label class="block space-y-1">
+            <span class="label">Spots</span>
+            <input name="capacity" type="number" min="1" required class="input" value={form.capacity} />
+          </label>
+        </div>
+        <label class="block space-y-1">
+          <span class="label">Class type</span>
+          <select name="templateId" class="input">
+            {templates.map((t) => (
+              <option value={t.id} selected={form.templateId === t.id}>
+                {t.icon} {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label class="block space-y-1">
+          <span class="label">Coach</span>
+          <select name="coachId" class="input">
+            <option value="">No coach shown</option>
+            {coaches.map((c) => (
+              <option value={c.id} selected={form.coachId === c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block space-y-1">
+            <span class="label">From</span>
+            <input name="startsOn" type="date" class="input" value={form.startsOn} />
+          </label>
+          <label class="block space-y-1">
+            <span class="label">
+              Until <span class="font-normal text-stone-400">(optional)</span>
+            </span>
+            <input name="endsOn" type="date" class="input" value={form.endsOn ?? ""} />
+          </label>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-primary flex-1">{editing ? "Save slot" : "Add slot"}</button>
+          {editing && (
+            <a href={Astro.url.pathname} class="btn">
+              Cancel
+            </a>
+          )}
+        </div>
+      </form>
+      {editing && (
+        <form method="post" class="card p-5">
+          <input type="hidden" name="id" value={editing.id} />
+          <p class="muted mb-3">Stop this slot from today. Classes people already booked stay on the calendar.</p>
+          <button class="btn btn-danger w-full" name="_action" value="endSlot">
+            Stop this weekly slot
+          </button>
+        </form>
+      )}
+      <details class="card p-5">
+        <summary class="cursor-pointer font-medium">Calendar details</summary>
+        <form method="post" class="mt-3 space-y-3">
+          <input type="hidden" name="_action" value="rename" />
+          <label class="block space-y-1">
+            <span class="label">Name</span>
+            <input name="name" required class="input" value={calendar.name} />
+          </label>
+          <label class="block space-y-1">
+            <span class="label">Description</span>
+            <input name="description" class="input" value={calendar.description ?? ""} />
+          </label>
+          <button class="btn w-full">Save</button>
+        </form>
+        <form method="post" class="mt-3">
+          <button
+            class="btn btn-danger w-full"
+            name="_action"
+            value="archive"
+            onclick="return confirm('Remove this calendar? Its classes disappear from the booking page.')"
+          >
+            Remove calendar
+          </button>
+        </form>
+      </details>
+    </div>
+  </div>
+</Studio>
