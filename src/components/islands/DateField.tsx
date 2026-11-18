@@ -32,17 +32,7 @@ const toDate = (s: string) => {
 };
 const toValue = (d: Date) => format(d, "yyyy-MM-dd");
 
-export default function DateField({
-  name,
-  value,
-  today,
-  required,
-  optional,
-  min,
-  ariaLabel,
-  locale,
-  labels,
-}: Props) {
+export default function DateField({ name, value, today, required, optional, min, ariaLabel, locale, labels }: Props) {
   const [selected, setSelected] = useState<string | null>(value || null);
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
@@ -80,7 +70,11 @@ export default function DateField({
         onClick={() => setOpen((o) => !o)}
       >
         <span className={selected ? "" : "text-stone-400"}>
-          {selected ? capitalizeFirst(format(toDate(selected), DATE_PATTERNS[locale].dateWithDay, { locale: DATE_FNS_LOCALES[locale] })) : labels.placeholder}
+          {selected
+            ? capitalizeFirst(
+                format(toDate(selected), DATE_PATTERNS[locale].dateWithDay, { locale: DATE_FNS_LOCALES[locale] }),
+              )
+            : labels.placeholder}
         </span>
         <svg
           width="16"

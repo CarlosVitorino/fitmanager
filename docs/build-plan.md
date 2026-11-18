@@ -102,6 +102,10 @@ Built in milestones, each one usable and committed before the next.
 - **Health data is sensitive** (special-category data under GDPR). It's only visible to the studio's coaches unless shared; a privacy notice and consent wording are needed before launch (Phase 4/5).
 - **Look and feel:** Inter typeface, Lucide icons, consistent page headers, stat tiles, avatars and empty states across pages.
 
+- **Five languages: English, German, Spanish, French, Portuguese (pt-PT).** Every screen, message, validation error and date format is translated. The language is the person's own choice (language menu, remembered on their account), otherwise their browser's language if supported, otherwise the studio's default language (Studio settings), otherwise English. Messages live in `src/i18n/messages/`, one file per area with all five languages side by side; TypeScript fails the build if a language misses a key, and a test checks placeholders match.
+- **Studio content isn't translated**: class type names, plan names, calendar names and coach notes stay as written. A new studio's defaults are created in the language of the person who creates it.
+- **Setup redesigned** as a settings area with side navigation and an overview checklist.
+
 ## Open decisions
 
 1. **Pilot studio**: who, and whether their current spreadsheet can seed the test data.

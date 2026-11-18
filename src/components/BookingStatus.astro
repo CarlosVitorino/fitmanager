@@ -1,4 +1,6 @@
 ---
+import { t } from "../i18n";
+
 interface Props {
   status: "booked" | "cancelled" | "late_cancelled";
   charged: boolean;
@@ -9,20 +11,20 @@ interface Props {
 const { status, charged, noShow, settled, sessionCancelled = false } = Astro.props;
 let label: string;
 let cls: string;
-if (sessionCancelled) [label, cls] = ["Class cancelled", "bg-stone-100 text-stone-600"];
-else if (status === "cancelled") [label, cls] = ["Cancelled", "bg-stone-100 text-stone-600"];
-else if (status === "late_cancelled") [label, cls] = ["Late cancel", "bg-amber-100 text-amber-800"];
-else if (!settled) [label, cls] = ["Booked", "bg-sky-100 text-sky-800"];
-else if (noShow) [label, cls] = ["No-show", "bg-amber-100 text-amber-800"];
-else [label, cls] = ["Attended", "bg-emerald-100 text-emerald-800"];
+if (sessionCancelled) [label, cls] = [t("booking.status.classCancelled"), "bg-stone-100 text-stone-600"];
+else if (status === "cancelled") [label, cls] = [t("booking.status.cancelled"), "bg-stone-100 text-stone-600"];
+else if (status === "late_cancelled") [label, cls] = [t("booking.status.lateCancel"), "bg-amber-100 text-amber-800"];
+else if (!settled) [label, cls] = [t("booking.status.booked"), "bg-sky-100 text-sky-800"];
+else if (noShow) [label, cls] = [t("booking.status.noShow"), "bg-amber-100 text-amber-800"];
+else [label, cls] = [t("booking.status.attended"), "bg-emerald-100 text-emerald-800"];
 const creditNote =
   status === "cancelled" || sessionCancelled
-    ? "credit returned"
+    ? t("booking.status.creditReturned")
     : !charged
-      ? "credit waived"
+      ? t("booking.status.creditWaived")
       : settled || status === "late_cancelled"
-        ? "credit used"
-        : "credit reserved";
+        ? t("booking.status.creditUsed")
+        : t("booking.status.creditReserved");
 ---
 
 <span class="inline-flex flex-wrap items-center gap-1.5">

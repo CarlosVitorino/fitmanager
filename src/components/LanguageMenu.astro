@@ -17,20 +17,29 @@ const linkFor = (l: string) => {
 ---
 
 <details class="relative">
-  <summary class="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900" title={t("common.language")} aria-label={t("common.language")}>
+  <summary
+    class="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+    title={t("common.language")}
+    aria-label={t("common.language")}
+  >
     <Languages size={16} />
     <span class="font-medium uppercase">{current}</span>
   </summary>
   <ul class:list={["card absolute z-50 mt-1 w-44 p-1", align === "right" ? "right-0" : "left-0"]}>
-    {
-      LOCALES.map((l) => (
-        <li>
-          <a href={linkFor(l)} lang={l} class:list={["flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-stone-100", l === current && "font-semibold"]}>
-            {LOCALE_NAMES[l]}
-            {l === current && <Check size={14} />}
-          </a>
-        </li>
-      ))
-    }
+    {LOCALES.map((l) => (
+      <li>
+        <a
+          href={linkFor(l)}
+          lang={l}
+          class:list={[
+            "flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-stone-100",
+            l === current && "font-semibold",
+          ]}
+        >
+          {LOCALE_NAMES[l]}
+          {l === current && <Check size={14} />}
+        </a>
+      </li>
+    ))}
   </ul>
 </details>

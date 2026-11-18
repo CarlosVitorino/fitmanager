@@ -1,0 +1,17 @@
+---
+/** The rich text editor island with translated toolbar labels. */
+import RichTextEditor from "./islands/RichTextEditor";
+import { messagesFor } from "../i18n";
+
+interface Props {
+  name: string;
+  value?: string | null | undefined;
+  placeholder?: string;
+  minHeight?: number;
+  ariaLabel?: string;
+}
+const props = Astro.props;
+const labels = messagesFor("profile").editor;
+---
+
+<RichTextEditor client:load {...props} value={props.value ?? null} labels={labels} />

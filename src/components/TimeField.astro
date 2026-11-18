@@ -17,11 +17,19 @@ const id = `t-${name}-${Math.random().toString(36).slice(2, 7)}`;
 <div class="flex items-center gap-1" data-time-field={id}>
   <input type="hidden" name={name} value={`${h}:${m}`} />
   <select class="input" aria-label={t("common.hourAria", { label })} data-part="h">
-    {hours.map((x) => <option value={x} selected={x === h}>{x}</option>)}
+    {hours.map((x) => (
+      <option value={x} selected={x === h}>
+        {x}
+      </option>
+    ))}
   </select>
   <span class="font-semibold text-stone-400">:</span>
   <select class="input" aria-label={t("common.minuteAria", { label })} data-part="m">
-    {minutes.map((x) => <option value={x} selected={x === m}>{x}</option>)}
+    {minutes.map((x) => (
+      <option value={x} selected={x === m}>
+        {x}
+      </option>
+    ))}
   </select>
 </div>
 

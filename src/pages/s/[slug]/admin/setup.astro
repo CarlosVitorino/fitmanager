@@ -35,11 +35,42 @@ const slotsBy = new Map(slotCounts.map((s) => [s.calendarId, s.n]));
 const totalSlots = slotCounts.reduce((n, s) => n + s.n, 0);
 
 const steps = [
-  { done: plans.length > 0 && plans.every((p) => p.priceCents !== null), title: t("setup.overview.stepPrices"), hint: t("setup.overview.stepPricesHint"), href: `${base}/plans`, show: owner },
-  { done: templates.length > 1, title: t("setup.overview.stepTypes"), hint: t("setup.overview.stepTypesHint"), href: `${base}/classes`, show: true },
-  { done: totalSlots > 0, title: t("setup.overview.stepSchedule"), hint: t("setup.overview.stepScheduleHint"), href: `${base}/calendars`, show: true },
-  { done: owner ? false : true, title: t("setup.overview.stepRules"), hint: t("setup.overview.stepRulesHint"), href: `${base}/settings`, show: owner, neutral: true },
-  { done: (memberCount?.n ?? 0) > 0, title: t("setup.overview.stepInvite"), hint: t("setup.overview.stepInviteHint"), href: owner ? `${base}/settings#invite` : `${base}/members`, show: true },
+  {
+    done: plans.length > 0 && plans.every((p) => p.priceCents !== null),
+    title: t("setup.overview.stepPrices"),
+    hint: t("setup.overview.stepPricesHint"),
+    href: `${base}/plans`,
+    show: owner,
+  },
+  {
+    done: templates.length > 1,
+    title: t("setup.overview.stepTypes"),
+    hint: t("setup.overview.stepTypesHint"),
+    href: `${base}/classes`,
+    show: true,
+  },
+  {
+    done: totalSlots > 0,
+    title: t("setup.overview.stepSchedule"),
+    hint: t("setup.overview.stepScheduleHint"),
+    href: `${base}/calendars`,
+    show: true,
+  },
+  {
+    done: owner ? false : true,
+    title: t("setup.overview.stepRules"),
+    hint: t("setup.overview.stepRulesHint"),
+    href: `${base}/settings`,
+    show: owner,
+    neutral: true,
+  },
+  {
+    done: (memberCount?.n ?? 0) > 0,
+    title: t("setup.overview.stepInvite"),
+    hint: t("setup.overview.stepInviteHint"),
+    href: owner ? `${base}/settings#invite` : `${base}/members`,
+    show: true,
+  },
 ].filter((s) => s.show);
 const counted = steps.filter((s) => !s.neutral);
 const doneCount = counted.filter((s) => s.done).length;
@@ -54,126 +85,154 @@ const pct = Math.round((doneCount / Math.max(1, counted.length)) * 100);
         <h2 class="h2">{allDone ? t("setup.overview.allDone") : t("setup.overview.checklistTitle")}</h2>
         <p class="muted">{t("setup.overview.checklistProgress", { done: doneCount, total: counted.length })}</p>
       </div>
-      <div class="h-2 w-40 overflow-hidden rounded-full bg-stone-100" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">
+      <div
+        class="h-2 w-40 overflow-hidden rounded-full bg-stone-100"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
         <div class="h-full rounded-full bg-emerald-500" style={`width:${pct}%`}></div>
       </div>
     </div>
     <ol class="divide-y divide-stone-100">
-      {
-        steps.map((s, i) => (
-          <li>
-            <a href={s.href} class="group flex items-center gap-4 px-5 py-3.5 transition hover:bg-stone-50">
+      {steps.map((s, i) => (
+        <li>
+          <a href={s.href} class="group flex items-center gap-4 px-5 py-3.5 transition hover:bg-stone-50">
+            <span
+              class:list={[
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                s.done && !s.neutral ? "bg-emerald-500 text-white" : "border border-stone-300 text-stone-500",
+              ]}
+            >
+              {s.done && !s.neutral ? <Check size={14} /> : i + 1}
+            </span>
+            <span class="min-w-0 flex-1">
               <span
                 class:list={[
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                  s.done && !s.neutral ? "bg-emerald-500 text-white" : "border border-stone-300 text-stone-500",
+                  "block text-sm font-medium",
+                  s.done && !s.neutral && "text-stone-500 line-through decoration-stone-300",
                 ]}
               >
-                {s.done && !s.neutral ? <Check size={14} /> : i + 1}
+                {s.title}
               </span>
-              <span class="min-w-0 flex-1">
-                <span class:list={["block text-sm font-medium", s.done && !s.neutral && "text-stone-500 line-through decoration-stone-300"]}>{s.title}</span>
-                <span class="block text-xs text-stone-500">{s.hint}</span>
-              </span>
-              <ArrowRight size={16} class="text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-stone-600" />
-            </a>
-          </li>
-        ))
-      }
+              <span class="block text-xs text-stone-500">{s.hint}</span>
+            </span>
+            <ArrowRight
+              size={16}
+              class="text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-stone-600"
+            />
+          </a>
+        </li>
+      ))}
     </ol>
   </section>
 
   <div class="grid gap-5 md:grid-cols-2">
-    {
-      owner && (
-        <section class="card p-5">
-          <div class="mb-3 flex items-center justify-between">
-            <h2 class="h2 flex items-center gap-2">
-              <Ticket size={17} class="text-stone-400" /> {t("setup.overview.plansCard")}
-            </h2>
-            <a href={`${base}/plans`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
-          </div>
-          <ul class="divide-y divide-stone-100">
-            {plans.map((p) => (
-              <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
-                <span class="min-w-0">
-                  <span class="block font-medium">{p.name}</span>
-                  <span class="block text-xs text-stone-500">
-                    {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
-                  </span>
+    {owner && (
+      <section class="card p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="h2 flex items-center gap-2">
+            <Ticket size={17} class="text-stone-400" /> {t("setup.overview.plansCard")}
+          </h2>
+          <a href={`${base}/plans`} class="text-sm text-stone-500 hover:text-stone-900">
+            {t("setup.overview.manage")} →
+          </a>
+        </div>
+        <ul class="divide-y divide-stone-100">
+          {plans.map((p) => (
+            <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
+              <span class="min-w-0">
+                <span class="block font-medium">{p.name}</span>
+                <span class="block text-xs text-stone-500">
+                  {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
                 </span>
-                {p.priceCents !== null ? (
-                  <span class="font-semibold tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
-                ) : (
-                  <span class="badge bg-amber-50 text-amber-700">{t("setup.overview.noPrice")}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
+              </span>
+              {p.priceCents !== null ? (
+                <span class="font-semibold tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
+              ) : (
+                <span class="badge bg-amber-50 text-amber-700">{t("setup.overview.noPrice")}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
 
     <section class="card p-5">
       <div class="mb-3 flex items-center justify-between">
-        <h2 class="h2 flex items-center gap-2"><Tags size={17} class="text-stone-400" /> {t("setup.overview.typesCard")}</h2>
-        <a href={`${base}/classes`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
+        <h2 class="h2 flex items-center gap-2">
+          <Tags size={17} class="text-stone-400" /> {t("setup.overview.typesCard")}
+        </h2>
+        <a href={`${base}/classes`} class="text-sm text-stone-500 hover:text-stone-900">
+          {t("setup.overview.manage")} →
+        </a>
       </div>
       <div class="flex flex-wrap gap-2">
-        {
-          templates.map((tpl) => (
-            <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium" style={`background:${tpl.color}14;color:${tpl.color}`}>
-              <span aria-hidden="true">{tpl.icon}</span>
-              {tpl.name}
-            </span>
-          ))
-        }
+        {templates.map((tpl) => (
+          <span
+            class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium"
+            style={`background:${tpl.color}14;color:${tpl.color}`}
+          >
+            <span aria-hidden="true">{tpl.icon}</span>
+            {tpl.name}
+          </span>
+        ))}
       </div>
     </section>
 
     <section class="card p-5">
       <div class="mb-3 flex items-center justify-between">
-        <h2 class="h2 flex items-center gap-2"><CalendarRange size={17} class="text-stone-400" /> {t("setup.overview.calendarsCard")}</h2>
-        <a href={`${base}/calendars`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
+        <h2 class="h2 flex items-center gap-2">
+          <CalendarRange size={17} class="text-stone-400" /> {t("setup.overview.calendarsCard")}
+        </h2>
+        <a href={`${base}/calendars`} class="text-sm text-stone-500 hover:text-stone-900">
+          {t("setup.overview.manage")} →
+        </a>
       </div>
       <ul class="divide-y divide-stone-100">
-        {
-          calendars.map((c) => (
-            <li>
-              <a href={`${base}/calendars/${c.id}`} class="flex items-center justify-between py-2.5 text-sm hover:underline">
-                <span class="font-medium">{c.name}</span>
-                <span class="text-stone-500">{t("setup.overview.weeklySlots", { count: slotsBy.get(c.id) ?? 0 })}</span>
-              </a>
-            </li>
-          ))
-        }
+        {calendars.map((c) => (
+          <li>
+            <a
+              href={`${base}/calendars/${c.id}`}
+              class="flex items-center justify-between py-2.5 text-sm hover:underline"
+            >
+              <span class="font-medium">{c.name}</span>
+              <span class="text-stone-500">{t("setup.overview.weeklySlots", { count: slotsBy.get(c.id) ?? 0 })}</span>
+            </a>
+          </li>
+        ))}
       </ul>
     </section>
 
-    {
-      owner && (
-        <section class="card p-5">
-          <div class="mb-3 flex items-center justify-between">
-            <h2 class="h2 flex items-center gap-2">
-              <Settings2 size={17} class="text-stone-400" /> {t("setup.overview.rulesCard")}
-            </h2>
-            <a href={`${base}/settings`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
-          </div>
-          <ul class="space-y-2 text-sm">
-            <li class="flex items-center gap-2">
-              <Clock size={15} class="text-stone-400" />
-              {t("setup.overview.bookingCloses", { time: formatMinutes(ctx.bookingCutoffMinutes) })}
-            </li>
-            <li class="flex items-center gap-2">
-              <Clock size={15} class="text-stone-400" />
-              {t("setup.overview.freeCancel", { time: formatMinutes(ctx.cancellationCutoffMinutes) })}
-            </li>
-            <li class="pt-1 text-xs text-stone-500">
-              {t("setup.overview.languageCurrency", { language: LOCALE_NAMES[isLocale(ctx.locale) ? ctx.locale : "en"], currency: ctx.currency, timezone: ctx.timezone })}
-            </li>
-          </ul>
-        </section>
-      )
-    }
+    {owner && (
+      <section class="card p-5">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="h2 flex items-center gap-2">
+            <Settings2 size={17} class="text-stone-400" /> {t("setup.overview.rulesCard")}
+          </h2>
+          <a href={`${base}/settings`} class="text-sm text-stone-500 hover:text-stone-900">
+            {t("setup.overview.manage")} →
+          </a>
+        </div>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-center gap-2">
+            <Clock size={15} class="text-stone-400" />
+            {t("setup.overview.bookingCloses", { time: formatMinutes(ctx.bookingCutoffMinutes) })}
+          </li>
+          <li class="flex items-center gap-2">
+            <Clock size={15} class="text-stone-400" />
+            {t("setup.overview.freeCancel", { time: formatMinutes(ctx.cancellationCutoffMinutes) })}
+          </li>
+          <li class="pt-1 text-xs text-stone-500">
+            {t("setup.overview.languageCurrency", {
+              language: LOCALE_NAMES[isLocale(ctx.locale) ? ctx.locale : "en"],
+              currency: ctx.currency,
+              timezone: ctx.timezone,
+            })}
+          </li>
+        </ul>
+      </section>
+    )}
   </div>
 </Setup>

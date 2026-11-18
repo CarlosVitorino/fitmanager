@@ -2,6 +2,7 @@
 import FormError from "../../components/FormError.astro";
 import Base from "../../layouts/Base.astro";
 import { HttpError } from "../../server/errors";
+import { t } from "../../i18n";
 import { createStudio, createStudioInput } from "../../server/studios";
 
 const { user } = Astro.locals;
@@ -19,7 +20,7 @@ if (Astro.request.method === "POST") {
   };
   const parsed = createStudioInput.safeParse(values);
   if (!parsed.success) {
-    error = parsed.error.issues[0]?.message ?? "Check the form";
+    error = parsed.error.issues[0]?.message ?? t("errors.checkForm");
     Astro.response.status = 400;
   } else {
     try {
@@ -36,17 +37,17 @@ if (Astro.request.method === "POST") {
 const timezones = Intl.supportedValuesOf("timeZone");
 ---
 
-<Base title="Create a studio">
-  <div class="mx-auto max-w-md space-y-6">
-    <h1 class="text-2xl font-semibold">Create a studio</h1>
+<Base title={t("auth.newStudioTitle")} narrow>
+  <div class="card space-y-6 p-7">
+    <h1 class="text-2xl font-semibold">{t("auth.newStudioTitle")}</h1>
     <FormError message={error} />
     <form method="post" class="space-y-4">
       <label class="block space-y-1">
-        <span class="text-sm font-medium">Studio name</span>
+        <span class="label">{t("auth.studioName")}</span>
         <input name="name" required value={values.name} class="w-full rounded border border-stone-300 px-3 py-2" />
       </label>
       <label class="block space-y-1">
-        <span class="text-sm font-medium">Address</span>
+        <span class="label">{t("auth.address")}</span>
         <div class="flex items-center rounded border border-stone-300 bg-white">
           <span class="pl-3 text-stone-500">/s/</span>
           <input
@@ -57,10 +58,10 @@ const timezones = Intl.supportedValuesOf("timeZone");
             class="w-full rounded px-1 py-2 outline-none"
           />
         </div>
-        <span class="text-xs text-stone-500">Lowercase letters, numbers and dashes. Members use this link.</span>
+        <span class="text-xs text-stone-500">{t("auth.addressHint")}</span>
       </label>
       <label class="block space-y-1">
-        <span class="text-sm font-medium">Timezone</span>
+        <span class="label">{t("auth.timezone")}</span>
         <select
           name="timezone"
           required
@@ -73,10 +74,10 @@ const timezones = Intl.supportedValuesOf("timeZone");
             </option>
           ))}
         </select>
-        <span class="text-xs text-stone-500">Class times, expiry dates and credit settlement use this timezone.</span>
+        <span class="text-xs text-stone-500">{t("auth.timezoneHint")}</span>
       </label>
       <button class="w-full rounded bg-stone-900 px-3 py-2 font-medium text-white hover:bg-stone-700">
-        Create studio
+        {t("auth.createStudioButton")}
       </button>
     </form>
   </div>

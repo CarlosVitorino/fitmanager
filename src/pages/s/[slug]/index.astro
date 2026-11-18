@@ -1,5 +1,6 @@
 ---
 import { BatteryLow, CalendarDays, Hourglass, UserPlus, UserX } from "@lucide/astro";
+import { t } from "../../../i18n";
 import Avatar from "../../../components/Avatar.astro";
 import PageHeader from "../../../components/PageHeader.astro";
 import Section from "../../../components/Section.astro";
@@ -29,16 +30,19 @@ const base = `/s/${ctx.slug}/admin`;
 const now = new Date();
 ---
 
-<Studio title="Today">
+<Studio title={t("nav.today")}>
   <PageHeader
     title={formatDayLong(today)}
-    subtitle={`${plural(todays.length, "class", "classes")} today · ${plural(memberRows.length, "member")}`}
+    subtitle={t("booking.today.subtitle", {
+      classes: plural(todays.length, "classes"),
+      members: plural(memberRows.length, "members"),
+    })}
   >
     <a href={`${base}/admin/calendar`} class="btn">
-      <CalendarDays size={16} /> Calendar
+      <CalendarDays size={16} /> {t("booking.today.calendar")}
     </a>
     <a href={`${base}/admin/members`} class="btn btn-primary">
-      <UserPlus size={16} /> Add a plan
+      <UserPlus size={16} /> {t("booking.today.addPlan")}
     </a>
   </PageHeader>
 
@@ -46,8 +50,8 @@ const now = new Date();
     <StatTile
       href={`${base}/members?filter=expiring`}
       value={expiringWithCredits.length}
-      label="plans expiring with credits left"
-      hint="in the next 14 days"
+      label={t("booking.today.expiringTile")}
+      hint={t("booking.today.expiringHint")}
       tone="amber"
     >
       <Hourglass slot="icon" size={20} />
@@ -55,8 +59,8 @@ const now = new Date();
     <StatTile
       href={`${base}/members?filter=low`}
       value={lowCredits.length}
-      label="members running low"
-      hint="2 or fewer credits"
+      label={t("booking.today.lowTile")}
+      hint={t("booking.today.lowHint")}
       tone="rose"
     >
       <BatteryLow slot="icon" size={20} />
@@ -64,8 +68,8 @@ const now = new Date();
     <StatTile
       href={`${base}/members?filter=none`}
       value={noPlan.length}
-      label="members without a plan"
-      hint="no active plan"
+      label={t("booking.today.noPlanTile")}
+      hint={t("booking.today.noPlanHint")}
       tone="stone"
     >
       <UserX slot="icon" size={20} />
@@ -74,9 +78,9 @@ const now = new Date();
 
   <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
     <div class="space-y-6">
-      <Section title="Today's classes">
+      <Section title={t("booking.today.todaysClasses")}>
         <CalendarDays slot="icon" size={18} />
-        {todays.length === 0 && <p class="muted">No classes today.</p>}
+        {todays.length === 0 && <p class="muted">{t("booking.today.noClassesToday")}</p>}
         <ul class="space-y-2">
           {todays.map((s) => (
             <li>
@@ -103,7 +107,11 @@ const now = new Date();
                     {s.booked}/{s.capacity}
                   </span>
                   <span class="muted block text-xs">
-                    {s.endsAt < now ? "done" : s.startsAt < now ? "in progress" : "booked"}
+                    {s.endsAt < now
+                      ? t("booking.today.done")
+                      : s.startsAt < now
+                        ? t("booking.today.inProgress")
+                        : t("booking.today.bookedLabel")}
                   </span>
                 </span>
               </a>
@@ -112,22 +120,23 @@ const now = new Date();
         </ul>
         {tomorrow.length > 0 && (
           <p class="muted mt-4">
-            Tomorrow:{" "}
-            {tomorrow
-              .map(
-                (s) =>
-                  `${formatTimeRange(s.startsAt, s.endsAt, ctx.timezone).split("–")[0]} ${s.templateName} (${s.booked}/${s.capacity})`,
-              )
-              .join(" · ")}
+            {t("booking.today.tomorrow", {
+              list: tomorrow
+                .map(
+                  (s) =>
+                    `${formatTimeRange(s.startsAt, s.endsAt, ctx.timezone).split("–")[0]} ${s.templateName} (${s.booked}/${s.capacity})`,
+                )
+                .join(" · "),
+            })}
           </p>
         )}
       </Section>
     </div>
 
     <div class="space-y-6">
-      <Section title="Expiring soon" description="Plans ending in the next 14 days.">
+      <Section title={t("booking.today.expiringSoon")} description={t("booking.today.expiringSoonHint")}>
         <Hourglass slot="icon" size={18} />
-        {expiring.length === 0 && <p class="muted">Nothing expiring.</p>}
+        {expiring.length === 0 && <p class="muted">{t("booking.today.nothingExpiring")}</p>}
         <ul class="space-y-2">
           {expiring.map((p) => {
             const days = daysBetween(today, p.expiresOn!);
@@ -138,7 +147,10 @@ const now = new Date();
                   <span>
                     <span class="block font-medium">{p.memberName}</span>
                     <span class="muted block text-xs">
-                      {p.name} · {days === 0 ? "last day today" : `ends ${formatDate(p.expiresOn!)}`}
+                      {p.name} ·{" "}
+                      {days === 0
+                        ? t("booking.today.lastDay")
+                        : t("booking.today.ends", { date: formatDate(p.expiresOn!) })}
                     </span>
                   </span>
                 </a>
@@ -148,16 +160,16 @@ const now = new Date();
                     p.available > 0 ? "bg-amber-100 text-amber-800" : "bg-stone-100 text-stone-600",
                   ]}
                 >
-                  {plural(p.available, "credit")} left
+                  {t("booking.today.creditsLeft", { count: p.available })}
                 </span>
               </li>
             );
           })}
         </ul>
       </Section>
-      <Section title="Running low">
+      <Section title={t("booking.today.runningLow")}>
         <BatteryLow slot="icon" size={18} />
-        {lowCredits.length === 0 && <p class="muted">Everyone has credits.</p>}
+        {lowCredits.length === 0 && <p class="muted">{t("booking.today.everyoneHasCredits")}</p>}
         <ul class="space-y-2">
           {lowCredits.map((m) => (
             <li class="flex items-center justify-between text-sm">
@@ -165,7 +177,7 @@ const now = new Date();
                 <Avatar name={m.name} size="sm" />
                 {m.name}
               </a>
-              <span class="badge bg-red-50 text-red-700">{plural(m.available, "credit")}</span>
+              <span class="badge bg-red-50 text-red-700">{plural(m.available, "credits")}</span>
             </li>
           ))}
         </ul>

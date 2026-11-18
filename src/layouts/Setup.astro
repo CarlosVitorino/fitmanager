@@ -31,20 +31,20 @@ const active = (href: string) => path === href || path.startsWith(`${href}/`);
     <aside>
       <p class="eyebrow mb-3 hidden px-3 lg:block">{t("setup.title")}</p>
       <nav class="-mx-1 flex gap-1 overflow-x-auto pb-1 lg:sticky lg:top-20 lg:mx-0 lg:flex-col lg:overflow-visible">
-        {
-          items.map((i) => (
-            <a
-              href={i.href}
-              class:list={[
-                "inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
-                active(i.href) ? "bg-white text-stone-900 shadow-sm ring-1 ring-stone-200" : "text-stone-600 hover:bg-stone-200/60 hover:text-stone-900",
-              ]}
-            >
-              <i.icon size={16} class={active(i.href) ? "text-stone-900" : "text-stone-400"} />
-              {i.label}
-            </a>
-          ))
-        }
+        {items.map((i) => (
+          <a
+            href={i.href}
+            class:list={[
+              "inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+              active(i.href)
+                ? "bg-white text-stone-900 shadow-sm ring-1 ring-stone-200"
+                : "text-stone-600 hover:bg-stone-200/60 hover:text-stone-900",
+            ]}
+          >
+            <i.icon size={16} class={active(i.href) ? "text-stone-900" : "text-stone-400"} />
+            {i.label}
+          </a>
+        ))}
       </nav>
     </aside>
     <div class="min-w-0">

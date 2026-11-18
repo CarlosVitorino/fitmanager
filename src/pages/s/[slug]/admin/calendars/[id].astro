@@ -8,7 +8,13 @@ import { t } from "../../../../../i18n";
 import { weekdayNames } from "../../../../../i18n/weekdays";
 import { formatDate } from "../../../../../lib/format";
 import { handleActions, int, optStr, str } from "../../../../../server/actions";
-import { archiveCalendar, calendarInput, getCalendar, listTemplates, saveCalendar } from "../../../../../server/catalog";
+import {
+  archiveCalendar,
+  calendarInput,
+  getCalendar,
+  listTemplates,
+  saveCalendar,
+} from "../../../../../server/catalog";
 import { endSlot, listCoaches, listSlots, saveSlot, slotInput } from "../../../../../server/schedule";
 
 const ctx = Astro.locals.studio!;
@@ -42,7 +48,11 @@ const result = await handleActions(Astro, {
     return t("setup.calendars.slotStopped");
   },
   rename: async (f) => {
-    await saveCalendar(ctx, calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }), calendar.id);
+    await saveCalendar(
+      ctx,
+      calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }),
+      calendar.id,
+    );
     return t("setup.calendars.saved");
   },
   archive: async () => {
@@ -52,63 +62,84 @@ const result = await handleActions(Astro, {
 });
 if (result instanceof Response) return result;
 
-const [slots, templates, coaches] = await Promise.all([listSlots(ctx, calendar.id), listTemplates(ctx), listCoaches(ctx)]);
+const [slots, templates, coaches] = await Promise.all([
+  listSlots(ctx, calendar.id),
+  listTemplates(ctx),
+  listCoaches(ctx),
+]);
 const editId = Astro.url.searchParams.get("edit");
 const days = weekdayNames();
 const byDay = days.map((name, i) => ({ name, slots: slots.filter((s) => s.slot.weekday === i + 1) }));
 type SlotRow = (typeof slots)[number]["slot"];
-const blank = { weekday: 1, startTime: "18:00", durationMinutes: 60, capacity: 12, coachId: ctx.userId, templateId: templates[0]?.id, startsOn: today, endsOn: null } as Partial<SlotRow>;
+const blank = {
+  weekday: 1,
+  startTime: "18:00",
+  durationMinutes: 60,
+  capacity: 12,
+  coachId: ctx.userId,
+  templateId: templates[0]?.id,
+  startsOn: today,
+  endsOn: null,
+} as Partial<SlotRow>;
 const editing = slots.find((s) => s.slot.id === editId)?.slot;
 const form = editing ?? blank;
 ---
 
 <Setup title={calendar.name} subtitle={t("setup.calendars.slotsSubtitle")} flash={result.flash} error={result.error}>
   <div class="mb-4 flex flex-wrap gap-2">
-    <a href={`/s/${ctx.slug}/admin/calendars`} class="btn btn-sm">← {t("setup.calendars.back")}</a>
-    <a href={`/s/${ctx.slug}/admin/calendar?calendar=${calendar.id}`} class="btn btn-sm"><CalendarDays size={14} /> {t("setup.calendars.seeInCalendar")}</a>
+    <a href={`/s/${ctx.slug}/admin/calendars`} class="btn btn-sm">
+      ← {t("setup.calendars.back")}
+    </a>
+    <a href={`/s/${ctx.slug}/admin/calendar?calendar=${calendar.id}`} class="btn btn-sm">
+      <CalendarDays size={14} /> {t("setup.calendars.seeInCalendar")}
+    </a>
   </div>
 
   <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
     <div class="card divide-y divide-stone-100 overflow-hidden">
-      {
-        byDay.map((d, i) => (
-          <div class="flex gap-4 p-4">
-            <div class="w-24 shrink-0 pt-1 text-sm font-semibold text-stone-500">{d.name}</div>
-            <div class="flex flex-1 flex-wrap gap-2">
-              {d.slots.length === 0 && (
-                <a href={`?day=${i + 1}`} class="inline-flex items-center gap-1 rounded-lg border border-dashed border-stone-200 px-3 py-2 text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600">
-                  <Plus size={14} /> {t("setup.calendars.noClasses")}
-                </a>
-              )}
-              {d.slots.map(({ slot, template, coachName }) => (
-                <a
-                  href={`?edit=${slot.id}`}
-                  class:list={["min-w-44 rounded-xl border border-l-4 px-3 py-2 text-sm transition hover:shadow-sm", editId === slot.id ? "border-stone-900 bg-stone-50" : "border-stone-200 bg-white"]}
-                  style={`border-left-color:${template.color}`}
-                >
-                  <div class="flex items-baseline justify-between gap-2">
-                    <span class="font-semibold tabular-nums">{slot.startTime}</span>
-                    <span class="text-xs text-stone-500">{slot.durationMinutes}′</span>
+      {byDay.map((d, i) => (
+        <div class="flex gap-4 p-4">
+          <div class="w-24 shrink-0 pt-1 text-sm font-semibold text-stone-500">{d.name}</div>
+          <div class="flex flex-1 flex-wrap gap-2">
+            {d.slots.length === 0 && (
+              <a
+                href={`?day=${i + 1}`}
+                class="inline-flex items-center gap-1 rounded-lg border border-dashed border-stone-200 px-3 py-2 text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600"
+              >
+                <Plus size={14} /> {t("setup.calendars.noClasses")}
+              </a>
+            )}
+            {d.slots.map(({ slot, template, coachName }) => (
+              <a
+                href={`?edit=${slot.id}`}
+                class:list={[
+                  "min-w-44 rounded-xl border border-l-4 px-3 py-2 text-sm transition hover:shadow-sm",
+                  editId === slot.id ? "border-stone-900 bg-stone-50" : "border-stone-200 bg-white",
+                ]}
+                style={`border-left-color:${template.color}`}
+              >
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="font-semibold tabular-nums">{slot.startTime}</span>
+                  <span class="text-xs text-stone-500">{slot.durationMinutes}′</span>
+                </div>
+                <div class="font-medium" style={`color:${template.color}`}>
+                  {template.icon} {template.name}
+                </div>
+                <div class="flex items-center gap-1 text-xs text-stone-500">
+                  <Users size={11} /> {slot.capacity}
+                  {coachName && ` · ${coachName}`}
+                </div>
+                {(slot.startsOn > today || slot.endsOn) && (
+                  <div class="text-xs text-stone-400">
+                    {slot.startsOn > today && t("setup.calendars.fromDate", { date: formatDate(slot.startsOn) })}
+                    {slot.endsOn && ` ${t("setup.calendars.untilDate", { date: formatDate(slot.endsOn) })}`}
                   </div>
-                  <div class="font-medium" style={`color:${template.color}`}>
-                    {template.icon} {template.name}
-                  </div>
-                  <div class="flex items-center gap-1 text-xs text-stone-500">
-                    <Users size={11} /> {slot.capacity}
-                    {coachName && ` · ${coachName}`}
-                  </div>
-                  {(slot.startsOn > today || slot.endsOn) && (
-                    <div class="text-xs text-stone-400">
-                      {slot.startsOn > today && t("setup.calendars.fromDate", { date: formatDate(slot.startsOn) })}
-                      {slot.endsOn && ` ${t("setup.calendars.untilDate", { date: formatDate(slot.endsOn) })}`}
-                    </div>
-                  )}
-                </a>
-              ))}
-            </div>
+                )}
+              </a>
+            ))}
           </div>
-        ))
-      }
+        </div>
+      ))}
     </div>
 
     <div class="space-y-4">
@@ -120,7 +151,14 @@ const form = editing ?? blank;
         <label class="block space-y-1">
           <span class="label">{t("setup.calendars.day")}</span>
           <select name="weekday" class="input">
-            {days.map((n, i) => <option value={i + 1} selected={(editing ? form.weekday : Number(Astro.url.searchParams.get("day") ?? 1)) === i + 1}>{n}</option>)}
+            {days.map((n, i) => (
+              <option
+                value={i + 1}
+                selected={(editing ? form.weekday : Number(Astro.url.searchParams.get("day") ?? 1)) === i + 1}
+              >
+                {n}
+              </option>
+            ))}
           </select>
         </label>
         <div class="space-y-1">
@@ -140,40 +178,67 @@ const form = editing ?? blank;
         <label class="block space-y-1">
           <span class="label">{t("setup.calendars.classType")}</span>
           <select name="templateId" class="input">
-            {templates.map((tpl) => <option value={tpl.id} selected={form.templateId === tpl.id}>{tpl.icon} {tpl.name}</option>)}
+            {templates.map((tpl) => (
+              <option value={tpl.id} selected={form.templateId === tpl.id}>
+                {tpl.icon} {tpl.name}
+              </option>
+            ))}
           </select>
         </label>
         <label class="block space-y-1">
           <span class="label">{t("setup.calendars.coach")}</span>
           <select name="coachId" class="input">
             <option value="">{t("setup.calendars.noCoach")}</option>
-            {coaches.map((c) => <option value={c.id} selected={form.coachId === c.id}>{c.name}</option>)}
+            {coaches.map((c) => (
+              <option value={c.id} selected={form.coachId === c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
         </label>
         <div class="space-y-1">
           <span class="label">{t("setup.calendars.from")}</span>
-          <DateInput name="startsOn" value={form.startsOn ?? today} today={today} required ariaLabel={t("setup.calendars.from")} />
+          <DateInput
+            name="startsOn"
+            value={form.startsOn ?? today}
+            today={today}
+            required
+            ariaLabel={t("setup.calendars.from")}
+          />
         </div>
         <div class="space-y-1">
-          <span class="label">{t("setup.calendars.until")} <span class="font-normal text-stone-400">({t("common.optional")})</span></span>
-          <DateInput name="endsOn" value={form.endsOn ?? null} today={today} optional ariaLabel={t("setup.calendars.until")} placeholder={t("setup.calendars.noEndDate")} />
+          <span class="label">
+            {t("setup.calendars.until")} <span class="font-normal text-stone-400">({t("common.optional")})</span>
+          </span>
+          <DateInput
+            name="endsOn"
+            value={form.endsOn ?? null}
+            today={today}
+            optional
+            ariaLabel={t("setup.calendars.until")}
+            placeholder={t("setup.calendars.noEndDate")}
+          />
         </div>
         <div class="flex gap-2 pt-1">
-          <button class="btn btn-primary flex-1">{editing ? t("setup.calendars.saveSlot") : t("setup.calendars.addSlotButton")}</button>
-          {editing && <a href={Astro.url.pathname} class="btn">{t("common.cancel")}</a>}
+          <button class="btn btn-primary flex-1">
+            {editing ? t("setup.calendars.saveSlot") : t("setup.calendars.addSlotButton")}
+          </button>
+          {editing && (
+            <a href={Astro.url.pathname} class="btn">
+              {t("common.cancel")}
+            </a>
+          )}
         </div>
       </form>
-      {
-        editing && (
-          <form method="post" class="card p-5">
-            <input type="hidden" name="id" value={editing.id} />
-            <p class="muted mb-3">{t("setup.calendars.stopSlotHint")}</p>
-            <button class="btn btn-danger w-full" name="_action" value="endSlot">
-              {t("setup.calendars.stopSlot")}
-            </button>
-          </form>
-        )
-      }
+      {editing && (
+        <form method="post" class="card p-5">
+          <input type="hidden" name="id" value={editing.id} />
+          <p class="muted mb-3">{t("setup.calendars.stopSlotHint")}</p>
+          <button class="btn btn-danger w-full" name="_action" value="endSlot">
+            {t("setup.calendars.stopSlot")}
+          </button>
+        </form>
+      )}
       <details class="card p-5">
         <summary class="cursor-pointer font-medium">{t("setup.calendars.details")}</summary>
         <form method="post" class="mt-3 space-y-3">
@@ -189,7 +254,12 @@ const form = editing ?? blank;
           <button class="btn w-full">{t("common.save")}</button>
         </form>
         <form method="post" class="mt-3">
-          <button class="btn btn-danger w-full" name="_action" value="archive" onclick={`return confirm(${JSON.stringify(t("setup.calendars.removeConfirm"))})`}>
+          <button
+            class="btn btn-danger w-full"
+            name="_action"
+            value="archive"
+            onclick={`return confirm(${JSON.stringify(t("setup.calendars.removeConfirm"))})`}
+          >
             {t("setup.calendars.removeCalendar")}
           </button>
         </form>

@@ -1,8 +1,10 @@
 ---
+import { t } from "../../i18n";
+import { unitLabel } from "../../server/labels";
 import { Plus, Trash } from "@lucide/astro";
-import DateField from "../islands/DateField";
+import DateInput from "../DateInput.astro";
 import { BENCHMARK_UNITS } from "../../db/schema";
-import { formatDate } from "../../lib/format";
+import { formatDate, formatNumber } from "../../lib/format";
 
 interface Props {
   rows: { id: string; exercise: string; value: number; unit: string; recordedOn: string; note: string | null }[];
@@ -14,7 +16,7 @@ const { rows, exercises, today } = Astro.props;
 
 <details>
   <summary class="btn btn-sm list-none">
-    <Plus size={14} /> Add a result
+    <Plus size={14} /> {t("profile.result.add")}
   </summary>
   <form
     method="post"
@@ -22,8 +24,14 @@ const { rows, exercises, today } = Astro.props;
   >
     <input type="hidden" name="_action" value="benchmark" />
     <label class="col-span-2 block space-y-1">
-      <span class="label">Exercise</span>
-      <input name="exercise" required list="exercise-list" class="input" placeholder="e.g. Back squat" />
+      <span class="label">{t("profile.result.exercise")}</span>
+      <input
+        name="exercise"
+        required
+        list="exercise-list"
+        class="input"
+        placeholder={t("profile.result.exercisePlaceholder")}
+      />
       <datalist id="exercise-list">
         {exercises.map((e) => (
           <option value={e} />
@@ -31,26 +39,26 @@ const { rows, exercises, today } = Astro.props;
       </datalist>
     </label>
     <label class="block space-y-1">
-      <span class="label">Result</span>
+      <span class="label">{t("profile.result.result")}</span>
       <input name="value" required inputmode="decimal" class="input" />
     </label>
     <label class="block space-y-1">
-      <span class="label">Unit</span>
+      <span class="label">{t("profile.result.unit")}</span>
       <select name="unit" class="input">
         {BENCHMARK_UNITS.map((u) => (
-          <option value={u}>{u}</option>
+          <option value={u}>{unitLabel(u)}</option>
         ))}
       </select>
     </label>
     <div class="col-span-2 space-y-1">
-      <span class="label">Date</span>
-      <DateField client:load name="recordedOn" value={today} today={today} required ariaLabel="Recorded on" />
+      <span class="label">{t("common.date")}</span>
+      <DateInput name="recordedOn" value={today} today={today} required ariaLabel={t("common.date")} />
     </div>
     <label class="col-span-2 block space-y-1">
-      <span class="label">Note</span>
-      <input name="note" class="input" placeholder="Optional, e.g. 3 reps, belt" />
+      <span class="label">{t("common.note")}</span>
+      <input name="note" class="input" placeholder={t("profile.result.notePlaceholder")} />
     </label>
-    <button class="btn btn-primary col-span-2 sm:col-span-1">Save result</button>
+    <button class="btn btn-primary col-span-2 sm:col-span-1">{t("profile.result.save")}</button>
   </form>
 </details>
 
@@ -64,15 +72,15 @@ const { rows, exercises, today } = Astro.props;
           {r.note && <span class="text-xs text-stone-500"> · {r.note}</span>}
         </span>
         <span class="font-medium tabular-nums">
-          {r.value} {r.unit}
+          {formatNumber(r.value)} {unitLabel(r.unit)}
         </span>
         <form method="post">
           <input type="hidden" name="_action" value="deleteBenchmark" />
           <input type="hidden" name="id" value={r.id} />
           <button
             class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
-            aria-label="Delete result"
-            onclick="return confirm('Delete this result?')"
+            aria-label={t("profile.result.delete")}
+            onclick={`return confirm(${JSON.stringify(t("profile.result.deleteConfirm"))})`}
           >
             <Trash size={14} />
           </button>

@@ -53,52 +53,50 @@ const editId = Astro.url.searchParams.get("edit");
 <Setup title={t("setup.plans.title")} subtitle={t("setup.plans.subtitle")} flash={result.flash} error={result.error}>
   <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
     <div class="space-y-3">
-      {
-        plans.map((p) =>
-          editId === p.id ? (
-            <form method="post" class="card space-y-3 p-5 ring-2 ring-stone-900/10">
-              <input type="hidden" name="_action" value="update" />
-              <input type="hidden" name="id" value={p.id} />
-              <input type="hidden" name="_redirect" value={Astro.url.pathname} />
-              <PlanFields plan={p} currency={ctx.currency} />
-              <div class="flex gap-2">
-                <button class="btn btn-primary">{t("common.save")}</button>
-                <a href={Astro.url.pathname} class="btn">
-                  {t("common.cancel")}
-                </a>
-              </div>
-            </form>
-          ) : (
-            <div class:list={["card flex flex-wrap items-center gap-4 p-4", p.archivedAt && "opacity-60"]}>
-              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <Ticket size={20} />
-              </span>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold">{p.name}</span>
-                  {p.archivedAt && <span class="badge bg-stone-100 text-stone-600">{t("common.hidden")}</span>}
-                </div>
-                <div class="text-sm text-stone-500">
-                  {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
-                </div>
-                {p.description && <p class="mt-0.5 text-sm text-stone-600">{p.description}</p>}
-              </div>
-              <span class="text-lg font-semibold tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
-              <div class="flex gap-1.5">
-                <a href={`?edit=${p.id}`} class="btn btn-sm">
-                  <Pencil size={13} /> {t("common.edit")}
-                </a>
-                <form method="post">
-                  <input type="hidden" name="id" value={p.id} />
-                  <button class="btn btn-sm" name="_action" value={p.archivedAt ? "restore" : "archive"}>
-                    {p.archivedAt ? t("common.restore") : t("common.hide")}
-                  </button>
-                </form>
-              </div>
+      {plans.map((p) =>
+        editId === p.id ? (
+          <form method="post" class="card space-y-3 p-5 ring-2 ring-stone-900/10">
+            <input type="hidden" name="_action" value="update" />
+            <input type="hidden" name="id" value={p.id} />
+            <input type="hidden" name="_redirect" value={Astro.url.pathname} />
+            <PlanFields plan={p} currency={ctx.currency} />
+            <div class="flex gap-2">
+              <button class="btn btn-primary">{t("common.save")}</button>
+              <a href={Astro.url.pathname} class="btn">
+                {t("common.cancel")}
+              </a>
             </div>
-          ),
-        )
-      }
+          </form>
+        ) : (
+          <div class:list={["card flex flex-wrap items-center gap-4 p-4", p.archivedAt && "opacity-60"]}>
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <Ticket size={20} />
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold">{p.name}</span>
+                {p.archivedAt && <span class="badge bg-stone-100 text-stone-600">{t("common.hidden")}</span>}
+              </div>
+              <div class="text-sm text-stone-500">
+                {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
+              </div>
+              {p.description && <p class="mt-0.5 text-sm text-stone-600">{p.description}</p>}
+            </div>
+            <span class="text-lg font-semibold tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
+            <div class="flex gap-1.5">
+              <a href={`?edit=${p.id}`} class="btn btn-sm">
+                <Pencil size={13} /> {t("common.edit")}
+              </a>
+              <form method="post">
+                <input type="hidden" name="id" value={p.id} />
+                <button class="btn btn-sm" name="_action" value={p.archivedAt ? "restore" : "archive"}>
+                  {p.archivedAt ? t("common.restore") : t("common.hide")}
+                </button>
+              </form>
+            </div>
+          </div>
+        ),
+      )}
     </div>
 
     <form method="post" class="card h-fit space-y-3 p-5 xl:sticky xl:top-20">

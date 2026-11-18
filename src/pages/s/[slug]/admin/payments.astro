@@ -1,4 +1,6 @@
 ---
+import { paymentMethodLabel } from "../../../../server/labels";
+import { t } from "../../../../i18n";
 import Studio from "../../../../layouts/Studio.astro";
 import { addMonths, localDateOf } from "../../../../domain/dates";
 import { formatDate, formatMoney, formatMonthYear } from "../../../../lib/format";
@@ -21,29 +23,37 @@ const byMethod = Object.entries(
 const label = formatMonthYear(from);
 ---
 
-<Studio title="Payments">
+<Studio title={t("members.payments.title")}>
   <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-2">
-      <a href={`?month=${addMonths(from, -1).slice(0, 7)}`} class="btn btn-sm" aria-label="Previous month">
+      <a
+        href={`?month=${addMonths(from, -1).slice(0, 7)}`}
+        class="btn btn-sm"
+        aria-label={t("members.payments.previousMonth")}
+      >
         ←
       </a>
-      <a href={`?month=${addMonths(from, 1).slice(0, 7)}`} class="btn btn-sm" aria-label="Next month">
+      <a
+        href={`?month=${addMonths(from, 1).slice(0, 7)}`}
+        class="btn btn-sm"
+        aria-label={t("members.payments.nextMonth")}
+      >
         →
       </a>
-      <h1 class="ml-2 text-2xl font-semibold">Payments · {label}</h1>
+      <h1 class="ml-2 text-2xl font-semibold">{t("members.payments.heading", { month: label })}</h1>
     </div>
   </div>
-  <p class="muted mb-5">Payments recorded by hand when adding plans or from a member's page.</p>
+  <p class="muted mb-5">{t("members.payments.intro")}</p>
 
   <div class="mb-5 grid gap-3 sm:grid-cols-4">
     <div class="card p-4 sm:col-span-1">
       <div class="text-2xl font-semibold tabular-nums">{formatMoney(total, ctx.currency)}</div>
-      <div class="muted">{payments.length} payments</div>
+      <div class="muted">{t("members.payments.count", { count: payments.length })}</div>
     </div>
     {byMethod.map(([method, cents]) => (
       <div class="card p-4">
         <div class="text-xl font-semibold tabular-nums">{formatMoney(cents, ctx.currency)}</div>
-        <div class="muted capitalize">{method}</div>
+        <div class="muted">{paymentMethodLabel(method)}</div>
       </div>
     ))}
   </div>
@@ -52,18 +62,18 @@ const label = formatMonthYear(from);
     <table class="table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Member</th>
-          <th>Plan</th>
-          <th>Method</th>
-          <th class="text-right">Amount</th>
+          <th>{t("members.payments.date")}</th>
+          <th>{t("members.payments.member")}</th>
+          <th>{t("members.payments.plan")}</th>
+          <th>{t("members.payments.method")}</th>
+          <th class="text-right">{t("members.payments.amount")}</th>
         </tr>
       </thead>
       <tbody>
         {payments.length === 0 && (
           <tr>
             <td colspan="5" class="py-8 text-center text-stone-500">
-              No payments this month.
+              {t("members.payments.none")}
             </td>
           </tr>
         )}
@@ -79,7 +89,7 @@ const label = formatMonthYear(from);
               {p.packName ?? "—"}
               {p.note && <span class="muted block text-xs">{p.note}</span>}
             </td>
-            <td class="capitalize">{p.method}</td>
+            <td>{paymentMethodLabel(p.method)}</td>
             <td class="text-right font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</td>
           </tr>
         ))}

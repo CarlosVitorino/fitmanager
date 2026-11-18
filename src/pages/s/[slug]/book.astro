@@ -1,6 +1,7 @@
 ---
 import Studio from "../../../layouts/Studio.astro";
 import ClassCalendar from "../../../components/islands/ClassCalendar";
+import { getLocale, messagesFor, t } from "../../../i18n";
 import { addDays, isLocalDate, localDateOf } from "../../../domain/dates";
 import { formatDate, formatDayLong, formatMinutes, formatTime } from "../../../lib/format";
 import { handleActions, str } from "../../../server/actions";
@@ -18,13 +19,14 @@ const selectedDate = dateParam && isLocalDate(dateParam) && dateParam >= today ?
 const result = await handleActions(Astro, {
   book: async (f) => {
     const { session } = await bookSelf(ctx, str(f, "sessionId"));
-    return `You're booked for ${formatDayLong(session.localDate)} at ${formatTime(session.startsAt, ctx.timezone)}.`;
+    return t("booking.flash.booked", {
+      day: formatDayLong(session.localDate),
+      time: formatTime(session.startsAt, ctx.timezone),
+    });
   },
   cancel: async (f) => {
     const outcome = await cancelOwnBooking(ctx, str(f, "bookingId"));
-    return outcome === "released"
-      ? "Booking cancelled. Your credit is back."
-      : "Booking cancelled. It was inside the cancellation window, so the credit is used.";
+    return outcome === "released" ? t("booking.flash.cancelledReleased") : t("booking.flash.cancelledLate");
   },
 });
 if (result instanceof Response) return result;
@@ -42,20 +44,26 @@ const nextExpiry = packs
   .map((p) => p.expiresOn!)[0];
 ---
 
-<Studio title="Book a class" flash={result.flash} error={result.error} wide>
+<Studio title={t("booking.book.title")} flash={result.flash} error={result.error} wide>
   <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-semibold">Book a class</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">{t("booking.book.title")}</h1>
       <p class="muted">
-        Tap a class to book it. Book until {formatMinutes(ctx.bookingCutoffMinutes)} before; cancel up to{" "}
-        {formatMinutes(ctx.cancellationCutoffMinutes)} before to get your credit back.
+        {t("booking.book.intro", {
+          booking: formatMinutes(ctx.bookingCutoffMinutes),
+          cancel: formatMinutes(ctx.cancellationCutoffMinutes),
+        })}
       </p>
     </div>
     <a href={`/s/${ctx.slug}/me`} class="card flex items-center gap-3 px-4 py-2.5 hover:border-stone-400">
       <span class="text-2xl font-semibold tabular-nums">{credits}</span>
       <span class="text-sm leading-tight text-stone-600">
-        {credits === 1 ? "credit" : "credits"} available
-        {nextExpiry && <span class="block text-xs text-stone-500">next expiry {formatDate(nextExpiry)}</span>}
+        {t("booking.book.creditsAvailable", { count: credits })}
+        {nextExpiry && (
+          <span class="block text-xs text-stone-500">
+            {t("booking.book.nextExpiry", { date: formatDate(nextExpiry) })}
+          </span>
+        )}
       </span>
     </a>
   </div>
@@ -63,7 +71,7 @@ const nextExpiry = packs
   {calendars.length > 1 && (
     <div class="mb-4 flex flex-wrap gap-1">
       <a href={filterLink()} class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
-        All
+        {t("common.all")}
       </a>
       {calendars.map((c) => (
         <a href={filterLink(c.id)} class:list={["btn btn-sm", calendarId === c.id && "btn-primary"]}>
@@ -75,9 +83,9 @@ const nextExpiry = packs
 
   {credits === 0 && (
     <p class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      You have no credits right now. Ask your coach for a plan; see{" "}
+      {t("booking.book.noCredits")}{" "}
       <a class="underline" href={`/s/${ctx.slug}/me#plans`}>
-        the plans this studio offers
+        {t("booking.book.plansLink")}
       </a>
       .
     </p>
@@ -94,8 +102,10 @@ const nextExpiry = packs
     bookingCutoffMinutes={ctx.bookingCutoffMinutes}
     cancellationCutoffMinutes={ctx.cancellationCutoffMinutes}
     credits={credits}
+    locale={getLocale()}
+    messages={messagesFor("booking")}
   />
   <noscript>
-    <p class="muted mt-4">The calendar needs JavaScript.</p>
+    <p class="muted mt-4">{t("common.needsJs")}</p>
   </noscript>
 </Studio>

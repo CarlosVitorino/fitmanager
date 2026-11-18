@@ -1,4 +1,5 @@
 ---
+import { t } from "../../i18n";
 import { formatDay } from "../../lib/format";
 
 interface Props {
@@ -11,7 +12,11 @@ const total = weeks.reduce((n, w) => n + w.count, 0);
 ---
 
 <div>
-  <div class="flex h-28 items-end gap-1.5" role="img" aria-label={`${total} classes in the last ${weeks.length} weeks`}>
+  <div
+    class="flex h-28 items-end gap-1.5"
+    role="img"
+    aria-label={t("members.chart.aria", { count: total, weeks: weeks.length })}
+  >
     {weeks.map((w, i) => (
       <div class="group relative flex h-full flex-1 flex-col items-center justify-end">
         {w.count > 0 && <span class="mb-1 text-[11px] font-medium text-stone-500 tabular-nums">{w.count}</span>}
@@ -23,13 +28,13 @@ const total = weeks.reduce((n, w) => n + w.count, 0);
           style={`height:${w.count ? Math.max(14, (w.count / max) * 85) : 5}%`}
         />
         <span class="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 rounded bg-stone-900 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-white group-hover:block">
-          {w.count} · wk of {formatDay(w.weekStart)}
+          {t("members.chart.weekOf", { count: w.count, date: formatDay(w.weekStart) })}
         </span>
       </div>
     ))}
   </div>
   <div class="mt-1.5 flex justify-between text-[11px] text-stone-400">
     <span>{formatDay(weeks[0]!.weekStart)}</span>
-    <span>This week</span>
+    <span>{t("members.chart.thisWeek")}</span>
   </div>
 </div>

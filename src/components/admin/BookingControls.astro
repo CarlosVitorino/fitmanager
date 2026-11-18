@@ -1,4 +1,5 @@
 ---
+import { t } from "../../i18n";
 /** Coach controls for one booking: no-show, whether the credit is used, remove, move. */
 interface Props {
   bookingId: string;
@@ -19,9 +20,9 @@ const { bookingId, status, charged, noShow, started, moveTargets = [] } = Astro.
       <input type="hidden" name="value" value={noShow ? "0" : "1"} />
       <button
         class:list={["btn btn-sm", noShow && "border-amber-300 bg-amber-50 text-amber-800"]}
-        title="Mark whether the member came"
+        title={t("booking.controls.markNoShowTitle")}
       >
-        {noShow ? "No-show ✓" : "Mark no-show"}
+        {noShow ? t("booking.controls.noShowDone") : t("booking.controls.markNoShow")}
       </button>
     </form>
   )}
@@ -30,14 +31,14 @@ const { bookingId, status, charged, noShow, started, moveTargets = [] } = Astro.
       <input type="hidden" name="_action" value="charge" />
       <input type="hidden" name="bookingId" value={bookingId} />
       <input type="hidden" name="value" value={charged ? "0" : "1"} />
-      <button class="btn btn-sm" title={charged ? "Give the credit back" : "Use the credit after all"}>
-        {charged ? "Waive credit" : "Charge credit"}
+      <button class="btn btn-sm" title={charged ? t("booking.controls.giveBack") : t("booking.controls.useAfterAll")}>
+        {charged ? t("booking.controls.waive") : t("booking.controls.charge")}
       </button>
     </form>
   )}
   {status === "booked" && !started && moveTargets.length > 0 && (
     <details class="relative">
-      <summary class="btn btn-sm list-none">Move…</summary>
+      <summary class="btn btn-sm list-none">{t("booking.controls.move")}</summary>
       <form method="post" class="card absolute right-0 z-10 mt-1 w-72 space-y-2 p-3">
         <input type="hidden" name="_action" value="move" />
         <input type="hidden" name="bookingId" value={bookingId} />
@@ -46,7 +47,7 @@ const { bookingId, status, charged, noShow, started, moveTargets = [] } = Astro.
             <option value={t.id}>{t.label}</option>
           ))}
         </select>
-        <button class="btn btn-primary w-full">Move booking</button>
+        <button class="btn btn-primary w-full">{t("booking.controls.moveBooking")}</button>
       </form>
     </details>
   )}
@@ -56,9 +57,9 @@ const { bookingId, status, charged, noShow, started, moveTargets = [] } = Astro.
       <input type="hidden" name="bookingId" value={bookingId} />
       <button
         class="btn btn-sm btn-danger"
-        onclick="return confirm('Remove this booking? The credit goes back to the member.')"
+        onclick={`return confirm(${JSON.stringify(t("booking.controls.removeConfirm"))})`}
       >
-        Remove
+        {t("common.remove")}
       </button>
     </form>
   )}

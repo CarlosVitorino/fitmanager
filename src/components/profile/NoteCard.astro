@@ -1,4 +1,6 @@
 ---
+import { t } from "../../i18n";
+import { noteCategoryLabel } from "../../server/labels";
 import { EyeOff, Pin, Users } from "@lucide/astro";
 import { formatInstant } from "../../lib/format";
 import { NOTE_CATEGORY, type NoteCategory } from "../../lib/notes";
@@ -17,6 +19,7 @@ interface Props {
 }
 const { note, timezone, showVisibility = false } = Astro.props;
 const cat = NOTE_CATEGORY[note.category] ?? NOTE_CATEGORY.general;
+const catLabel = noteCategoryLabel(note.category);
 ---
 
 <article
@@ -26,24 +29,24 @@ const cat = NOTE_CATEGORY[note.category] ?? NOTE_CATEGORY.general;
   ]}
 >
   <header class="mb-2 flex flex-wrap items-center gap-2">
-    <span class:list={["badge", cat.cls]}>{cat.label}</span>
+    <span class:list={["badge", cat.cls]}>{catLabel}</span>
     {note.pinned && (
       <span class="badge gap-1 bg-stone-900 text-white">
-        <Pin size={11} /> Pinned
+        <Pin size={11} /> {t("profile.notes.pinned")}
       </span>
     )}
     {showVisibility &&
       (note.visibility === "private" ? (
         <span class="badge gap-1 bg-amber-100 text-amber-800">
-          <EyeOff size={11} /> Coaches only
+          <EyeOff size={11} /> {t("profile.notes.coachesOnly")}
         </span>
       ) : (
         <span class="badge gap-1 bg-sky-50 text-sky-700">
-          <Users size={11} /> Shared with member
+          <Users size={11} /> {t("profile.notes.sharedWithMember")}
         </span>
       ))}
     <span class="ml-auto text-xs text-stone-400">
-      {note.authorName ?? "Coach"} · {formatInstant(note.createdAt, timezone)}
+      {note.authorName ?? t("profile.notes.coach")} · {formatInstant(note.createdAt, timezone)}
     </span>
   </header>
   <div class="fm-prose" set:html={note.body} />

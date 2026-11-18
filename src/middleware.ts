@@ -81,7 +81,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 });
 
 function errorPage(status: number, message: string): Response {
-  const title = status === 404 ? t("common.notFound") : status === 403 ? t("common.notAllowed") : t("common.somethingWrong");
+  const title =
+    status === 404 ? t("common.notFound") : status === 403 ? t("common.notAllowed") : t("common.somethingWrong");
   const html = `<!doctype html><html lang="${getLocale()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title></head>
 <body style="font-family:system-ui,sans-serif;background:#f6f5f3;color:#1c1917;display:grid;place-items:center;min-height:100vh;margin:0">
 <main style="text-align:center;max-width:28rem;padding:2rem"><h1 style="font-size:1.5rem">${escapeHtml(title)}</h1><p style="color:#57534e">${escapeHtml(message)}</p>

@@ -1,8 +1,9 @@
 ---
 import FormError from "../components/FormError.astro";
 import Base from "../layouts/Base.astro";
+import { t } from "../i18n";
 import { auth } from "../lib/auth";
-import { readAuthError, redirectWithCookies, safeNext } from "../server/forms";
+import { redirectWithCookies, safeNext } from "../server/forms";
 
 const next = safeNext(Astro.url.searchParams.get("next"));
 let error: string | null = null;
@@ -17,45 +18,32 @@ if (Astro.request.method === "POST") {
     asResponse: true,
   });
   if (res.ok) return redirectWithCookies(next, res);
-  error = await readAuthError(res, "Email or password is incorrect");
+  error = t("auth.loginFailed");
   Astro.response.status = res.status;
 } else if (Astro.locals.user) {
   return Astro.redirect(next);
 }
 ---
 
-<Base title="Log in">
-  <div class="mx-auto max-w-sm space-y-6">
-    <h1 class="text-2xl font-semibold">Log in</h1>
+<Base title={t("auth.loginTitle")} narrow>
+  <div class="card space-y-6 p-7">
+    <h1 class="text-2xl font-semibold tracking-tight">{t("auth.loginTitle")}</h1>
     <FormError message={error} />
     <form method="post" class="space-y-4">
       <label class="block space-y-1">
-        <span class="text-sm font-medium">Email</span>
-        <input
-          name="email"
-          type="email"
-          required
-          autocomplete="email"
-          value={email}
-          class="w-full rounded border border-stone-300 px-3 py-2"
-        />
+        <span class="label">{t("common.email")}</span>
+        <input name="email" type="email" required autocomplete="email" value={email} class="input" />
       </label>
       <label class="block space-y-1">
-        <span class="text-sm font-medium">Password</span>
-        <input
-          name="password"
-          type="password"
-          required
-          autocomplete="current-password"
-          class="w-full rounded border border-stone-300 px-3 py-2"
-        />
+        <span class="label">{t("auth.password")}</span>
+        <input name="password" type="password" required autocomplete="current-password" class="input" />
       </label>
-      <button class="w-full rounded bg-stone-900 px-3 py-2 font-medium text-white hover:bg-stone-700">Log in</button>
+      <button class="btn btn-primary w-full py-2.5">{t("auth.loginButton")}</button>
     </form>
     <p class="text-sm text-stone-600">
-      No account?{" "}
-      <a class="underline" href={`/signup?next=${encodeURIComponent(next)}`}>
-        Sign up
+      {t("auth.noAccount")}{" "}
+      <a class="font-medium underline" href={`/signup?next=${encodeURIComponent(next)}`}>
+        {t("auth.signupButton")}
       </a>
     </p>
   </div>

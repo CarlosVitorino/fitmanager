@@ -92,7 +92,9 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
             <a
               href={`${base}/book`}
               class="hidden rounded-lg px-2.5 py-1.5 text-sm text-stone-500 hover:bg-stone-100 lg:inline"
-            >{t("common.memberView")}</a>
+            >
+              {t("common.memberView")}
+            </a>
           )}
           <LanguageMenu />
           <span class="flex items-center gap-2 text-sm text-stone-700">
@@ -102,8 +104,8 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
           <form method="post" action="/logout">
             <button
               class="rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
-              title="Log out"
-              aria-label="Log out"
+              title={t("common.logOut")}
+              aria-label={t("common.logOut")}
             >
               <LogOut size={16} />
             </button>

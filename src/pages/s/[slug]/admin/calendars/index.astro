@@ -12,7 +12,10 @@ import { calendarInput, listCalendars, saveCalendar } from "../../../../../serve
 const ctx = Astro.locals.studio!;
 const result = await handleActions(Astro, {
   create: async (f) => {
-    const cal = await saveCalendar(ctx, calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }));
+    const cal = await saveCalendar(
+      ctx,
+      calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }),
+    );
     return Astro.redirect(`/s/${ctx.slug}/admin/calendars/${cal.id}`, 303);
   },
 });
@@ -28,24 +31,34 @@ const counts = await db
 const slotCount = new Map(counts.map((c) => [c.calendarId, c.n]));
 ---
 
-<Setup title={t("setup.calendars.title")} subtitle={t("setup.calendars.subtitle")} flash={result.flash} error={result.error}>
+<Setup
+  title={t("setup.calendars.title")}
+  subtitle={t("setup.calendars.subtitle")}
+  flash={result.flash}
+  error={result.error}
+>
   <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
     <div class="space-y-3">
-      {
-        calendars.map((c) => (
-          <a href={`/s/${ctx.slug}/admin/calendars/${c.id}`} class="card group flex items-center gap-4 p-4 transition hover:border-stone-300 hover:shadow-md">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
-              <CalendarRange size={20} />
+      {calendars.map((c) => (
+        <a
+          href={`/s/${ctx.slug}/admin/calendars/${c.id}`}
+          class="card group flex items-center gap-4 p-4 transition hover:border-stone-300 hover:shadow-md"
+        >
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+            <CalendarRange size={20} />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block font-semibold">{c.name}</span>
+            <span class="block text-sm text-stone-500">
+              {c.description ?? t("setup.calendars.weeklySlots", { count: slotCount.get(c.id) ?? 0 })}
             </span>
-            <span class="min-w-0 flex-1">
-              <span class="block font-semibold">{c.name}</span>
-              <span class="block text-sm text-stone-500">{c.description ?? t("setup.calendars.weeklySlots", { count: slotCount.get(c.id) ?? 0 })}</span>
-            </span>
-            <span class="badge bg-stone-100 text-stone-600">{t("setup.calendars.weeklySlots", { count: slotCount.get(c.id) ?? 0 })}</span>
-            <ChevronRight size={18} class="text-stone-300 group-hover:text-stone-600" />
-          </a>
-        ))
-      }
+          </span>
+          <span class="badge bg-stone-100 text-stone-600">
+            {t("setup.calendars.weeklySlots", { count: slotCount.get(c.id) ?? 0 })}
+          </span>
+          <ChevronRight size={18} class="text-stone-300 group-hover:text-stone-600" />
+        </a>
+      ))}
     </div>
     <form method="post" class="card h-fit space-y-3 p-5 xl:sticky xl:top-20">
       <h2 class="h2">{t("setup.calendars.add")}</h2>

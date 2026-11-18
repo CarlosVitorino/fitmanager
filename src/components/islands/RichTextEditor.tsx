@@ -15,9 +15,25 @@ interface Props {
   /** Height of the writing area, in rem. */
   minHeight?: number;
   ariaLabel?: string;
+  labels: Record<
+    | "placeholder"
+    | "linkPrompt"
+    | "toolbar"
+    | "bold"
+    | "italic"
+    | "underline"
+    | "heading"
+    | "bullets"
+    | "numbers"
+    | "quote"
+    | "link"
+    | "undo"
+    | "redo",
+    string
+  >;
 }
 
-export default function RichTextEditor({ name, value, placeholder = "Write hereâ€¦", minHeight = 8, ariaLabel }: Props) {
+export default function RichTextEditor({ name, value, placeholder, minHeight = 8, ariaLabel, labels }: Props) {
   const [html, setHtml] = useState(value ?? "");
   const editor = useEditor({
     immediatelyRender: false,
@@ -28,7 +44,7 @@ export default function RichTextEditor({ name, value, placeholder = "Write hereâ
         horizontalRule: false,
         link: { openOnClick: false, autolink: true, defaultProtocol: "https" },
       }),
-      Placeholder.configure({ placeholder }),
+      Placeholder.configure({ placeholder: placeholder ?? labels.placeholder }),
     ],
     content: value || "",
     editorProps: {
@@ -66,7 +82,7 @@ export default function RichTextEditor({ name, value, placeholder = "Write hereâ
   const setLink = () => {
     if (!editor) return;
     const previous = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("Link address", previous ?? "https://");
+    const url = window.prompt(labels.linkPrompt, previous ?? "https://");
     if (url === null) return;
     if (url.trim() === "" || url === "https://") chain().extendMarkRange("link").unsetLink().run();
     else chain().extendMarkRange("link").setLink({ href: url.trim() }).run();
@@ -78,38 +94,38 @@ export default function RichTextEditor({ name, value, placeholder = "Write hereâ
       <div
         className="flex items-center gap-0.5 overflow-x-auto border-b border-stone-200 px-1.5 py-1"
         role="toolbar"
-        aria-label="Formatting"
+        aria-label={labels.toolbar}
       >
-        <Tool label="Bold" active={state?.bold} onClick={() => chain().toggleBold().run()}>
+        <Tool label={labels.bold} active={state?.bold} onClick={() => chain().toggleBold().run()}>
           <Bold size={16} />
         </Tool>
-        <Tool label="Italic" active={state?.italic} onClick={() => chain().toggleItalic().run()}>
+        <Tool label={labels.italic} active={state?.italic} onClick={() => chain().toggleItalic().run()}>
           <Italic size={16} />
         </Tool>
-        <Tool label="Underline" active={state?.underline} onClick={() => chain().toggleUnderline().run()}>
+        <Tool label={labels.underline} active={state?.underline} onClick={() => chain().toggleUnderline().run()}>
           <Underline size={16} />
         </Tool>
         <Sep />
-        <Tool label="Heading" active={state?.heading} onClick={() => chain().toggleHeading({ level: 3 }).run()}>
+        <Tool label={labels.heading} active={state?.heading} onClick={() => chain().toggleHeading({ level: 3 }).run()}>
           <Heading size={16} />
         </Tool>
-        <Tool label="Bulleted list" active={state?.bullet} onClick={() => chain().toggleBulletList().run()}>
+        <Tool label={labels.bullets} active={state?.bullet} onClick={() => chain().toggleBulletList().run()}>
           <List size={16} />
         </Tool>
-        <Tool label="Numbered list" active={state?.ordered} onClick={() => chain().toggleOrderedList().run()}>
+        <Tool label={labels.numbers} active={state?.ordered} onClick={() => chain().toggleOrderedList().run()}>
           <ListOrdered size={16} />
         </Tool>
-        <Tool label="Quote" active={state?.quote} onClick={() => chain().toggleBlockquote().run()}>
+        <Tool label={labels.quote} active={state?.quote} onClick={() => chain().toggleBlockquote().run()}>
           <Quote size={16} />
         </Tool>
-        <Tool label="Link" active={state?.link} onClick={setLink}>
+        <Tool label={labels.link} active={state?.link} onClick={setLink}>
           <Link2 size={16} />
         </Tool>
         <span className="ml-auto flex">
-          <Tool label="Undo" disabled={!state?.canUndo} onClick={() => chain().undo().run()}>
+          <Tool label={labels.undo} disabled={!state?.canUndo} onClick={() => chain().undo().run()}>
             <Undo2 size={16} />
           </Tool>
-          <Tool label="Redo" disabled={!state?.canRedo} onClick={() => chain().redo().run()}>
+          <Tool label={labels.redo} disabled={!state?.canRedo} onClick={() => chain().redo().run()}>
             <Redo2 size={16} />
           </Tool>
         </span>
@@ -118,7 +134,7 @@ export default function RichTextEditor({ name, value, placeholder = "Write hereâ
         <EditorContent editor={editor} />
       ) : (
         <div className="fm-prose px-3 py-2.5 text-stone-400" style={{ minHeight: `${minHeight}rem` }}>
-          {placeholder}
+          {placeholder ?? labels.placeholder}
         </div>
       )}
     </div>

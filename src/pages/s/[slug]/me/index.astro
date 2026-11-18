@@ -1,4 +1,6 @@
 ---
+import { t } from "../../../../i18n";
+import { goalLabel, paymentMethodLabel, validityLabel } from "../../../../server/labels";
 import {
   Award,
   CalendarCheck,
@@ -21,7 +23,6 @@ import CurrentPlan from "../../../../components/profile/CurrentPlan.astro";
 import NoteCard from "../../../../components/profile/NoteCard.astro";
 import Studio from "../../../../layouts/Studio.astro";
 import { localDateOf } from "../../../../domain/dates";
-import { describeValidity } from "../../../../domain/packs";
 import { weeklyCounts } from "../../../../domain/progress";
 import { formatDate, formatDay, formatDayLong, formatMoney, formatTime, plural } from "../../../../lib/format";
 import { handleActions, str } from "../../../../server/actions";
@@ -45,9 +46,7 @@ const base = `/s/${ctx.slug}`;
 const result = await handleActions(Astro, {
   cancel: async (f) => {
     const outcome = await cancelOwnBooking(ctx, str(f, "bookingId"));
-    return outcome === "released"
-      ? "Booking cancelled. Your credit is back."
-      : "Booking cancelled. It was inside the cancellation window, so the credit is used.";
+    return outcome === "released" ? t("booking.flash.cancelledReleased") : t("booking.flash.cancelledLate");
   },
 });
 if (result instanceof Response) return result;
@@ -76,35 +75,39 @@ const lateCancel = minsToNext < ctx.cancellationCutoffMinutes;
 const firstName = me.name.split(" ")[0];
 ---
 
-<Studio title="Home" flash={result.flash} error={result.error}>
-  <PageHeader title={`Hi, ${firstName}`} subtitle={`Your training at ${ctx.name}`}>
+<Studio title={t("nav.home")} flash={result.flash} error={result.error}>
+  <PageHeader title={t("profile.me.hi", { name: firstName })} subtitle={t("profile.me.subtitle", { studio: ctx.name })}>
     {isStaff(ctx.role) && (
       <a href={base} class="btn">
-        Back to studio
+        {t("common.backToStudio")}
       </a>
     )}
     <a href={`${base}/book`} class="btn btn-primary">
-      <CalendarPlus size={16} /> Book a class
+      <CalendarPlus size={16} /> {t("nav.book")}
     </a>
   </PageHeader>
 
   <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <StatTile label="classes done" value={a.totalClasses} tone="stone">
+    <StatTile label={t("profile.me.classesDone")} value={a.totalClasses} tone="stone">
       <CalendarCheck slot="icon" size={20} />
     </StatTile>
     <StatTile
-      label="week streak"
+      label={t("profile.me.weekStreak")}
       value={a.currentStreakWeeks}
-      hint={a.longestStreakWeeks > a.currentStreakWeeks ? `best ${a.longestStreakWeeks}` : undefined}
+      hint={
+        a.longestStreakWeeks > a.currentStreakWeeks ? t("profile.me.best", { count: a.longestStreakWeeks }) : undefined
+      }
       tone="amber"
     >
       <Flame slot="icon" size={20} />
     </StatTile>
-    <StatTile label="this month" value={thisMonth} tone="sky">
+    <StatTile label={t("profile.me.thisMonth")} value={thisMonth} tone="sky">
       <CalendarDays slot="icon" size={20} />
     </StatTile>
     <StatTile
-      label={a.nextMilestone ? `to reach ${a.nextMilestone.count} classes` : "milestones reached"}
+      label={
+        a.nextMilestone ? t("profile.me.toReach", { count: a.nextMilestone.count }) : t("profile.me.milestonesReached")
+      }
       value={a.nextMilestone ? a.nextMilestone.remaining : reached.length}
       tone="violet"
     >
@@ -114,7 +117,7 @@ const firstName = me.name.split(" ")[0];
 
   <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
     <div class="space-y-6">
-      <Section title="Your next class">
+      <Section title={t("profile.me.nextClass")}>
         <CalendarDays slot="icon" size={18} />
         {next ? (
           <div>
@@ -140,15 +143,11 @@ const firstName = me.name.split(" ")[0];
                 <input type="hidden" name="bookingId" value={next.bookingId} />
                 <button
                   class="btn btn-sm"
-                  onclick={
-                    lateCancel
-                      ? "return confirm('This is inside the cancellation window, so your credit will still be used. Cancel anyway?')"
-                      : undefined
-                  }
+                  onclick={lateCancel ? `return confirm(${JSON.stringify(t("profile.me.lateConfirm"))})` : undefined}
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
-                {lateCancel && <p class="mt-1 text-[11px] text-amber-700">credit won't be returned</p>}
+                {lateCancel && <p class="mt-1 text-[11px] text-amber-700">{t("profile.me.noRefund")}</p>}
               </form>
             </div>
             {upcoming.length > 1 && (
@@ -165,7 +164,9 @@ const firstName = me.name.split(" ")[0];
                     <form method="post" class="ml-auto">
                       <input type="hidden" name="_action" value="cancel" />
                       <input type="hidden" name="bookingId" value={h.bookingId} />
-                      <button class="text-xs text-stone-500 underline hover:text-stone-900">Cancel</button>
+                      <button class="text-xs text-stone-500 underline hover:text-stone-900">
+                        {t("common.cancel")}
+                      </button>
                     </form>
                   </li>
                 ))}
@@ -173,19 +174,16 @@ const firstName = me.name.split(" ")[0];
             )}
           </div>
         ) : (
-          <EmptyState
-            title="Nothing booked yet"
-            text="Pick a class from the calendar. It takes one credit, and you can cancel in time to get it back."
-          >
+          <EmptyState title={t("profile.me.nothingBooked")} text={t("profile.me.nothingBookedHint")}>
             <CalendarDays slot="icon" size={20} />
             <a href={`${base}/book`} class="btn btn-primary btn-sm">
-              Book a class
+              {t("nav.book")}
             </a>
           </EmptyState>
         )}
       </Section>
 
-      <Section title="Your progress" description="Classes per week, last 12 weeks">
+      <Section title={t("profile.me.progress")} description={t("profile.me.progressHint")}>
         <Sparkles slot="icon" size={18} />
         <AttendanceChart weeks={weeks} />
         <div class="mt-5 flex flex-wrap gap-2 border-t border-stone-100 pt-4">
@@ -195,16 +193,18 @@ const firstName = me.name.split(" ")[0];
                 "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
                 m.reachedOn ? "bg-amber-100 text-amber-900" : "bg-stone-100 text-stone-400",
               ]}
-              title={m.reachedOn ? `Reached ${formatDate(m.reachedOn)}` : "Not reached yet"}
+              title={
+                m.reachedOn ? t("profile.me.reachedOn", { date: formatDate(m.reachedOn) }) : t("profile.me.notReached")
+              }
             >
               <Award size={13} />
-              {m.count === 1 ? "First class" : `${m.count} classes`}
+              {m.count === 1 ? t("profile.me.firstClass") : t("profile.me.nClasses", { count: m.count })}
             </span>
           ))}
         </div>
       </Section>
 
-      <Section title="From your coach">
+      <Section title={t("profile.me.fromCoach")}>
         <MessageSquareText slot="icon" size={18} />
         {notes.length ? (
           <div class="space-y-3">
@@ -213,7 +213,9 @@ const firstName = me.name.split(" ")[0];
             ))}
             {notes.length > 3 && (
               <details>
-                <summary class="muted cursor-pointer">Older notes ({notes.length - 3})</summary>
+                <summary class="muted cursor-pointer">
+                  {t("profile.me.olderNotes", { count: notes.length - 3 })}
+                </summary>
                 <div class="mt-3 space-y-3">
                   {notes.slice(3).map((n) => (
                     <NoteCard note={n} timezone={ctx.timezone} />
@@ -223,17 +225,13 @@ const firstName = me.name.split(" ")[0];
             )}
           </div>
         ) : (
-          <EmptyState
-            title="No notes yet"
-            text="Feedback and plans your coach shares with you will show up here."
-            compact
-          >
+          <EmptyState title={t("profile.me.noNotes")} text={t("profile.me.noNotesHint")} compact>
             <MessageSquareText slot="icon" size={20} />
           </EmptyState>
         )}
       </Section>
 
-      <Section title="Recent classes">
+      <Section title={t("profile.me.recent")}>
         <Clock slot="icon" size={18} />
         {recent.length ? (
           <ul class="divide-y divide-stone-100">
@@ -257,7 +255,7 @@ const firstName = me.name.split(" ")[0];
             ))}
           </ul>
         ) : (
-          <EmptyState title="No classes yet" compact>
+          <EmptyState title={t("profile.me.noClasses")} compact>
             <Clock slot="icon" size={20} />
           </EmptyState>
         )}
@@ -268,7 +266,7 @@ const firstName = me.name.split(" ")[0];
       <div class="card p-5">
         <CurrentPlan packs={packs} timezone={ctx.timezone}>
           <p slot="empty" class="mt-1 text-sm text-stone-500">
-            Ask your coach to add one of the plans below.
+            {t("profile.me.askForPlan")}
           </p>
         </CurrentPlan>
       </div>
@@ -276,22 +274,22 @@ const firstName = me.name.split(" ")[0];
       {(fitness.goals.length > 0 || fitness.shared.goals) && (
         <a href={`${base}/me/profile`} class="card block p-5 transition hover:border-stone-300">
           <p class="eyebrow flex items-center gap-1.5">
-            <Target size={13} /> Your goals
+            <Target size={13} /> {t("profile.me.yourGoals")}
           </p>
           {fitness.goals.length ? (
             <div class="mt-2 flex flex-wrap gap-1.5">
               {fitness.goals.map((g) => (
-                <span class="chip">{g}</span>
+                <span class="chip">{goalLabel(g)}</span>
               ))}
             </div>
           ) : (
-            <p class="mt-2 text-sm text-stone-500">Your coach hasn't set goals with you yet.</p>
+            <p class="mt-2 text-sm text-stone-500">{t("profile.me.noGoals")}</p>
           )}
-          <p class="mt-3 text-xs font-medium text-stone-600">See your fitness profile →</p>
+          <p class="mt-3 text-xs font-medium text-stone-600">{t("profile.me.seeProfile")}</p>
         </a>
       )}
 
-      <Section title="Plans this studio offers" description="Ask your coach to add one to your account.">
+      <Section title={t("profile.me.plansOffered")} description={t("profile.me.plansOfferedHint")}>
         <ul class="space-y-3">
           {plans.map((p) => (
             <li class="text-sm">
@@ -300,7 +298,7 @@ const firstName = me.name.split(" ")[0];
                 <span class="tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
               </div>
               <div class="text-xs text-stone-500">
-                {plural(p.entries, "class", "classes")} · {describeValidity(validityOf(p)).toLowerCase()}
+                {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
               </div>
             </li>
           ))}
@@ -309,7 +307,7 @@ const firstName = me.name.split(" ")[0];
 
       {(payments.length > 0 || packs.some((p) => p.status === "expired" || p.status === "used_up")) && (
         <details class="card p-5">
-          <summary class="cursor-pointer text-sm font-semibold">Plan & payment history</summary>
+          <summary class="cursor-pointer text-sm font-semibold">{t("profile.me.history")}</summary>
           <ul class="mt-3 space-y-2 text-sm">
             {packs
               .filter((p) => p.status === "expired" || p.status === "used_up")
@@ -317,14 +315,16 @@ const firstName = me.name.split(" ")[0];
                 <li class="flex justify-between gap-2">
                   <span class="text-stone-600">{p.name}</span>
                   <span class="text-xs text-stone-500">
-                    {p.status === "expired" ? `expired ${formatDate(p.expiresOn!)}` : "used up"}
+                    {p.status === "expired"
+                      ? t("profile.me.expiredOn", { date: formatDate(p.expiresOn!) })
+                      : t("profile.me.usedUp")}
                   </span>
                 </li>
               ))}
             {payments.map((p) => (
               <li class="flex justify-between gap-2">
                 <span class="text-stone-600">
-                  {formatDate(p.paidOn)} <span class="text-xs text-stone-400">· {p.method}</span>
+                  {formatDate(p.paidOn)} <span class="text-xs text-stone-400">· {paymentMethodLabel(p.method)}</span>
                 </span>
                 <span class="font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</span>
               </li>

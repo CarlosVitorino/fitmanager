@@ -1,4 +1,5 @@
 ---
+import { t } from "../../i18n";
 /** One "visible to member" switch for a fitness profile section. Posts immediately. */
 import { Eye, EyeOff } from "@lucide/astro";
 
@@ -22,8 +23,8 @@ const { section, label, shared } = Astro.props;
     class:list={["relative h-6 w-11 rounded-full transition", shared ? "bg-emerald-500" : "bg-stone-300"]}
     role="switch"
     aria-checked={shared ? "true" : "false"}
-    aria-label={`${label}: ${shared ? "shared with member" : "coaches only"}`}
-    title={shared ? "Shared with the member. Click to hide." : "Coaches only. Click to share."}
+    aria-label={shared ? t("members.share.sharedAria", { label }) : t("members.share.privateAria", { label })}
+    title={shared ? t("members.share.sharedTitle") : t("members.share.privateTitle")}
   >
     <span
       class:list={[

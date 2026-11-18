@@ -1,5 +1,6 @@
 ---
-import DateField from "../islands/DateField";
+import { t } from "../../i18n";
+import DateInput from "../DateInput.astro";
 
 interface Props {
   p: {
@@ -26,74 +27,79 @@ const field = "block space-y-1";
   <input type="hidden" name="_action" value="personal" />
   {redirect && <input type="hidden" name="_redirect" value={redirect} />}
   <fieldset class="grid gap-4 sm:grid-cols-2">
-    <legend class="eyebrow mb-3">About</legend>
+    <legend class="eyebrow mb-3">{t("profile.personal.about")}</legend>
     <label class={field}>
-      <span class="label">Full name</span>
+      <span class="label">{t("profile.personal.fullName")}</span>
       <input name="name" required class="input" value={p.name} autocomplete="name" />
     </label>
     <label class={field}>
-      <span class="label">Email</span>
+      <span class="label">{t("common.email")}</span>
       <input class="input bg-stone-50 text-stone-500" value={p.email} disabled />
     </label>
     <label class={field}>
-      <span class="label">Phone</span>
+      <span class="label">{t("common.phone")}</span>
       <input name="phone" class="input" value={p.phone ?? ""} autocomplete="tel" inputmode="tel" />
     </label>
     <div class={field}>
-      <span class="label">Date of birth</span>
-      <DateField
-        client:load
+      <span class="label">{t("profile.personal.dateOfBirth")}</span>
+      <DateInput
         name="dateOfBirth"
         value={p.dateOfBirth}
         today={today}
         optional
-        placeholder="Not set"
-        ariaLabel="Date of birth"
+        placeholder={t("common.notSet")}
+        ariaLabel={t("profile.personal.dateOfBirth")}
       />
     </div>
     <label class={field}>
-      <span class="label">Gender</span>
-      <input name="gender" class="input" value={p.gender ?? ""} list="gender-options" placeholder="Optional" />
+      <span class="label">{t("profile.personal.gender")}</span>
+      <input
+        name="gender"
+        class="input"
+        value={p.gender ?? ""}
+        list="gender-options"
+        placeholder={t("common.optional")}
+      />
       <datalist id="gender-options">
-        <option value="Female" />
-        <option value="Male" />
-        <option value="Non-binary" />
-        <option value="Prefer not to say" />
+        <option value={t("profile.personal.genderFemale")} />
+        <option value={t("profile.personal.genderMale")} />
+        <option value={t("profile.personal.genderNonBinary")} />
+        <option value={t("profile.personal.genderUnsaid")} />
       </datalist>
     </label>
   </fieldset>
   <fieldset class="grid gap-4 sm:grid-cols-2">
-    <legend class="eyebrow mb-3">Address</legend>
+    <legend class="eyebrow mb-3">{t("profile.personal.address")}</legend>
     <label class:list={[field, "sm:col-span-2"]}>
-      <span class="label">Street</span>
+      <span class="label">{t("profile.personal.street")}</span>
       <input name="addressLine" class="input" value={p.addressLine ?? ""} autocomplete="street-address" />
     </label>
     <label class={field}>
-      <span class="label">City</span>
+      <span class="label">{t("profile.personal.city")}</span>
       <input name="city" class="input" value={p.city ?? ""} autocomplete="address-level2" />
     </label>
     <label class={field}>
-      <span class="label">Postal code</span>
+      <span class="label">{t("profile.personal.postalCode")}</span>
       <input name="postalCode" class="input" value={p.postalCode ?? ""} autocomplete="postal-code" />
     </label>
     <label class={field}>
-      <span class="label">Country</span>
+      <span class="label">{t("profile.personal.country")}</span>
       <input name="country" class="input" value={p.country ?? ""} autocomplete="country-name" />
     </label>
   </fieldset>
   <fieldset class="grid gap-4 sm:grid-cols-2">
-    <legend class="eyebrow mb-3">Emergency contact</legend>
+    <legend class="eyebrow mb-3">{t("profile.personal.emergency")}</legend>
     <label class={field}>
-      <span class="label">Name</span>
+      <span class="label">{t("common.name")}</span>
       <input name="emergencyName" class="input" value={p.emergencyName ?? ""} />
     </label>
     <label class={field}>
-      <span class="label">Phone</span>
+      <span class="label">{t("common.phone")}</span>
       <input name="emergencyPhone" class="input" value={p.emergencyPhone ?? ""} inputmode="tel" />
     </label>
   </fieldset>
   <div class="flex items-center gap-3">
-    <button class="btn btn-primary">Save details</button>
-    <span class="text-xs text-stone-500">Everything is optional.</span>
+    <button class="btn btn-primary">{t("profile.personal.save")}</button>
+    <span class="text-xs text-stone-500">{t("profile.personal.allOptional")}</span>
   </div>
 </form>

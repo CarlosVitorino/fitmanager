@@ -1,4 +1,6 @@
 ---
+import { t } from "../../../../../i18n";
+import { goalLabel, noteCategoryLabel, paymentMethodLabel, validityLabel } from "../../../../../server/labels";
 import {
   CalendarCheck,
   CalendarDays,
@@ -30,8 +32,8 @@ import BenchmarksEditor from "../../../../../components/coach/BenchmarksEditor.a
 import FitnessEditor from "../../../../../components/coach/FitnessEditor.astro";
 import MeasurementsEditor from "../../../../../components/coach/MeasurementsEditor.astro";
 import ShareSwitch from "../../../../../components/coach/ShareSwitch.astro";
-import DateField from "../../../../../components/islands/DateField";
-import RichTextEditor from "../../../../../components/islands/RichTextEditor";
+import DateInput from "../../../../../components/DateInput.astro";
+import RichText from "../../../../../components/RichText.astro";
 import AttendanceChart from "../../../../../components/profile/AttendanceChart.astro";
 import CurrentPlan from "../../../../../components/profile/CurrentPlan.astro";
 import FitnessView from "../../../../../components/profile/FitnessView.astro";
@@ -40,7 +42,6 @@ import PersonalForm from "../../../../../components/profile/PersonalForm.astro";
 import Studio from "../../../../../layouts/Studio.astro";
 import { PAYMENT_METHODS } from "../../../../../db/schema";
 import { localDateOf } from "../../../../../domain/dates";
-import { describeValidity } from "../../../../../domain/packs";
 import { ageOn, weeklyCounts } from "../../../../../domain/progress";
 import { formatDate, formatDay, formatInstant, formatMoney, formatTime, plural } from "../../../../../lib/format";
 import { NOTE_CATEGORY, type NoteCategory } from "../../../../../lib/notes";
@@ -116,14 +117,14 @@ const result = await handleActions(Astro, {
         medical: optStr(f, "medical"),
       }),
     );
-    return "Fitness profile saved.";
+    return t("members.flash.fitnessSaved");
   },
   share: async (f) => {
     const section = str(f, "section");
-    if (!(SECTIONS as readonly string[]).includes(section)) throw badRequest("Unknown section");
+    if (!(SECTIONS as readonly string[]).includes(section)) throw badRequest(t("errors.unknownSection"));
     const value = bool(f, "value");
     await setSectionShared(ctx, memberId, section as FitnessSection, value);
-    return value ? "Now visible to the member." : "Hidden from the member.";
+    return value ? t("members.flash.nowVisible") : t("members.flash.nowHidden");
   },
   measurement: async (f) => {
     await addMeasurement(
@@ -142,11 +143,11 @@ const result = await handleActions(Astro, {
         note: optStr(f, "note"),
       }),
     );
-    return "Check-in saved.";
+    return t("members.flash.checkinSaved");
   },
   deleteMeasurement: async (f) => {
     await deleteMeasurement(ctx, str(f, "id"));
-    return "Check-in deleted.";
+    return t("members.flash.checkinDeleted");
   },
   benchmark: async (f) => {
     await addBenchmark(
@@ -160,11 +161,11 @@ const result = await handleActions(Astro, {
         note: optStr(f, "note"),
       }),
     );
-    return "Result saved.";
+    return t("members.flash.resultSaved");
   },
   deleteBenchmark: async (f) => {
     await deleteBenchmark(ctx, str(f, "id"));
-    return "Result deleted.";
+    return t("members.flash.resultDeleted");
   },
   note: async (f) => {
     await addNote(ctx, memberId, {
@@ -173,7 +174,7 @@ const result = await handleActions(Astro, {
       category: str(f, "category") as NoteCategory,
       pinned: bool(f, "pinned"),
     });
-    return "Note saved.";
+    return t("members.flash.noteSaved");
   },
   editNote: async (f) => {
     await updateNote(ctx, str(f, "noteId"), {
@@ -182,15 +183,15 @@ const result = await handleActions(Astro, {
       category: str(f, "category") as NoteCategory,
       pinned: bool(f, "pinned"),
     });
-    return "Note saved.";
+    return t("members.flash.noteSaved");
   },
   pinNote: async (f) => {
     await setNotePinned(ctx, str(f, "noteId"), bool(f, "value"));
-    return bool(f, "value") ? "Note pinned." : "Note unpinned.";
+    return bool(f, "value") ? t("members.flash.notePinned") : t("members.flash.noteUnpinned");
   },
   deleteNote: async (f) => {
     await deleteNote(ctx, str(f, "noteId"));
-    return "Note deleted.";
+    return t("members.flash.noteDeleted");
   },
   assign: async (f) => {
     const amount = money(f, "amount");
@@ -208,17 +209,17 @@ const result = await handleActions(Astro, {
             }
           : undefined,
     });
-    return amount !== null ? "Plan added and payment recorded." : "Plan added.";
+    return amount !== null ? t("members.flash.planAddedPaid") : t("members.flash.planAdded");
   },
   adjust: async (f) => {
-    const n = int(f, "amount", "credits");
+    const n = int(f, "amount", t("members.member.adjustCredits"));
     const delta = str(f, "direction") === "remove" ? -n : n;
     await adjustCredits(ctx, { packId: str(f, "packId"), delta, reason: str(f, "reason") });
-    return `${delta > 0 ? "Added" : "Removed"} ${plural(Math.abs(delta), "credit")}.`;
+    return t(delta > 0 ? "members.flash.added" : "members.flash.removed", { count: Math.abs(delta) });
   },
   payment: async (f) => {
     const amount = money(f, "amount");
-    if (amount === null) throw badRequest("Enter the amount paid");
+    if (amount === null) throw badRequest(t("errors.enterAmountPaid"));
     await recordPayment(ctx, memberId, {
       amountCents: amount,
       method: str(f, "method") as (typeof PAYMENT_METHODS)[number],
@@ -226,17 +227,17 @@ const result = await handleActions(Astro, {
       note: optStr(f, "note") ?? undefined,
       packId: optStr(f, "packId"),
     });
-    return "Payment recorded.";
+    return t("members.flash.paymentRecorded");
   },
   deletePayment: async (f) => {
     await deletePayment(ctx, str(f, "paymentId"));
-    return "Payment deleted.";
+    return t("members.flash.paymentDeleted");
   },
   role: async (f) => {
     const role = str(f, "role");
-    if (!isRole(role)) throw badRequest("Unknown role");
+    if (!isRole(role)) throw badRequest(t("errors.unknownRole"));
     await setRole(ctx, memberId, role);
-    return "Role changed.";
+    return t("members.flash.roleChanged");
   },
 });
 if (result instanceof Response) return result;
@@ -291,41 +292,59 @@ const moveTargets = (sessionId: string) =>
       id: u.id,
       label: `${formatDay(u.localDate)} ${formatTime(u.startsAt, ctx.timezone)} · ${u.templateName} (${u.booked}/${u.capacity})`,
     }));
+const roleName = (r: string) =>
+  r === "owner" ? t("auth.roleOwner") : r === "coach" ? t("auth.roleCoach") : t("auth.roleMember");
 const auditText: Record<string, (d: Record<string, unknown>) => string> = {
   "plan.assigned": (d) =>
-    `Added plan ${d.plan} (${d.entries} credits)${d.paymentCents != null ? `, paid ${formatMoney(d.paymentCents as number, ctx.currency)}` : ""}`,
+    d.paymentCents != null
+      ? t("members.audit.planAssignedPaid", {
+          plan: String(d.plan),
+          entries: Number(d.entries),
+          amount: formatMoney(d.paymentCents as number, ctx.currency),
+        })
+      : t("members.audit.planAssigned", { plan: String(d.plan), entries: Number(d.entries) }),
   "credits.adjusted": (d) =>
-    `${(d.delta as number) > 0 ? "Added" : "Removed"} ${Math.abs(d.delta as number)} on ${d.pack}: “${d.reason}”`,
-  "booking.added": () => "Booked into a class by staff",
-  "booking.removed": () => "Booking removed, credit returned",
-  "booking.moved": () => "Booking moved to another class",
-  "booking.charge_changed": (d) => (d.charged ? "Credit charged for a booking" : "Credit waived for a booking"),
-  "booking.no_show_changed": (d) => (d.noShow ? "Marked as no-show" : "No-show removed"),
-  "member.role_changed": (d) => `Role changed from ${d.from} to ${d.to}`,
-  "payment.recorded": (d) => `Payment recorded: ${formatMoney(d.amountCents as number, ctx.currency)}`,
-  "payment.deleted": (d) => `Payment deleted: ${formatMoney(d.amountCents as number, ctx.currency)} from ${d.paidOn}`,
+    t((d.delta as number) > 0 ? "members.audit.creditsAdded" : "members.audit.creditsRemoved", {
+      count: Math.abs(d.delta as number),
+      pack: String(d.pack),
+      reason: String(d.reason),
+    }),
+  "booking.added": () => t("members.audit.bookingAdded"),
+  "booking.removed": () => t("members.audit.bookingRemoved"),
+  "booking.moved": () => t("members.audit.bookingMoved"),
+  "booking.charge_changed": (d) => (d.charged ? t("members.audit.charged") : t("members.audit.waived")),
+  "booking.no_show_changed": (d) => (d.noShow ? t("members.audit.noShowOn") : t("members.audit.noShowOff")),
+  "member.role_changed": (d) =>
+    t("members.audit.roleChanged", { from: roleName(String(d.from)), to: roleName(String(d.to)) }),
+  "payment.recorded": (d) =>
+    t("members.audit.paymentRecorded", { amount: formatMoney(d.amountCents as number, ctx.currency) }),
+  "payment.deleted": (d) =>
+    t("members.audit.paymentDeleted", {
+      amount: formatMoney(d.amountCents as number, ctx.currency),
+      date: formatDate(String(d.paidOn)),
+    }),
 };
 const tabs = [
-  ["overview", "Overview", LayoutDashboard],
-  ["personal", "Personal", UserRound],
-  ["fitness", "Fitness", HeartPulse],
-  ["notes", `Notes${notes.length ? ` · ${notes.length}` : ""}`, MessageSquareText],
-  ["plans", "Plans & payments", CreditCard],
-  ["classes", `Classes${history.length ? ` · ${history.length}` : ""}`, CalendarDays],
-  ["activity", "Activity", HistoryIcon],
+  ["overview", t("members.member.tabs.overview"), LayoutDashboard],
+  ["personal", t("members.member.tabs.personal"), UserRound],
+  ["fitness", t("members.member.tabs.fitness"), HeartPulse],
+  ["notes", `${t("members.member.tabs.notes")}${notes.length ? ` · ${notes.length}` : ""}`, MessageSquareText],
+  ["plans", t("members.member.tabs.plans"), CreditCard],
+  ["classes", `${t("members.member.tabs.classes")}${history.length ? ` · ${history.length}` : ""}`, CalendarDays],
+  ["activity", t("members.member.tabs.activity"), HistoryIcon],
 ] as const;
 const SECTION_LABELS: Record<FitnessSection, string> = {
-  goals: "Goals",
-  background: "Training background",
-  health: "Health & injuries",
-  measurements: "Body measurements",
-  benchmarks: "Personal records",
+  goals: t("profile.fitness.goals"),
+  background: t("profile.fitness.background"),
+  health: t("profile.fitness.health"),
+  measurements: t("profile.fitness.measurements"),
+  benchmarks: t("profile.fitness.records"),
 };
 ---
 
 <Studio title={m.name} flash={result.flash} error={result.error}>
   <a href={`/s/${ctx.slug}/admin/members`} class="mb-3 inline-flex text-sm text-stone-500 hover:text-stone-900">
-    ← Members
+    ← {t("members.member.back")}
   </a>
 
   <div class="card mb-6 p-5">
@@ -334,10 +353,10 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
       <div class="min-w-0 flex-1">
         <h1 class="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
           {m.name}
-          {m.role !== "member" && <span class="badge bg-stone-900 text-white capitalize">{m.role}</span>}
+          {m.role !== "member" && <span class="badge bg-stone-900 text-white">{roleName(m.role)}</span>}
           {fitness.clearance === "needs_clearance" && (
             <span class="badge gap-1 bg-rose-50 text-rose-700">
-              <ShieldAlert size={12} /> Needs medical clearance
+              <ShieldAlert size={12} /> {t("members.member.needsClearance")}
             </span>
           )}
         </h1>
@@ -350,13 +369,13 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
               <Phone size={14} /> {personal.phone}
             </a>
           )}
-          {personal.dateOfBirth && <span>{ageOn(personal.dateOfBirth, today)} years</span>}
-          <span>Member since {formatDate(localDateOf(m.joinedAt, ctx.timezone))}</span>
+          {personal.dateOfBirth && <span>{plural(ageOn(personal.dateOfBirth, today), "years")}</span>}
+          <span>{t("members.member.since", { date: formatDate(localDateOf(m.joinedAt, ctx.timezone)) })}</span>
         </p>
         {fitness.goals.length > 0 && (
           <div class="mt-2 flex flex-wrap gap-1.5">
             {fitness.goals.map((g) => (
-              <span class="chip">{g}</span>
+              <span class="chip">{goalLabel(g)}</span>
             ))}
           </div>
         )}
@@ -364,19 +383,19 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
       <div class="grid grid-cols-4 gap-4 text-center">
         <div>
           <div class="text-2xl font-semibold tabular-nums">{credits}</div>
-          <div class="text-xs text-stone-500">credits</div>
+          <div class="text-xs text-stone-500">{t("members.member.stats.credits")}</div>
         </div>
         <div>
           <div class="text-2xl font-semibold tabular-nums">{a.totalClasses}</div>
-          <div class="text-xs text-stone-500">classes</div>
+          <div class="text-xs text-stone-500">{t("members.member.stats.classes")}</div>
         </div>
         <div>
           <div class="text-2xl font-semibold tabular-nums">{a.currentStreakWeeks}</div>
-          <div class="text-xs text-stone-500">wk streak</div>
+          <div class="text-xs text-stone-500">{t("members.member.stats.streak")}</div>
         </div>
         <div>
           <div class="text-2xl font-semibold tabular-nums">{upcoming.length}</div>
-          <div class="text-xs text-stone-500">booked</div>
+          <div class="text-xs text-stone-500">{t("members.member.stats.booked")}</div>
         </div>
       </div>
     </div>
@@ -405,18 +424,18 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
           <div class="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 p-4">
             <CircleAlert size={20} class="mt-0.5 shrink-0 text-rose-600" />
             <div class="min-w-0">
-              <p class="font-medium text-rose-900">Health notes</p>
+              <p class="font-medium text-rose-900">{t("members.member.healthNotes")}</p>
               {fitness.clearance === "needs_clearance" && (
-                <p class="text-sm text-rose-800">Needs a doctor's clearance before hard training.</p>
+                <p class="text-sm text-rose-800">{t("members.member.needsDoctor")}</p>
               )}
               {fitness.injuries && <div class="fm-prose mt-1 text-rose-900" set:html={fitness.injuries} />}
             </div>
           </div>
         )}
-        <Section title="Upcoming classes">
+        <Section title={t("members.member.upcoming")}>
           <CalendarDays slot="icon" size={18} />
           {upcoming.length === 0 ? (
-            <EmptyState title="Nothing booked" compact>
+            <EmptyState title={t("members.member.nothingBooked")} compact>
               <CalendarDays slot="icon" size={20} />
             </EmptyState>
           ) : (
@@ -444,20 +463,20 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
             </ul>
           )}
         </Section>
-        <Section title="Attendance" description="Classes per week, last 12 weeks">
+        <Section title={t("members.member.attendance")} description={t("members.member.attendanceHint")}>
           <CalendarCheck slot="icon" size={18} />
           <AttendanceChart weeks={weeks} />
         </Section>
-        <Section title={pinned.length ? "Pinned notes" : "Latest note"}>
+        <Section title={pinned.length ? t("members.member.pinnedNotes") : t("members.member.latestNote")}>
           <MessageSquareText slot="icon" size={18} />
           <a slot="actions" href="?tab=notes" class="text-sm text-stone-500 hover:text-stone-900">
-            All notes →
+            {t("members.member.allNotes")}
           </a>
           {notes.length === 0 ? (
-            <EmptyState title="No notes yet" compact>
+            <EmptyState title={t("members.member.noNotes")} compact>
               <MessageSquareText slot="icon" size={20} />
               <a href="?tab=notes" class="btn btn-sm">
-                Write the first note
+                {t("members.member.firstNote")}
               </a>
             </EmptyState>
           ) : (
@@ -474,21 +493,21 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
           <CurrentPlan packs={packs} timezone={ctx.timezone}>
             {canCredits && (
               <a href="?tab=plans" class="btn btn-sm mt-4 w-full">
-                Manage plans
+                {t("members.member.managePlans")}
               </a>
             )}
             {canCredits && (
               <a slot="empty" href="?tab=plans" class="btn btn-primary btn-sm mt-3 w-full">
-                Add a plan
+                {t("members.member.addPlan")}
               </a>
             )}
           </CurrentPlan>
         </div>
-        <Section title="Contact">
+        <Section title={t("members.member.contact")}>
           <UserRound slot="icon" size={18} />
           <dl class="space-y-2 text-sm">
             <div>
-              <dt class="text-xs text-stone-500">Email</dt>
+              <dt class="text-xs text-stone-500">{t("common.email")}</dt>
               <dd>
                 <a href={`mailto:${m.email}`} class="hover:underline">
                   {m.email}
@@ -496,11 +515,11 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
               </dd>
             </div>
             <div>
-              <dt class="text-xs text-stone-500">Phone</dt>
+              <dt class="text-xs text-stone-500">{t("common.phone")}</dt>
               <dd>{personal.phone ?? <span class="text-stone-400">—</span>}</dd>
             </div>
             <div>
-              <dt class="text-xs text-stone-500">Emergency contact</dt>
+              <dt class="text-xs text-stone-500">{t("members.member.emergency")}</dt>
               <dd>
                 {personal.emergencyName ? (
                   `${personal.emergencyName}${personal.emergencyPhone ? ` · ${personal.emergencyPhone}` : ""}`
@@ -511,7 +530,7 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
             </div>
           </dl>
           <a href="?tab=personal" class="mt-3 inline-block text-xs font-medium text-stone-600 hover:text-stone-900">
-            Edit details →
+            {t("members.member.editDetails")}
           </a>
         </Section>
       </aside>
@@ -521,27 +540,27 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
   {/* ---------------- Personal ---------------- */}
   {tab === "personal" && (
     <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
-      <Section title="Personal profile" description="Nothing here is required. The member can edit these details too.">
+      <Section title={t("members.member.personalTitle")} description={t("members.member.personalHint")}>
         <UserRound slot="icon" size={18} />
         <PersonalForm p={personal} today={today} redirect={`${self}?tab=personal`} />
       </Section>
       {can(ctx.role, "staff:manage") && m.userId !== ctx.userId && (
         <form method="post" class="card h-fit space-y-3 p-5">
-          <h2 class="h2">Role in the studio</h2>
+          <h2 class="h2">{t("members.member.role")}</h2>
           <input type="hidden" name="_action" value="role" />
           <input type="hidden" name="_redirect" value={`${self}?tab=personal`} />
           <select name="role" class="input">
             <option value="member" selected={m.role === "member"}>
-              Member
+              {t("members.member.roleMember")}
             </option>
             <option value="coach" selected={m.role === "coach"}>
-              Coach: manages classes, members and credits
+              {t("members.member.roleCoach")}
             </option>
             <option value="owner" selected={m.role === "owner"}>
-              Owner: also settings and staff
+              {t("members.member.roleOwner")}
             </option>
           </select>
-          <button class="btn w-full">Change role</button>
+          <button class="btn w-full">{t("members.member.changeRole")}</button>
         </form>
       )}
     </div>
@@ -552,34 +571,31 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
     <div class="grid gap-6 lg:grid-cols-[1fr_18rem]">
       <div class="space-y-6">
         <FitnessEditor p={fitness} today={today} />
-        <Section title="Body measurements" description="Check-ins over time. Leave out anything you didn't measure.">
+        <Section title={t("members.member.measurements")} description={t("members.member.measurementsHint")}>
           <Ruler slot="icon" size={18} />
           <MeasurementsEditor rows={measurements} today={today} />
         </Section>
-        <Section
-          title="Personal records"
-          description="Strength, endurance and skill results. Best results are worked out automatically."
-        >
+        <Section title={t("members.member.records")} description={t("members.member.recordsHint")}>
           <Trophy slot="icon" size={18} />
           <BenchmarksEditor rows={benchmarks} exercises={exercises} today={today} />
         </Section>
         <div>
           <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Target size={18} class="text-stone-400" /> Summary
+            <Target size={18} class="text-stone-400" /> {t("members.member.summary")}
           </h2>
           <FitnessView profile={fitness} measurements={measurements} benchmarks={benchmarks} />
         </div>
       </div>
       <aside class="space-y-4">
         <div class="card sticky top-20 p-5">
-          <h2 class="h2">What {m.name.split(" ")[0]} can see</h2>
-          <p class="muted mb-2">Shared sections appear on their profile page.</p>
+          <h2 class="h2">{t("members.member.whatCanSee", { name: m.name.split(" ")[0]! })}</h2>
+          <p class="muted mb-2">{t("members.member.whatCanSeeHint")}</p>
           <div class="divide-y divide-stone-100">
             {SECTIONS.map((s) => (
               <ShareSwitch section={s} label={SECTION_LABELS[s]} shared={fitness.shared[s]} />
             ))}
           </div>
-          <p class="mt-3 text-xs text-stone-500">Health details are coaches-only by default.</p>
+          <p class="mt-3 text-xs text-stone-500">{t("members.member.healthDefault")}</p>
         </div>
       </aside>
     </div>
@@ -593,18 +609,15 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
           <a href="?tab=notes" class:list={["btn btn-sm", !noteFilter && "btn-primary"]}>
             All
           </a>
-          {Object.entries(NOTE_CATEGORY).map(([k, v]) => (
+          {Object.keys(NOTE_CATEGORY).map((k) => (
             <a href={`?tab=notes&category=${k}`} class:list={["btn btn-sm", noteFilter === k && "btn-primary"]}>
-              {v.label}
+              {noteCategoryLabel(k)}
             </a>
           ))}
         </div>
         {shownNotes.length === 0 ? (
           <div class="card">
-            <EmptyState
-              title="No notes here yet"
-              text="Session feedback, programme changes, nutrition tips… Share them with the member or keep them for coaches."
-            >
+            <EmptyState title={t("members.member.noNotesHere")} text={t("members.member.noNotesHint")}>
               <ClipboardList slot="icon" size={20} />
             </EmptyState>
           </div>
@@ -616,31 +629,31 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
                   <input type="hidden" name="_action" value="editNote" />
                   <input type="hidden" name="noteId" value={n.id} />
                   <input type="hidden" name="_redirect" value={`${self}?tab=notes`} />
-                  <RichTextEditor client:load name="body" value={n.body} minHeight={8} ariaLabel="Note" />
+                  <RichText name="body" value={n.body} minHeight={8} ariaLabel={t("common.note")} />
                   <div class="flex flex-wrap items-center gap-2">
                     <select name="category" class="input w-auto">
-                      {Object.entries(NOTE_CATEGORY).map(([k, v]) => (
+                      {Object.keys(NOTE_CATEGORY).map((k) => (
                         <option value={k} selected={n.category === k}>
-                          {v.label}
+                          {noteCategoryLabel(k)}
                         </option>
                       ))}
                     </select>
                     <select name="visibility" class="input w-auto">
                       <option value="private" selected={n.visibility === "private"}>
-                        Coaches only
+                        {t("members.member.coachesOnly")}
                       </option>
                       <option value="shared" selected={n.visibility === "shared"}>
-                        Shared with member
+                        {t("members.member.sharedWithMember")}
                       </option>
                     </select>
                     <label class="flex items-center gap-1.5 text-sm">
-                      <input type="checkbox" name="pinned" checked={n.pinned} /> Pinned
+                      <input type="checkbox" name="pinned" checked={n.pinned} /> {t("members.member.pinned")}
                     </label>
                     <span class="ml-auto flex gap-2">
                       <a href="?tab=notes" class="btn btn-sm">
-                        Cancel
+                        {t("common.cancel")}
                       </a>
-                      <button class="btn btn-primary btn-sm">Save</button>
+                      <button class="btn btn-primary btn-sm">{t("common.save")}</button>
                     </span>
                   </div>
                 </form>
@@ -654,26 +667,26 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
                       <button class="btn btn-sm border-transparent shadow-none">
                         {n.pinned ? (
                           <>
-                            <PinOff size={13} /> Unpin
+                            <PinOff size={13} /> {t("members.member.unpin")}
                           </>
                         ) : (
                           <>
-                            <Pin size={13} /> Pin
+                            <Pin size={13} /> {t("members.member.pin")}
                           </>
                         )}
                       </button>
                     </form>
                     <a href={`?tab=notes&note=${n.id}`} class="btn btn-sm border-transparent shadow-none">
-                      Edit
+                      {t("common.edit")}
                     </a>
                     <form method="post">
                       <input type="hidden" name="_action" value="deleteNote" />
                       <input type="hidden" name="noteId" value={n.id} />
                       <button
                         class="btn btn-sm border-transparent text-red-600 shadow-none hover:bg-red-50"
-                        onclick="return confirm('Delete this note?')"
+                        onclick={`return confirm(${JSON.stringify(t("members.member.deleteNoteConfirm"))})`}
                       >
-                        <Trash size={13} /> Delete
+                        <Trash size={13} /> {t("common.delete")}
                       </button>
                     </form>
                   </div>
@@ -684,48 +697,47 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
         )}
       </div>
       <form method="post" class="card h-fit space-y-4 p-5 lg:sticky lg:top-20">
-        <h2 class="h2">New note</h2>
+        <h2 class="h2">{t("members.member.newNote")}</h2>
         <input type="hidden" name="_action" value="note" />
-        <RichTextEditor
-          client:load
+        <RichText
           name="body"
-          placeholder="Session feedback, programme changes, things to remember…"
+          placeholder={t("members.member.newNotePlaceholder")}
           minHeight={9}
-          ariaLabel="New note"
+          ariaLabel={t("members.member.newNote")}
         />
         <div class="grid grid-cols-2 gap-3">
           <label class="block space-y-1">
-            <span class="label">Category</span>
+            <span class="label">{t("members.member.category")}</span>
             <select name="category" class="input">
-              {Object.entries(NOTE_CATEGORY).map(([k, v]) => (
+              {Object.keys(NOTE_CATEGORY).map((k) => (
                 <option value={k} selected={k === (noteFilter ?? "general")}>
-                  {v.label}
+                  {noteCategoryLabel(k)}
                 </option>
               ))}
             </select>
           </label>
           <label class="flex items-end gap-2 pb-2 text-sm">
-            <input type="checkbox" name="pinned" /> Pin to top
+            <input type="checkbox" name="pinned" /> {t("members.member.pinToTop")}
           </label>
         </div>
         <fieldset class="grid grid-cols-2 gap-2">
-          <legend class="label mb-1">Who can see it</legend>
+          <legend class="label mb-1">{t("members.member.whoCanSee")}</legend>
           <label class="cursor-pointer">
             <input type="radio" name="visibility" value="private" checked class="peer sr-only" />
             <span class="block rounded-lg border border-stone-300 p-2.5 text-sm peer-checked:border-stone-900 peer-checked:ring-1 peer-checked:ring-stone-900">
-              <b class="block">Coaches only</b>
-              <span class="text-xs text-stone-500">Private record</span>
+              <b class="block">{t("members.member.coachesOnly")}</b>
+              <span class="text-xs text-stone-500">{t("members.member.privateRecord")}</span>
             </span>
           </label>
           <label class="cursor-pointer">
             <input type="radio" name="visibility" value="shared" class="peer sr-only" />
             <span class="block rounded-lg border border-stone-300 p-2.5 text-sm peer-checked:border-stone-900 peer-checked:ring-1 peer-checked:ring-stone-900">
-              <b class="block">Share with {m.name.split(" ")[0]}</b>
-              <span class="text-xs text-stone-500">Shows on their home</span>
+              <b class="block">{t("members.member.shareWith", { name: m.name.split(" ")[0]! })}</b>
+              <span class="text-xs text-stone-500">{t("members.member.showsOnHome")}</span>
             </span>
           </label>
         </fieldset>
-        <button class="btn btn-primary w-full">Save note</button>
+        <button class="btn btn-primary w-full">{t("members.member.saveNote")}</button>
       </form>
     </div>
   )}
@@ -734,32 +746,41 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
   {tab === "plans" && (
     <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div class="space-y-6">
-        <Section title="Current plans" description="Credits are spent from the plan closest to expiry first.">
-          {current.length === 0 && <p class="muted">No active plan.</p>}
+        <Section title={t("members.member.currentPlans")} description={t("members.member.currentPlansHint")}>
+          {current.length === 0 && <p class="muted">{t("members.pack.noActive")}</p>}
           <div class="grid gap-3 sm:grid-cols-2">
             {current.map((p) => (
               <PackCard pack={p} timezone={ctx.timezone}>
                 {canCredits && (
                   <details class="mt-3 border-t border-stone-100 pt-3">
-                    <summary class="cursor-pointer text-sm font-medium text-stone-700">Adjust credits</summary>
+                    <summary class="cursor-pointer text-sm font-medium text-stone-700">
+                      {t("members.member.adjust")}
+                    </summary>
                     <form method="post" class="mt-2 space-y-2">
                       <input type="hidden" name="_action" value="adjust" />
                       <input type="hidden" name="packId" value={p.id} />
                       <div class="flex gap-2">
                         <select name="direction" class="input w-28">
-                          <option value="add">Add</option>
-                          <option value="remove">Remove</option>
+                          <option value="add">{t("members.member.adjustAdd")}</option>
+                          <option value="remove">{t("members.member.adjustRemove")}</option>
                         </select>
-                        <input name="amount" type="number" min="1" value="1" class="input w-20" aria-label="Credits" />
+                        <input
+                          name="amount"
+                          type="number"
+                          min="1"
+                          value="1"
+                          class="input w-20"
+                          aria-label={t("members.member.adjustCredits")}
+                        />
                       </div>
                       <input
                         name="reason"
                         required
                         minlength="3"
-                        placeholder="Reason (kept in the history)"
+                        placeholder={t("members.member.reason")}
                         class="input"
                       />
-                      <button class="btn btn-sm w-full">Save adjustment</button>
+                      <button class="btn btn-sm w-full">{t("members.member.saveAdjustment")}</button>
                     </form>
                   </details>
                 )}
@@ -768,7 +789,7 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
           </div>
           {old.length > 0 && (
             <details class="mt-4">
-              <summary class="muted cursor-pointer">Past plans ({old.length})</summary>
+              <summary class="muted cursor-pointer">{t("members.member.pastPlans", { count: old.length })}</summary>
               <div class="mt-3 grid gap-3 sm:grid-cols-2">
                 {old.map((p) => (
                   <PackCard pack={p} timezone={ctx.timezone} />
@@ -777,10 +798,13 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
             </details>
           )}
         </Section>
-        <Section title="Payments" description={`${formatMoney(totalPaid, ctx.currency)} in total`}>
+        <Section
+          title={t("members.member.payments")}
+          description={t("members.member.paymentsTotal", { total: formatMoney(totalPaid, ctx.currency) })}
+        >
           <CreditCard slot="icon" size={18} />
           {payments.length === 0 ? (
-            <p class="muted">No payments recorded.</p>
+            <p class="muted">{t("members.member.noPayments")}</p>
           ) : (
             <table class="table">
               <tbody>
@@ -791,7 +815,7 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
                       {p.packName ?? "—"}
                       {p.note && <span class="block text-xs text-stone-500">{p.note}</span>}
                     </td>
-                    <td class="capitalize">{p.method}</td>
+                    <td>{paymentMethodLabel(p.method)}</td>
                     <td class="text-right font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</td>
                     <td class="text-right">
                       {canCredits && (
@@ -801,8 +825,8 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
                             class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
                             name="_action"
                             value="deletePayment"
-                            aria-label="Delete payment"
-                            onclick="return confirm('Delete this payment record?')"
+                            aria-label={t("members.member.deletePayment")}
+                            onclick={`return confirm(${JSON.stringify(t("members.member.deletePaymentConfirm"))})`}
                           >
                             <Trash size={14} />
                           </button>
@@ -816,7 +840,7 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
           )}
           {canCredits && (
             <details class="mt-4">
-              <summary class="btn btn-sm list-none">Record a payment</summary>
+              <summary class="btn btn-sm list-none">{t("members.member.recordPayment")}</summary>
               <form
                 method="post"
                 class="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4"
@@ -826,7 +850,7 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
                   name="amount"
                   inputmode="decimal"
                   required
-                  placeholder={`Amount (${ctx.currency})`}
+                  placeholder={t("members.member.amountPlaceholder", { currency: ctx.currency })}
                   class="input"
                 />
                 <select name="method" class="input">
@@ -834,17 +858,17 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
                     <option value={pm}>{pm}</option>
                   ))}
                 </select>
-                <DateField client:load name="paidOn" value={today} today={today} ariaLabel="Paid on" />
+                <DateInput name="paidOn" value={today} today={today} ariaLabel={t("members.member.paidOn")} />
                 <select name="packId" class="input">
-                  <option value="">Not linked to a plan</option>
+                  <option value="">{t("members.member.notLinked")}</option>
                   {packs.map((p) => (
                     <option value={p.id}>
-                      {p.name} (from {formatDate(p.startsOn)})
+                      {t("members.member.planFrom", { plan: p.name, date: formatDate(p.startsOn) })}
                     </option>
                   ))}
                 </select>
-                <input name="note" placeholder="Note (optional)" class="input col-span-2" />
-                <button class="btn btn-primary col-span-2">Record payment</button>
+                <input name="note" placeholder={t("common.noteOptional")} class="input col-span-2" />
+                <button class="btn btn-primary col-span-2">{t("members.member.recordPaymentButton")}</button>
               </form>
             </details>
           )}
@@ -852,41 +876,48 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
       </div>
       {canCredits && (
         <form method="post" class="card h-fit space-y-3 p-5">
-          <h2 class="h2">Add a plan</h2>
+          <h2 class="h2">{t("members.member.addPlan")}</h2>
           <input type="hidden" name="_action" value="assign" />
           <label class="block space-y-1">
-            <span class="label">Plan</span>
+            <span class="label">{t("members.member.plan")}</span>
             <select name="packTypeId" class="input">
               {plans.map((p) => (
                 <option value={p.id}>
-                  {p.name} · {plural(p.entries, "class", "classes")} · {describeValidity(validityOf(p)).toLowerCase()}
+                  {t("members.member.planOption", {
+                    plan: p.name,
+                    classes: plural(p.entries, "classes"),
+                    validity: validityLabel(validityOf(p)),
+                  })}
                 </option>
               ))}
             </select>
           </label>
           <div class="space-y-1">
-            <span class="label">Starts on</span>
-            <DateField client:load name="startsOn" value={today} today={today} required ariaLabel="Starts on" />
-            <span class="block text-xs text-stone-500">
-              Expiry is counted from this day. Set it in the past to carry over an existing plan.
-            </span>
+            <span class="label">{t("members.member.startsOn")}</span>
+            <DateInput name="startsOn" value={today} today={today} required ariaLabel={t("members.member.startsOn")} />
+            <span class="block text-xs text-stone-500">{t("members.member.startsOnHint")}</span>
           </div>
           <fieldset class="space-y-2 rounded-xl bg-stone-50 p-3">
             <legend class="label px-1">
-              Payment <span class="font-normal text-stone-400">(optional)</span>
+              {t("members.member.payment")} <span class="font-normal text-stone-400">({t("common.optional")})</span>
             </legend>
             <div class="grid grid-cols-2 gap-2">
-              <input name="amount" inputmode="decimal" placeholder={`Amount (${ctx.currency})`} class="input" />
+              <input
+                name="amount"
+                inputmode="decimal"
+                placeholder={t("members.member.amountPlaceholder", { currency: ctx.currency })}
+                class="input"
+              />
               <select name="method" class="input">
                 {PAYMENT_METHODS.map((pm) => (
                   <option value={pm}>{pm}</option>
                 ))}
               </select>
             </div>
-            <DateField client:load name="paidOn" value={today} today={today} ariaLabel="Paid on" />
+            <DateInput name="paidOn" value={today} today={today} ariaLabel={t("members.member.paidOn")} />
           </fieldset>
-          <input name="note" placeholder="Note (optional)" class="input" />
-          <button class="btn btn-primary w-full">Add plan</button>
+          <input name="note" placeholder={t("common.noteOptional")} class="input" />
+          <button class="btn btn-primary w-full">{t("members.member.addPlanButton")}</button>
         </form>
       )}
     </div>
@@ -894,13 +925,10 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
 
   {/* ---------------- Classes ---------------- */}
   {tab === "classes" && (
-    <Section
-      title="Class history"
-      description="Credits are used when a class starts, including no-shows. Waive a credit if the member shouldn't be charged."
-    >
+    <Section title={t("members.member.classHistory")} description={t("members.member.classHistoryHint")}>
       <CalendarDays slot="icon" size={18} />
       {past.length === 0 ? (
-        <EmptyState title="No classes yet" compact>
+        <EmptyState title={t("members.member.noClasses")} compact>
           <CalendarDays slot="icon" size={20} />
         </EmptyState>
       ) : (
@@ -942,10 +970,10 @@ const SECTION_LABELS: Record<FitnessSection, string> = {
 
   {/* ---------------- Activity ---------------- */}
   {tab === "activity" && (
-    <Section title="Changes by staff" description="Every manual change to this member's plans, credits and bookings.">
+    <Section title={t("members.member.changes")} description={t("members.member.changesHint")}>
       <HistoryIcon slot="icon" size={18} />
       {log.length === 0 ? (
-        <EmptyState title="No manual changes" compact>
+        <EmptyState title={t("members.member.noChanges")} compact>
           <HistoryIcon slot="icon" size={20} />
         </EmptyState>
       ) : (

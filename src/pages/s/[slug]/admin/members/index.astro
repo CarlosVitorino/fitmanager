@@ -1,4 +1,6 @@
 ---
+import { plural } from "../../../../../lib/format";
+import { t } from "../../../../../i18n";
 import Avatar from "../../../../../components/Avatar.astro";
 import Studio from "../../../../../layouts/Studio.astro";
 import { daysBetween, localDateOf } from "../../../../../domain/dates";
@@ -12,15 +14,18 @@ const today = localDateOf(new Date(), ctx.timezone);
 const q = (Astro.url.searchParams.get("q") ?? "").trim().toLowerCase();
 const filter = Astro.url.searchParams.get("filter") ?? "all";
 const filters = {
-  all: { label: "Everyone", test: () => true },
+  all: { label: t("members.list.everyone"), test: () => true },
   expiring: {
-    label: "Expiring in 14 days",
+    label: t("members.list.expiring"),
     test: (m: (typeof all)[number]) =>
       m.nextExpiry !== null && daysBetween(today, m.nextExpiry) <= 14 && m.available > 0,
   },
-  low: { label: "2 or fewer credits", test: (m: (typeof all)[number]) => m.activePacks > 0 && m.available <= 2 },
-  none: { label: "No active plan", test: (m: (typeof all)[number]) => m.activePacks === 0 && m.role === "member" },
-  staff: { label: "Staff", test: (m: (typeof all)[number]) => m.role !== "member" },
+  low: { label: t("members.list.low"), test: (m: (typeof all)[number]) => m.activePacks > 0 && m.available <= 2 },
+  none: {
+    label: t("members.list.noPlanFilter"),
+    test: (m: (typeof all)[number]) => m.activePacks === 0 && m.role === "member",
+  },
+  staff: { label: t("members.list.staff"), test: (m: (typeof all)[number]) => m.role !== "member" },
 } as const;
 const f = filters[filter as keyof typeof filters] ?? filters.all;
 const rows = all
@@ -33,24 +38,28 @@ const invite = can(ctx.role, "staff:manage")
 const base = `/s/${ctx.slug}/admin/members`;
 ---
 
-<Studio title="Members" wide>
+<Studio title={t("members.list.title")} wide>
   <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-semibold">Members</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">{t("members.list.title")}</h1>
       <p class="muted">
-        {all.filter((m) => m.role === "member").length} members, {all.filter((m) => m.role !== "member").length} staff
+        {t("members.list.summary", {
+          members: plural(all.filter((m) => m.role === "member").length, "members"),
+          staff: all.filter((m) => m.role !== "member").length,
+        })}
       </p>
     </div>
     {invite && (
       <div class="flex items-center gap-2">
-        <span class="muted hidden sm:inline">Invite link</span>
+        <span class="muted hidden sm:inline">{t("members.list.inviteLink")}</span>
         <input readonly class="input w-72 font-mono text-xs" value={invite} id="invite" onclick="this.select()" />
         <button
           type="button"
           class="btn"
-          onclick="navigator.clipboard.writeText(document.getElementById('invite').value);this.textContent='Copied'"
+          data-copied={t("common.copied")}
+          onclick="navigator.clipboard.writeText(document.getElementById('invite').value);this.textContent=this.dataset.copied"
         >
-          Copy
+          {t("common.copy")}
         </button>
       </div>
     )}
@@ -64,7 +73,7 @@ const base = `/s/${ctx.slug}/admin/members`;
     ))}
     <form class="ml-auto">
       <input type="hidden" name="filter" value={filter} />
-      <input name="q" value={q} placeholder="Search name or email" class="input w-60" />
+      <input name="q" value={q} placeholder={t("members.list.search")} class="input w-60" />
     </form>
   </div>
 
@@ -72,19 +81,19 @@ const base = `/s/${ctx.slug}/admin/members`;
     <table class="table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Contact</th>
-          <th class="text-right">Credits</th>
-          <th>Next expiry</th>
-          <th>Last class</th>
-          <th class="text-right">Upcoming</th>
+          <th>{t("members.list.name")}</th>
+          <th>{t("members.list.contact")}</th>
+          <th class="text-right">{t("members.list.credits")}</th>
+          <th>{t("members.list.nextExpiry")}</th>
+          <th>{t("members.list.lastClass")}</th>
+          <th class="text-right">{t("members.list.upcoming")}</th>
         </tr>
       </thead>
       <tbody>
         {rows.length === 0 && (
           <tr>
             <td colspan="6" class="py-8 text-center text-stone-500">
-              No one matches.
+              {t("members.list.noMatch")}
             </td>
           </tr>
         )}
@@ -96,7 +105,11 @@ const base = `/s/${ctx.slug}/admin/members`;
                 <a href={`${base}/${m.userId}`} class="flex items-center gap-3 font-medium hover:underline">
                   <Avatar name={m.name} size="sm" />
                   {m.name}
-                  {m.role !== "member" && <span class="badge bg-stone-900 text-white capitalize">{m.role}</span>}
+                  {m.role !== "member" && (
+                    <span class="badge bg-stone-900 text-white">
+                      {m.role === "owner" ? t("auth.roleOwner") : t("auth.roleCoach")}
+                    </span>
+                  )}
                 </a>
               </td>
               <td class="text-stone-600">
@@ -106,7 +119,7 @@ const base = `/s/${ctx.slug}/admin/members`;
               <td class="text-right">
                 {m.role === "member" &&
                   (m.activePacks === 0 ? (
-                    <span class="badge bg-stone-100 text-stone-600">No plan</span>
+                    <span class="badge bg-stone-100 text-stone-600">{t("members.list.noPlan")}</span>
                   ) : (
                     <span
                       class:list={[

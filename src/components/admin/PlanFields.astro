@@ -26,7 +26,10 @@ const units = [
   <input name="name" required class="input" value={plan?.name ?? ""} placeholder={t("setup.plans.namePlaceholder")} />
 </label>
 <label class="block space-y-1">
-  <span class="label">{t("setup.plans.descriptionLabel")} <span class="font-normal text-stone-400">({t("setup.plans.descriptionHint")})</span></span>
+  <span class="label">
+    {t("setup.plans.descriptionLabel")}{" "}
+    <span class="font-normal text-stone-400">({t("setup.plans.descriptionHint")})</span>
+  </span>
   <input name="description" class="input" value={plan?.description ?? ""} />
 </label>
 <div class="grid grid-cols-2 gap-3">
@@ -48,9 +51,20 @@ const units = [
 <div class="space-y-1">
   <span class="label">{t("setup.plans.validFor")}</span>
   <div class="grid grid-cols-2 gap-3">
-    <input name="validityAmount" type="number" min="1" class="input" value={plan ? (plan.validityAmount ?? "") : 14} aria-label={t("setup.plans.validFor")} />
+    <input
+      name="validityAmount"
+      type="number"
+      min="1"
+      class="input"
+      value={plan ? (plan.validityAmount ?? "") : 14}
+      aria-label={t("setup.plans.validFor")}
+    />
     <select name="validityUnit" class="input" aria-label={t("setup.plans.validFor")}>
-      {units.map(([v, l]) => <option value={v} selected={(plan ? (plan.validityUnit ?? "never") : "weeks") === v}>{l}</option>)}
+      {units.map(([v, l]) => (
+        <option value={v} selected={(plan ? (plan.validityUnit ?? "never") : "weeks") === v}>
+          {l}
+        </option>
+      ))}
     </select>
   </div>
   <p class="text-xs text-stone-500">{t("setup.plans.validityHint")}</p>

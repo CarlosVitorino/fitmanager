@@ -39,7 +39,12 @@ const inviteUrl = new URL(`/join/${ctx.slug}/${settings.joinCode}`, Astro.url).t
 const timezones = Intl.supportedValuesOf("timeZone");
 ---
 
-<Setup title={t("setup.settings.title")} subtitle={t("setup.settings.subtitle")} flash={result.flash} error={result.error}>
+<Setup
+  title={t("setup.settings.title")}
+  subtitle={t("setup.settings.subtitle")}
+  flash={result.flash}
+  error={result.error}
+>
   <div class="max-w-3xl space-y-6">
     <form method="post" class="space-y-6">
       <input type="hidden" name="_action" value="save" />
@@ -53,7 +58,11 @@ const timezones = Intl.supportedValuesOf("timeZone");
           <label class="block space-y-1">
             <span class="label">{t("setup.settings.defaultLanguage")}</span>
             <select name="locale" class="input">
-              {LOCALES.map((l) => <option value={l} selected={l === settings.locale}>{LOCALE_NAMES[l]}</option>)}
+              {LOCALES.map((l) => (
+                <option value={l} selected={l === settings.locale}>
+                  {LOCALE_NAMES[l]}
+                </option>
+              ))}
             </select>
             <span class="block text-xs text-stone-500">{t("setup.settings.defaultLanguageHint")}</span>
           </label>
@@ -64,7 +73,11 @@ const timezones = Intl.supportedValuesOf("timeZone");
           <label class="block space-y-1 sm:col-span-2">
             <span class="label">{t("setup.settings.timezone")}</span>
             <select name="timezone" class="input">
-              {timezones.map((tz) => <option value={tz} selected={tz === settings.timezone}>{tz}</option>)}
+              {timezones.map((tz) => (
+                <option value={tz} selected={tz === settings.timezone}>
+                  {tz}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -76,20 +89,36 @@ const timezones = Intl.supportedValuesOf("timeZone");
           <label class="block space-y-1">
             <span class="label">{t("setup.settings.bookingCloses")}</span>
             <div class="flex items-center gap-2">
-              <input name="bookingCutoffHours" type="number" min="0" step="0.5" class="input w-24" value={settings.bookingCutoffMinutes / 60} />
+              <input
+                name="bookingCutoffHours"
+                type="number"
+                min="0"
+                step="0.5"
+                class="input w-24"
+                value={settings.bookingCutoffMinutes / 60}
+              />
               <span class="muted whitespace-nowrap">{t("setup.settings.hoursBefore")}</span>
             </div>
           </label>
           <label class="block space-y-1">
             <span class="label">{t("setup.settings.freeCancellation")}</span>
             <div class="flex items-center gap-2">
-              <input name="cancellationCutoffHours" type="number" min="0" class="input w-24" value={settings.cancellationCutoffMinutes / 60} />
+              <input
+                name="cancellationCutoffHours"
+                type="number"
+                min="0"
+                class="input w-24"
+                value={settings.cancellationCutoffMinutes / 60}
+              />
               <span class="muted whitespace-nowrap">{t("setup.settings.hoursBefore")}</span>
             </div>
           </label>
         </div>
         <p class="mt-4 rounded-xl bg-stone-50 p-3.5 text-sm text-stone-600">
-          {t("setup.settings.rulesSummary", { booking: formatMinutes(settings.bookingCutoffMinutes), cancel: formatMinutes(settings.cancellationCutoffMinutes) })}
+          {t("setup.settings.rulesSummary", {
+            booking: formatMinutes(settings.bookingCutoffMinutes),
+            cancel: formatMinutes(settings.cancellationCutoffMinutes),
+          })}
         </p>
       </Section>
 
@@ -102,12 +131,22 @@ const timezones = Intl.supportedValuesOf("timeZone");
       <Link2 slot="icon" size={18} />
       <div class="flex gap-2">
         <input readonly class="input font-mono text-xs" value={inviteUrl} id="invite-url" onclick="this.select()" />
-        <button type="button" class="btn" data-copied={t("common.copied")} onclick="navigator.clipboard.writeText(document.getElementById('invite-url').value);this.textContent=this.dataset.copied">
+        <button
+          type="button"
+          class="btn"
+          data-copied={t("common.copied")}
+          onclick="navigator.clipboard.writeText(document.getElementById('invite-url').value);this.textContent=this.dataset.copied"
+        >
           {t("common.copy")}
         </button>
       </div>
       <form method="post" class="mt-4 flex flex-wrap items-center gap-2">
-        <button class="btn btn-sm" name="_action" value="regenerate" onclick={`return confirm(${JSON.stringify(t("setup.settings.newLinkConfirm"))})`}>
+        <button
+          class="btn btn-sm"
+          name="_action"
+          value="regenerate"
+          onclick={`return confirm(${JSON.stringify(t("setup.settings.newLinkConfirm"))})`}
+        >
           {t("setup.settings.newLink")}
         </button>
         <span class="muted">{t("setup.settings.newLinkHint")}</span>

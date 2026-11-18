@@ -13,37 +13,52 @@ const icon = template?.icon ?? TEMPLATE_ICONS[1];
 
 <label class="block space-y-1">
   <span class="label">{t("common.name")}</span>
-  <input name="name" required class="input" value={template?.name ?? ""} placeholder={t("setup.types.namePlaceholder")} />
+  <input
+    name="name"
+    required
+    class="input"
+    value={template?.name ?? ""}
+    placeholder={t("setup.types.namePlaceholder")}
+  />
 </label>
 <label class="block space-y-1">
-  <span class="label">{t("common.description")} <span class="font-normal text-stone-400">({t("setup.types.descriptionHint")})</span></span>
+  <span class="label">
+    {t("common.description")} <span class="font-normal text-stone-400">({t("setup.types.descriptionHint")})</span>
+  </span>
   <input name="description" class="input" value={template?.description ?? ""} />
 </label>
 <fieldset class="space-y-1.5">
   <legend class="label">{t("setup.types.colour")}</legend>
   <div class="flex flex-wrap gap-2">
-    {
-      TEMPLATE_COLORS.map((c) => (
-        <label class="cursor-pointer">
-          <input type="radio" name="color" value={c} checked={c === color} class="peer sr-only" id={`${idPrefix}-c-${c}`} />
-          <span class="block h-8 w-8 rounded-full ring-offset-2 peer-checked:ring-2 peer-checked:ring-stone-900 peer-focus-visible:ring-2" style={`background:${c}`} title={c} />
-        </label>
-      ))
-    }
+    {TEMPLATE_COLORS.map((c) => (
+      <label class="cursor-pointer">
+        <input
+          type="radio"
+          name="color"
+          value={c}
+          checked={c === color}
+          class="peer sr-only"
+          id={`${idPrefix}-c-${c}`}
+        />
+        <span
+          class="block h-8 w-8 rounded-full ring-offset-2 peer-checked:ring-2 peer-checked:ring-stone-900 peer-focus-visible:ring-2"
+          style={`background:${c}`}
+          title={c}
+        />
+      </label>
+    ))}
   </div>
 </fieldset>
 <fieldset class="space-y-1.5">
   <legend class="label">{t("setup.types.icon")}</legend>
   <div class="flex flex-wrap gap-1.5">
-    {
-      TEMPLATE_ICONS.map((i) => (
-        <label class="cursor-pointer">
-          <input type="radio" name="icon" value={i} checked={i === icon} class="peer sr-only" />
-          <span class="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-lg peer-checked:border-stone-900 peer-checked:bg-stone-100 peer-focus-visible:ring-2">
-            {i}
-          </span>
-        </label>
-      ))
-    }
+    {TEMPLATE_ICONS.map((i) => (
+      <label class="cursor-pointer">
+        <input type="radio" name="icon" value={i} checked={i === icon} class="peer sr-only" />
+        <span class="flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 text-lg peer-checked:border-stone-900 peer-checked:bg-stone-100 peer-focus-visible:ring-2">
+          {i}
+        </span>
+      </label>
+    ))}
   </div>
 </fieldset>

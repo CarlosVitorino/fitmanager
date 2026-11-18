@@ -8,7 +8,12 @@ import { archiveTemplate, listTemplates, saveTemplate, templateInput } from "../
 
 const ctx = Astro.locals.studio!;
 const parse = (f: FormData) =>
-  templateInput.parse({ name: str(f, "name"), description: optStr(f, "description"), color: str(f, "color"), icon: str(f, "icon") });
+  templateInput.parse({
+    name: str(f, "name"),
+    description: optStr(f, "description"),
+    color: str(f, "color"),
+    icon: str(f, "icon"),
+  });
 
 const result = await handleActions(Astro, {
   create: async (f) => {
@@ -37,57 +42,59 @@ const editId = Astro.url.searchParams.get("edit");
 <Setup title={t("setup.types.title")} subtitle={t("setup.types.subtitle")} flash={result.flash} error={result.error}>
   <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
     <div class="grid content-start gap-3 sm:grid-cols-2">
-      {
-        templates.map((tpl) =>
-          editId === tpl.id ? (
-            <form method="post" class="card space-y-4 p-5 ring-2 ring-stone-900/10 sm:col-span-2">
-              <input type="hidden" name="_action" value="update" />
-              <input type="hidden" name="id" value={tpl.id} />
-              <input type="hidden" name="_redirect" value={Astro.url.pathname} />
-              <TemplateFields template={tpl} idPrefix={tpl.id} />
-              <div class="flex gap-2">
-                <button class="btn btn-primary">{t("common.save")}</button>
-                <a href={Astro.url.pathname} class="btn">
-                  {t("common.cancel")}
-                </a>
-              </div>
-            </form>
-          ) : (
-            <div class:list={["card flex flex-col overflow-hidden", tpl.archivedAt && "opacity-60"]}>
-              <div class="flex items-center gap-3 p-4" style={`background:${tpl.color}10`}>
-                <span class="flex h-11 w-11 items-center justify-center rounded-xl text-2xl" style={`background:${tpl.color}22`} aria-hidden="true">
-                  {tpl.icon}
-                </span>
-                <div class="min-w-0">
-                  <p class="font-semibold" style={`color:${tpl.color}`}>
-                    {tpl.name}
-                  </p>
-                  <div class="flex gap-1.5">
-                    {tpl.isDefault && <span class="badge bg-white/70 text-stone-600">{t("common.default")}</span>}
-                    {tpl.archivedAt && <span class="badge bg-white/70 text-stone-600">{t("common.hidden")}</span>}
-                  </div>
-                </div>
-              </div>
-              <div class="flex flex-1 items-end justify-between gap-2 p-4 pt-3">
-                <p class="text-sm text-stone-600">{tpl.description ?? ""}</p>
-                <div class="flex shrink-0 gap-1.5">
-                  <a href={`?edit=${tpl.id}`} class="btn btn-sm">
-                    <Pencil size={13} /> {t("common.edit")}
-                  </a>
-                  {!tpl.isDefault && (
-                    <form method="post">
-                      <input type="hidden" name="id" value={tpl.id} />
-                      <button class="btn btn-sm" name="_action" value={tpl.archivedAt ? "restore" : "archive"}>
-                        {tpl.archivedAt ? t("common.restore") : t("common.hide")}
-                      </button>
-                    </form>
-                  )}
+      {templates.map((tpl) =>
+        editId === tpl.id ? (
+          <form method="post" class="card space-y-4 p-5 ring-2 ring-stone-900/10 sm:col-span-2">
+            <input type="hidden" name="_action" value="update" />
+            <input type="hidden" name="id" value={tpl.id} />
+            <input type="hidden" name="_redirect" value={Astro.url.pathname} />
+            <TemplateFields template={tpl} idPrefix={tpl.id} />
+            <div class="flex gap-2">
+              <button class="btn btn-primary">{t("common.save")}</button>
+              <a href={Astro.url.pathname} class="btn">
+                {t("common.cancel")}
+              </a>
+            </div>
+          </form>
+        ) : (
+          <div class:list={["card flex flex-col overflow-hidden", tpl.archivedAt && "opacity-60"]}>
+            <div class="flex items-center gap-3 p-4" style={`background:${tpl.color}10`}>
+              <span
+                class="flex h-11 w-11 items-center justify-center rounded-xl text-2xl"
+                style={`background:${tpl.color}22`}
+                aria-hidden="true"
+              >
+                {tpl.icon}
+              </span>
+              <div class="min-w-0">
+                <p class="font-semibold" style={`color:${tpl.color}`}>
+                  {tpl.name}
+                </p>
+                <div class="flex gap-1.5">
+                  {tpl.isDefault && <span class="badge bg-white/70 text-stone-600">{t("common.default")}</span>}
+                  {tpl.archivedAt && <span class="badge bg-white/70 text-stone-600">{t("common.hidden")}</span>}
                 </div>
               </div>
             </div>
-          ),
-        )
-      }
+            <div class="flex flex-1 items-end justify-between gap-2 p-4 pt-3">
+              <p class="text-sm text-stone-600">{tpl.description ?? ""}</p>
+              <div class="flex shrink-0 gap-1.5">
+                <a href={`?edit=${tpl.id}`} class="btn btn-sm">
+                  <Pencil size={13} /> {t("common.edit")}
+                </a>
+                {!tpl.isDefault && (
+                  <form method="post">
+                    <input type="hidden" name="id" value={tpl.id} />
+                    <button class="btn btn-sm" name="_action" value={tpl.archivedAt ? "restore" : "archive"}>
+                      {tpl.archivedAt ? t("common.restore") : t("common.hide")}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        ),
+      )}
     </div>
     <form method="post" class="card h-fit space-y-4 p-5 xl:sticky xl:top-20">
       <h2 class="h2">{t("setup.types.add")}</h2>

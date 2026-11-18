@@ -1,6 +1,7 @@
 ---
+import { t } from "../../i18n";
 import { Plus, Trash } from "@lucide/astro";
-import DateField from "../islands/DateField";
+import DateInput from "../DateInput.astro";
 import { formatDate } from "../../lib/format";
 
 interface Props {
@@ -21,28 +22,28 @@ interface Props {
 }
 const { rows, today } = Astro.props;
 const COLS = [
-  ["weightKg", "Weight", "kg"],
-  ["bodyFatPct", "Body fat", "%"],
-  ["waistCm", "Waist", "cm"],
-  ["hipsCm", "Hips", "cm"],
-  ["chestCm", "Chest", "cm"],
-  ["armCm", "Arm", "cm"],
-  ["thighCm", "Thigh", "cm"],
-  ["restingHr", "Rest HR", "bpm"],
+  ["weightKg", t("profile.metrics.weightKg"), "kg"],
+  ["bodyFatPct", t("profile.metrics.bodyFatPct"), "%"],
+  ["waistCm", t("profile.metrics.waistCm"), "cm"],
+  ["hipsCm", t("profile.metrics.hipsCm"), "cm"],
+  ["chestCm", t("profile.metrics.chestCm"), "cm"],
+  ["armCm", t("profile.metrics.armCm"), "cm"],
+  ["thighCm", t("profile.metrics.thighCm"), "cm"],
+  ["restingHr", t("profile.checkin.restHr"), "bpm"],
 ] as const;
 const newestFirst = [...rows].reverse();
 ---
 
 <details class="group">
   <summary class="btn btn-sm list-none">
-    <Plus size={14} /> Add a check-in
+    <Plus size={14} /> {t("profile.checkin.add")}
   </summary>
   <form method="post" class="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
     <input type="hidden" name="_action" value="measurement" />
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div class="col-span-2 space-y-1">
-        <span class="label">Date</span>
-        <DateField client:load name="measuredOn" value={today} today={today} required ariaLabel="Measured on" />
+        <span class="label">{t("common.date")}</span>
+        <DateInput name="measuredOn" value={today} today={today} required ariaLabel={t("common.date")} />
       </div>
       {COLS.map(([k, l, u]) => (
         <label class="block space-y-1">
@@ -53,11 +54,11 @@ const newestFirst = [...rows].reverse();
         </label>
       ))}
       <label class="col-span-2 block space-y-1 sm:col-span-4">
-        <span class="label">Note</span>
-        <input name="note" class="input" placeholder="Optional, e.g. after holidays" />
+        <span class="label">{t("common.note")}</span>
+        <input name="note" class="input" placeholder={t("profile.checkin.notePlaceholder")} />
       </label>
     </div>
-    <button class="btn btn-primary mt-3">Save check-in</button>
+    <button class="btn btn-primary mt-3">{t("profile.checkin.save")}</button>
   </form>
 </details>
 
@@ -66,7 +67,7 @@ const newestFirst = [...rows].reverse();
     <table class="table">
       <thead>
         <tr>
-          <th>Date</th>
+          <th>{t("common.date")}</th>
           {COLS.map(([, l]) => (
             <th class="text-right">{l}</th>
           ))}
@@ -89,8 +90,8 @@ const newestFirst = [...rows].reverse();
                 <input type="hidden" name="id" value={r.id} />
                 <button
                   class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
-                  aria-label="Delete check-in"
-                  onclick="return confirm('Delete this check-in?')"
+                  aria-label={t("profile.checkin.delete")}
+                  onclick={`return confirm(${JSON.stringify(t("profile.checkin.deleteConfirm"))})`}
                 >
                   <Trash size={14} />
                 </button>
