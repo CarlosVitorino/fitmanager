@@ -1,0 +1,32 @@
+---
+import { initials } from "../lib/format";
+
+interface Props {
+  name: string;
+  size?: "sm" | "md" | "lg" | "xl";
+}
+const { name, size = "md" } = Astro.props;
+// A stable, soft colour per person so lists are easy to scan.
+const palette = [
+  ["#fee2e2", "#991b1b"],
+  ["#ffedd5", "#9a3412"],
+  ["#fef3c7", "#92400e"],
+  ["#dcfce7", "#166534"],
+  ["#ccfbf1", "#115e59"],
+  ["#dbeafe", "#1e40af"],
+  ["#ede9fe", "#5b21b6"],
+  ["#fce7f3", "#9d174d"],
+];
+let hash = 0;
+for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
+const [bg, fg] = palette[hash % palette.length]!;
+const sizes = { sm: "h-8 w-8 text-xs", md: "h-10 w-10 text-sm", lg: "h-14 w-14 text-lg", xl: "h-16 w-16 text-xl" };
+---
+
+<span
+  class:list={["inline-flex shrink-0 items-center justify-center rounded-full font-semibold", sizes[size]]}
+  style={`background:${bg};color:${fg}`}
+  aria-hidden="true"
+>
+  {initials(name) || "?"}
+</span>
