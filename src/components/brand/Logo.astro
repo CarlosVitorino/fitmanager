@@ -1,0 +1,48 @@
+---
+/**
+ * FitManager logo: a kettlebell with a check mark in its bell (every class counted), on a dark tile,
+ * plus the wordmark. `tone` is the background it sits on.
+ */
+interface Props {
+  tone?: "light" | "dark";
+  size?: "sm" | "md" | "lg";
+  markOnly?: boolean;
+  class?: string;
+}
+const { tone = "light", size = "md", markOnly = false, class: className } = Astro.props;
+const px = { sm: 28, md: 34, lg: 44 }[size];
+const text = { sm: "text-[1.05rem]", md: "text-[1.3rem]", lg: "text-[1.7rem]" }[size];
+---
+
+<span class:list={["inline-flex items-center gap-2.5", className]}>
+  <svg width={px} height={px} viewBox="0 0 32 32" aria-hidden="true" class="shrink-0">
+    <rect width="32" height="32" rx="8" fill={tone === "dark" ? "#d4f53c" : "#141413"}></rect>
+    <path
+      d="M11 14.5V11a5 5 0 0 1 10 0v3.5"
+      fill="none"
+      stroke={tone === "dark" ? "#141413" : "#d4f53c"}
+      stroke-width="3"
+      stroke-linecap="round"
+    ></path>
+    <circle cx="16" cy="20.5" r="7.5" fill={tone === "dark" ? "#141413" : "#d4f53c"}></circle>
+    <path
+      d="M12.6 20.6l2.4 2.4 4.4-4.8"
+      fill="none"
+      stroke={tone === "dark" ? "#d4f53c" : "#141413"}
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    ></path>
+  </svg>
+  {!markOnly && (
+    <span
+      class:list={[
+        "font-display leading-none font-extrabold tracking-tight uppercase",
+        text,
+        tone === "dark" ? "text-white" : "text-stone-900",
+      ]}
+    >
+      Fit<span class={tone === "dark" ? "text-[#d4f53c]" : "text-stone-500"}>Manager</span>
+    </span>
+  )}
+</span>

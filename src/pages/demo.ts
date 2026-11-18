@@ -27,7 +27,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, redirect 
   } catch {
     /* not available behind some adapters */
   }
-  if (!allowed(ip)) return redirect("/?demo=busy", 303);
+  // Only in production: local tooling (like the screenshot script) builds many demos in a row.
+  if (import.meta.env.PROD && !allowed(ip)) return redirect("/?demo=busy", 303);
   try {
     const { slug, signIn } = await startDemo(role);
     if (!signIn.ok) return redirect("/?demo=failed", 303);

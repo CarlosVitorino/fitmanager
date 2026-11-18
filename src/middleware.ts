@@ -51,7 +51,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const slug = demoSlug(token);
     context.locals.demo = { token, slug, expiresAt: await demoExpiry(token) };
     const path = context.url.pathname;
-    if (DEMO_BLOCKED.test(path)) return context.redirect(`/s/${slug}`);
+    if (DEMO_BLOCKED.test(path) && !path.startsWith(`/join/${slug}/`)) return context.redirect(`/s/${slug}`);
     if (path.startsWith("/api/auth/") && !DEMO_AUTH_ALLOWED.test(path))
       return new Response("Not available in the demo", { status: 403 });
   }

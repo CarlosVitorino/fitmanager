@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { LogOut } from "@lucide/astro";
+import Logo from "../components/brand/Logo.astro";
 import LanguageMenu from "../components/LanguageMenu.astro";
 import { getLocale, t } from "../i18n";
 
@@ -19,16 +20,14 @@ const { user } = Astro.locals;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title} · {t("common.appName")}</title>
   </head>
   <body class="min-h-screen font-sans text-stone-900 antialiased">
     <header class="border-b border-stone-200/80 bg-white/90">
       <nav class:list={["mx-auto flex h-14 items-center", width, " justify-between gap-4 px-4"]}>
-        <a href="/" class="flex items-center gap-2.5 font-semibold tracking-tight">
-          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-sm font-bold text-white">
-            F
-          </span>
-          {t("common.appName")}
+        <a href="/" aria-label={t("common.appName")}>
+          <Logo size="sm" />
         </a>
         <div class="flex items-center gap-2 text-sm">
           <LanguageMenu />

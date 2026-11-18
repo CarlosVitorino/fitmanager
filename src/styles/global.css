@@ -1,8 +1,13 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
+@import "@fontsource/barlow-condensed/700.css";
+@import "@fontsource/barlow-condensed/800.css";
 
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Barlow Condensed", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-volt: #d4f53c;
+  --color-ink: #141413;
 }
 
 :root {

@@ -1,0 +1,44 @@
+---
+/** One feature row: copy on one side, a screenshot on the other. */
+import { Check } from "@lucide/astro";
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  text: string;
+  bullets?: string[];
+  reverse?: boolean;
+  /** Tint behind the screenshot. */
+  tint: string;
+}
+const { eyebrow, title, text, bullets = [], reverse = false, tint } = Astro.props;
+---
+
+<div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+  <div class:list={["max-w-xl", reverse && "lg:order-2"]}>
+    <p class="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-stone-500">
+      <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-volt">
+        <slot name="icon" />
+      </span>
+      {eyebrow}
+    </p>
+    <h3 class="font-display text-4xl leading-[0.95] font-extrabold tracking-tight uppercase sm:text-5xl">{title}</h3>
+    <p class="mt-4 text-lg leading-relaxed text-stone-600">{text}</p>
+    {bullets.length > 0 && (
+      <ul class="mt-6 space-y-2.5">
+        {bullets.map((b) => (
+          <li class="flex items-start gap-3 text-stone-800">
+            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-volt text-ink">
+              <Check size={13} stroke-width={3} />
+            </span>
+            {b}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+  <div class="relative">
+    <div class="absolute -inset-4 -z-10 rounded-[2rem] sm:-inset-8" style={`background:${tint}`}></div>
+    <slot />
+  </div>
+</div>

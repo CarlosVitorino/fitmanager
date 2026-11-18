@@ -1,21 +1,29 @@
 ---
 import {
+  ArrowRight,
   CalendarCheck,
+  CalendarX2,
+  ChevronDown,
   ChevronRight,
-  ClipboardCheck,
-  Flame,
-  Languages,
-  LineChart,
-  ShieldCheck,
+  Dumbbell,
+  Globe,
+  HeartPulse,
+  MessageCircleQuestion,
+  Sheet,
   Ticket,
-  UserX,
+  TriangleAlert,
+  UserRound,
 } from "@lucide/astro";
 import Flash from "../components/Flash.astro";
+import Logo from "../components/brand/Logo.astro";
+import BrowserFrame from "../components/landing/BrowserFrame.astro";
+import Feature from "../components/landing/Feature.astro";
+import PhoneFrame from "../components/landing/PhoneFrame.astro";
+import { shot } from "../components/landing/shots";
 import Base from "../layouts/Base.astro";
+import Landing from "../layouts/Landing.astro";
 import { db } from "../db/client";
-import { addDays } from "../domain/dates";
 import { t } from "../i18n";
-import { formatDate, formatDay } from "../lib/format";
 import { listUserStudios } from "../server/studio-context";
 
 const { user } = Astro.locals;
@@ -28,28 +36,31 @@ const demoState = Astro.url.searchParams.get("demo");
 const notice = demoState === "ended" ? t("site.demo.ended") : null;
 const problem = demoState === "busy" ? t("site.demo.busy") : demoState === "failed" ? t("site.demo.failed") : null;
 
-const today = new Date().toISOString().slice(0, 10);
-const features = [
-  { icon: Ticket, title: t("site.home.features.plansTitle"), text: t("site.home.features.plansText") },
-  { icon: CalendarCheck, title: t("site.home.features.bookingTitle"), text: t("site.home.features.bookingText") },
-  { icon: ShieldCheck, title: t("site.home.features.creditsTitle"), text: t("site.home.features.creditsText") },
-  { icon: UserX, title: t("site.home.features.noShowTitle"), text: t("site.home.features.noShowText") },
-  { icon: LineChart, title: t("site.home.features.profileTitle"), text: t("site.home.features.profileText") },
-  { icon: Languages, title: t("site.home.features.languagesTitle"), text: t("site.home.features.languagesText") },
+const pains = [
+  { icon: MessageCircleQuestion, title: t("site.home.pains.oneTitle"), text: t("site.home.pains.oneText") },
+  { icon: CalendarX2, title: t("site.home.pains.twoTitle"), text: t("site.home.pains.twoText") },
+  { icon: Sheet, title: t("site.home.pains.threeTitle"), text: t("site.home.pains.threeText") },
+];
+const stats = [
+  ["3", t("site.home.stats.plans")],
+  ["5", t("site.home.stats.languages")],
+  ["0", t("site.home.stats.apps")],
+  ["1", t("site.home.stats.link")],
 ];
 const steps = [
   [t("site.home.steps.oneTitle"), t("site.home.steps.oneText")],
   [t("site.home.steps.twoTitle"), t("site.home.steps.twoText")],
   [t("site.home.steps.threeTitle"), t("site.home.steps.threeText")],
 ];
-const mockClasses = [
-  { day: formatDay(addDays(today, 1)), time: "18:30", name: t("demo.upper"), icon: "💪", color: "#2563eb" },
-  { day: formatDay(addDays(today, 3)), time: "07:00", name: t("demo.hiit"), icon: "🔥", color: "#ea580c" },
-];
+const faq = (["app", "move", "noShow", "expiry", "studios", "language"] as const).map((k) => [
+  t(`site.home.faq.${k}Q`),
+  t(`site.home.faq.${k}A`),
+]);
+const classTypes = t("site.home.classTypes").split(" · ");
 ---
 
-<Base title={t("common.home")} wide={!user}>
-  {user ? (
+{user ? (
+  <Base title={t("common.home")}>
     <div class="mx-auto max-w-lg space-y-6">
       <h1 class="text-2xl font-semibold tracking-tight">{t("auth.yourStudios")}</h1>
       {studios.length === 0 ? (
@@ -74,141 +85,311 @@ const mockClasses = [
         {t("auth.createStudio")}
       </a>
     </div>
-  ) : (
-    <div class="space-y-20 pb-10">
-      <Flash message={notice} error={problem} />
-
-      <section class="grid items-center gap-12 pt-4 lg:grid-cols-[1.15fr_1fr]">
-        <div class="space-y-6">
-          <p class="eyebrow">{t("site.home.eyebrow")}</p>
-          <h1 class="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{t("site.home.title")}</h1>
-          <p class="max-w-xl text-lg text-stone-600">{t("site.home.text")}</p>
-          <form method="post" action="/demo" class="flex flex-wrap gap-3" data-demo-form>
-            <button name="as" value="coach" class="btn btn-primary px-5 py-2.5">
-              <ClipboardCheck size={17} />
+  </Base>
+) : (
+  <Landing title={`${t("common.appName")} · ${t("site.home.kicker")}`} description={t("site.home.text")}>
+    {/* ---------- Hero ---------- */}
+    <section class="relative overflow-hidden bg-ink pt-24 pb-32 text-white sm:pt-32 lg:pb-36">
+      <div class="hero-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+      <div
+        class="pointer-events-none absolute -top-40 right-[-10%] h-[36rem] w-[36rem] rounded-full bg-volt/20 blur-[120px]"
+        aria-hidden="true"
+      />
+      <div class="relative mx-auto grid max-w-6xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          {(notice || problem) && (
+            <div class="mb-6 text-sm">
+              <Flash message={notice} error={problem} />
+            </div>
+          )}
+          <p class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold tracking-wide text-stone-300 uppercase">
+            <Dumbbell size={14} class="text-volt" />
+            {t("site.home.kicker")}
+          </p>
+          <h1 class="font-display text-[3.4rem] leading-[0.88] font-extrabold tracking-tight uppercase sm:text-7xl lg:text-[4.6rem]">
+            <span class="block">{t("site.home.titleA")}</span>
+            <span class="mt-1 block text-volt">{t("site.home.titleB")}</span>
+          </h1>
+          <p class="mt-8 max-w-xl text-lg leading-relaxed text-stone-300">{t("site.home.text")}</p>
+          <form method="post" action="/demo" class="mt-8 flex flex-wrap gap-3" data-demo-form>
+            <button
+              name="as"
+              value="coach"
+              class="group inline-flex items-center gap-2 rounded-xl bg-volt px-5 py-3 font-semibold text-ink transition hover:bg-white"
+            >
               {t("site.home.demoCoach")}
+              <ArrowRight size={18} class="transition group-hover:translate-x-0.5" />
             </button>
-            <button name="as" value="member" class="btn px-5 py-2.5">
-              <CalendarCheck size={17} />
+            <button
+              name="as"
+              value="member"
+              class="inline-flex items-center gap-2 rounded-xl border border-white/25 px-5 py-3 font-semibold text-white transition hover:border-white hover:bg-white/5"
+            >
               {t("site.home.demoMember")}
             </button>
           </form>
-          <p class="hidden text-sm font-medium text-stone-700" data-demo-wait aria-live="polite">
-            <span class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-stone-300 border-t-stone-900 align-[-1px]"></span>
+          <p class="mt-4 hidden text-sm font-medium text-volt" data-demo-wait aria-live="polite">
+            <span class="mr-2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-volt/30 border-t-volt align-[-1px]" />
             {t("site.home.preparing")}
           </p>
-          <p class="max-w-md text-sm text-stone-500">{t("site.home.demoNote")}</p>
+          <p class="mt-4 max-w-md text-sm text-stone-400">{t("site.home.demoNote")}</p>
         </div>
 
-        <div class="relative" aria-hidden="true">
-          <div class="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-br from-amber-100 via-stone-100 to-emerald-100 blur-2xl"></div>
-          <div class="card space-y-4 p-5 shadow-xl">
-            <div class="flex items-center gap-3">
-              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-sm font-semibold text-rose-800">
-                MM
-              </span>
-              <div class="flex-1">
-                <p class="font-semibold">Mia Member</p>
-                <p class="flex items-center gap-1 text-xs text-amber-700">
-                  <Flame size={13} />
-                  {t("site.home.mock.streak")}
-                </p>
-              </div>
-            </div>
-            <div class="rounded-xl bg-stone-900 p-4 text-white">
-              <div class="flex items-baseline justify-between">
-                <p class="font-medium">{t("site.home.mock.plan")}</p>
-                <p class="text-xs text-stone-400">
-                  {t("site.home.mock.ends", { date: formatDate(addDays(today, 38)) })}
-                </p>
-              </div>
-              <div class="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
-                <div class="h-full w-[60%] rounded-full bg-emerald-400"></div>
-              </div>
-              <p class="mt-2 text-sm text-stone-300">{t("site.home.mock.left", { left: 6, total: 10 })}</p>
-            </div>
-            <div>
-              <p class="eyebrow mb-2">{t("site.home.mock.next")}</p>
-              <ul class="space-y-2">
-                {mockClasses.map((c) => (
-                  <li
-                    class="flex items-center justify-between rounded-lg border-l-4 px-3 py-2 text-sm"
-                    style={`border-left-color:${c.color};background:${c.color}12`}
-                  >
-                    <span>
-                      <span class="font-semibold tabular-nums">
-                        {c.day} · {c.time}
-                      </span>
-                      <span class="ml-2">
-                        {c.icon} {c.name}
-                      </span>
-                    </span>
-                    <span class="badge bg-emerald-100 text-emerald-800">✓ {t("site.home.mock.booked")}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <div class="relative mx-auto w-full max-w-2xl lg:mr-[-4rem] lg:max-w-none">
+          <BrowserFrame src={shot("today")} alt={t("site.home.shotAlt")} eager class="lg:rotate-[0.6deg]" />
+          <PhoneFrame
+            src={shot("phone-home")}
+            alt={t("site.home.phoneAlt")}
+            eager
+            class="absolute -bottom-16 left-1 w-[34%] max-w-[13rem] -rotate-3 sm:-left-10"
+          />
+          <div class="chip absolute -top-5 right-6 rotate-2">
+            <TriangleAlert size={15} class="text-amber-600" />
+            {t("site.home.chipLow")}
+          </div>
+          <div class="chip absolute right-[-0.5rem] bottom-10 -rotate-2 sm:right-[-1.5rem]">
+            <Ticket size={15} class="text-ink" />
+            {t("site.home.chipLeft")}
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section>
-        <h2 class="mb-8 text-2xl font-semibold tracking-tight">{t("site.home.featuresTitle")}</h2>
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
-            <div class="card p-5">
-              <span class="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100 text-stone-700">
-                <f.icon size={18} />
-              </span>
-              <h3 class="font-semibold">{f.title}</h3>
-              <p class="mt-1 text-sm text-stone-600">{f.text}</p>
-            </div>
-          ))}
+    {/* ---------- Class types band ---------- */}
+    <div class="relative z-10 -mt-6 -rotate-1 overflow-hidden bg-volt py-3 text-ink shadow-lg" aria-hidden="true">
+      <div class="marquee flex w-max gap-8 font-display text-2xl font-extrabold tracking-wide uppercase">
+        {[...classTypes, ...classTypes, ...classTypes].map((c) => (
+          <span class="flex items-center gap-8">
+            {c}
+            <span class="text-ink/40">✦</span>
+          </span>
+        ))}
+      </div>
+    </div>
+
+    {/* ---------- Problems ---------- */}
+    <section class="mx-auto max-w-6xl px-4 pt-24 pb-8 sm:px-6">
+      <h2 class="font-display text-5xl font-extrabold tracking-tight uppercase sm:text-6xl">
+        {t("site.home.painTitle")}
+      </h2>
+      <div class="mt-10 grid gap-5 md:grid-cols-3">
+        {pains.map((p, i) => (
+          <div
+            class:list={[
+              "relative rounded-2xl p-6 transition hover:-translate-y-1",
+              i === 0 ? "bg-ink text-white" : "bg-white ring-1 ring-stone-200",
+            ]}
+          >
+            <span
+              class:list={[
+                "mb-6 flex h-11 w-11 items-center justify-center rounded-xl",
+                i === 0 ? "bg-volt text-ink" : "bg-stone-100 text-stone-700",
+              ]}
+            >
+              <p.icon size={22} />
+            </span>
+            <h3 class="text-xl leading-snug font-semibold">{p.title}</h3>
+            <p class:list={["mt-2", i === 0 ? "text-stone-300" : "text-stone-600"]}>{p.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* ---------- Features ---------- */}
+    <section id="features" class="mx-auto max-w-6xl scroll-mt-8 space-y-28 px-4 py-24 sm:px-6 lg:space-y-36">
+      <Feature
+        eyebrow={t("site.home.packs.eyebrow")}
+        title={t("site.home.packs.title")}
+        text={t("site.home.packs.text")}
+        bullets={[t("site.home.packs.b1"), t("site.home.packs.b2"), t("site.home.packs.b3")]}
+        tint="linear-gradient(135deg,#e9f9a8,#d4f53c)"
+      >
+        <Ticket slot="icon" size={15} />
+        <BrowserFrame src={shot("member")} alt={t("site.home.packs.alt")} />
+      </Feature>
+
+      <Feature
+        eyebrow={t("site.home.booking.eyebrow")}
+        title={t("site.home.booking.title")}
+        text={t("site.home.booking.text")}
+        bullets={[t("site.home.booking.b1"), t("site.home.booking.b2"), t("site.home.booking.b3")]}
+        tint="linear-gradient(135deg,#ffd9c2,#ff8a4c)"
+        reverse
+      >
+        <CalendarCheck slot="icon" size={15} />
+        <div class="relative">
+          <BrowserFrame src={shot("calendar")} alt={t("site.home.booking.alt")} />
+          <PhoneFrame
+            src={shot("phone-book")}
+            alt={t("site.home.booking.alt")}
+            class="absolute -right-3 -bottom-14 w-[32%] max-w-[12rem] rotate-3 sm:-right-8"
+          />
+          <div class="chip absolute -top-5 left-6 -rotate-2">
+            <span class="chip-dot bg-emerald-500" />
+            {t("site.home.chipBooked")}
+          </div>
         </div>
-      </section>
+      </Feature>
 
-      <section>
-        <h2 class="mb-8 text-2xl font-semibold tracking-tight">{t("site.home.howTitle")}</h2>
-        <ol class="grid gap-6 md:grid-cols-3">
-          {steps.map(([title, text], i) => (
-            <li class="flex gap-4">
-              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-900 text-sm font-semibold text-white">
-                {i + 1}
-              </span>
-              <span>
-                <span class="block font-semibold">{title}</span>
-                <span class="mt-1 block text-sm text-stone-600">{text}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <Feature
+        eyebrow={t("site.home.members.eyebrow")}
+        title={t("site.home.members.title")}
+        text={t("site.home.members.text")}
+        bullets={[t("site.home.members.b1"), t("site.home.members.b2"), t("site.home.members.b3")]}
+        tint="linear-gradient(135deg,#d9e6ff,#7aa2ff)"
+      >
+        <HeartPulse slot="icon" size={15} />
+        <BrowserFrame src={shot("fitness")} alt={t("site.home.members.alt")} />
+      </Feature>
 
-      <section class="rounded-3xl bg-stone-900 px-6 py-10 text-center text-white sm:px-10">
-        <h2 class="text-2xl font-semibold tracking-tight">{t("site.home.ctaTitle")}</h2>
-        <p class="mx-auto mt-2 max-w-lg text-stone-300">{t("site.home.ctaText")}</p>
-        <div class="mt-6 flex flex-wrap justify-center gap-3">
+      <Feature
+        eyebrow={t("site.home.page.eyebrow")}
+        title={t("site.home.page.title")}
+        text={t("site.home.page.text")}
+        tint="linear-gradient(135deg,#e7e5e4,#a8a29e)"
+        reverse
+      >
+        <Globe slot="icon" size={15} />
+        <BrowserFrame src={shot("studio-page")} alt={t("site.home.page.alt")} />
+      </Feature>
+    </section>
+
+    {/* ---------- Numbers ---------- */}
+    <section class="bg-ink text-white">
+      <div class="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden px-4 py-4 sm:px-6 md:grid-cols-4">
+        {stats.map(([n, label]) => (
+          <div class="px-4 py-8">
+            <p class="font-display text-7xl leading-none font-extrabold text-volt">{n}</p>
+            <p class="mt-2 text-sm text-stone-300">{label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    {/* ---------- How it works ---------- */}
+    <section id="how" class="mx-auto max-w-6xl scroll-mt-8 px-4 py-24 sm:px-6">
+      <h2 class="font-display text-5xl font-extrabold tracking-tight uppercase sm:text-6xl">
+        {t("site.home.howTitle")}
+      </h2>
+      <ol class="mt-12 grid gap-6 md:grid-cols-3">
+        {steps.map(([title, text], i) => (
+          <li class="relative rounded-2xl bg-white p-6 ring-1 ring-stone-200">
+            <span class="font-display text-6xl leading-none font-extrabold text-stone-200">0{i + 1}</span>
+            <h3 class="mt-4 text-xl font-semibold">{title}</h3>
+            <p class="mt-1.5 text-stone-600">{text}</p>
+            {i < 2 && (
+              <ArrowRight
+                size={22}
+                class="absolute top-1/2 -right-5 z-10 hidden -translate-y-1/2 rounded-full bg-volt p-1 text-ink md:block"
+              />
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    {/* ---------- FAQ ---------- */}
+    <section id="faq" class="mx-auto max-w-3xl scroll-mt-8 px-4 pb-24 sm:px-6">
+      <h2 class="font-display text-5xl font-extrabold tracking-tight uppercase sm:text-6xl">
+        {t("site.home.faqTitle")}
+      </h2>
+      <div class="mt-10 divide-y divide-stone-300/70 border-y border-stone-300/70">
+        {faq.map(([q, a]) => (
+          <details class="group py-5">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-semibold">
+              {q}
+              <ChevronDown size={20} class="shrink-0 text-stone-400 transition group-open:rotate-180" />
+            </summary>
+            <p class="mt-3 max-w-2xl text-stone-600">{a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+
+    {/* ---------- Closing call to action ---------- */}
+    <section class="px-4 pb-24 sm:px-6">
+      <div class="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-volt px-6 py-14 text-ink sm:px-14">
+        <div class="pointer-events-none absolute -right-10 -bottom-16 opacity-[0.12]" aria-hidden="true">
+          <Logo markOnly size="lg" class="[&_svg]:h-80 [&_svg]:w-80" />
+        </div>
+        <h2 class="relative max-w-2xl font-display text-5xl leading-[0.92] font-extrabold tracking-tight uppercase sm:text-7xl">
+          {t("site.home.ctaTitle")}
+        </h2>
+        <p class="relative mt-4 max-w-lg text-lg">{t("site.home.ctaText")}</p>
+        <div class="relative mt-8 flex flex-wrap gap-3">
           <a
             href="/signup?next=/studios/new"
-            class="btn border-white bg-white px-5 py-2.5 text-stone-900 hover:bg-stone-100"
+            class="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 font-semibold text-white transition hover:bg-stone-800"
           >
+            <UserRound size={18} />
             {t("site.home.createStudio")}
           </a>
-          <a href="/login" class="btn border-stone-600 bg-transparent px-5 py-2.5 text-white hover:bg-stone-800">
-            {t("common.logIn")}
-          </a>
+          <form method="post" action="/demo" data-demo-form>
+            <button
+              name="as"
+              value="coach"
+              class="inline-flex items-center gap-2 rounded-xl border-2 border-ink px-5 py-2.5 font-semibold transition hover:bg-ink hover:text-white"
+            >
+              {t("site.home.demoCoach")}
+              <ArrowRight size={18} />
+            </button>
+          </form>
         </div>
-      </section>
-    </div>
-  )}
-</Base>
+      </div>
+    </section>
+  </Landing>
+)}
+
+<style>
+  .hero-grid {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at 70% 30%, black 20%, transparent 75%);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: white;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #141413;
+    box-shadow: 0 12px 30px -8px rgb(0 0 0 / 0.35);
+    white-space: nowrap;
+  }
+  .chip-dot {
+    height: 0.5rem;
+    width: 0.5rem;
+    border-radius: 9999px;
+  }
+  .marquee {
+    animation: marquee 40s linear infinite;
+  }
+  @keyframes marquee {
+    to {
+      transform: translateX(-33.333%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee {
+      animation: none;
+    }
+  }
+</style>
 
 <script>
   // Building a demo takes a few seconds: show progress and stop double submits.
-  const form = document.querySelector<HTMLFormElement>("[data-demo-form]");
-  form?.addEventListener("submit", () => {
-    // Disabled after the browser has read the pressed button, so its value is still sent.
-    setTimeout(() => form.querySelectorAll("button").forEach((b) => (b.disabled = true)));
-    document.querySelector("[data-demo-wait]")?.classList.remove("hidden");
-  });
+  for (const form of document.querySelectorAll<HTMLFormElement>("[data-demo-form]")) {
+    form.addEventListener("submit", () => {
+      // Disabled after the browser has read the pressed button, so its value is still sent.
+      setTimeout(() =>
+        document.querySelectorAll<HTMLButtonElement>("[data-demo-form] button").forEach((b) => (b.disabled = true)),
+      );
+      document.querySelector("[data-demo-wait]")?.classList.remove("hidden");
+    });
+  }
 </script>

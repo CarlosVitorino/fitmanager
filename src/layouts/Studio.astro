@@ -66,11 +66,12 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title} · {studio.name}</title>
   </head>
   <body class="min-h-screen font-sans text-stone-900 antialiased">
     {demo && (
-      <div class="bg-amber-100 text-amber-950">
+      <div class="bg-amber-100 text-amber-950" data-demo-banner>
         <div class:list={["mx-auto flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 text-sm", width]}>
           <FlaskConical size={16} class="shrink-0 text-amber-700" />
           <p class="min-w-0 flex-[1_1_14rem]">
