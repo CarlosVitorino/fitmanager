@@ -41,9 +41,11 @@ const result = await handleActions(Astro, {
 });
 if (result instanceof Response) return result;
 
+const rangeFrom = addDays(selectedDate, -42);
+const rangeTo = addDays(selectedDate, 70);
 const [sessions, calendars, templates, coaches] = await Promise.all([
   // A generous window around the visible date; navigating further reloads the page with ?date=.
-  listSessions(ctx, addDays(selectedDate, -42), addDays(selectedDate, 70), { calendarId, includeCancelled: true }),
+  listSessions(ctx, rangeFrom, rangeTo, { calendarId, includeCancelled: true }),
   listCalendars(ctx),
   listTemplates(ctx),
   listCoaches(ctx),
@@ -91,6 +93,8 @@ const base = `/s/${ctx.slug}/admin`;
     timezone={ctx.timezone}
     today={today}
     selectedDate={selectedDate}
+    rangeFrom={rangeFrom}
+    rangeTo={rangeTo}
     sessionBaseUrl={`${base}/sessions`}
     bookingCutoffMinutes={ctx.bookingCutoffMinutes}
     cancellationCutoffMinutes={ctx.cancellationCutoffMinutes}
