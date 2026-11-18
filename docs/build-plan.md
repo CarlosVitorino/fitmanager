@@ -7,7 +7,6 @@ The feature list below is the founder's scope (2026-11-18). Where it differs fro
 ## 1. Plan
 - [x] Read the brief, the notes in `docs/notes/` and the handoff files.
 - [x] Agree the first-version scope with the founder.
-- [ ] Decide the payment provider for member pack purchases (see Open decisions).
 - Done when: the founder has read this plan and agreed.
 
 ## 2. Foundation
@@ -42,25 +41,22 @@ Built in milestones, each one usable and committed before the next.
 - [ ] Join a studio by invite link; sign up / sign in.
 - [ ] Calendar: day list of sessions with template colour/icon and spots left; book and cancel within the windows; full sessions shown as full.
 - [ ] Profile: my packs (entries left, expiry), class history, achievements.
-- [ ] Buy a pack: pick one of the studio's pack types, pay online, credits appear when the provider confirms payment.
+- [ ] See the studio's pack types and prices, so members know what to ask the coach for.
 
 ### 3d. Admin members
 - [ ] Members list: name, contact, active packs, entries left, next expiry.
-- [ ] Member detail: profile; fitness notes (private to coaches, and shared with the member); class history; payment history.
-- [ ] Manual credits: grant a pack or adjust entries without payment, with a required reason. Used for migrating existing balances and goodwill.
+- [ ] Member detail: profile; fitness notes (private to coaches, and shared with the member); class history; payment history (the payments recorded when plans were assigned).
+- [ ] Assign a plan: the coach adds pack type X to member A. Optional payment details on the same form (amount, method, date paid), which feed the payment history.
+- [ ] Adjust credits: add or remove entries on an existing pack, with a required reason. Used for migrating existing balances, corrections and goodwill.
 - [ ] Booking adjustments on a member's behalf: add (including to a full session), remove, move.
 - [ ] Audit log of every manual change: what, who, when, why.
 
-### 3e. Payments
-- [ ] Checkout for pack purchases through the chosen provider.
-- [ ] Webhook handler: verify signature, idempotent, grants the pack and writes the payment record.
-- [ ] Payments view for the admin: our own payment records, with a link to the provider for details.
-- Done when: a demo studio runs the whole loop (set up calendars and packs, member buys, books, class happens, credits settle, coach sees history and payments) on seeded and real data.
+- Done when: a demo studio runs the whole loop (set up calendars and packs, coach assigns a plan, member books, class happens, credits settle, coach sees history and payments) on seeded and real data.
 
 ## 4. Harden
 - [ ] Playwright end-to-end tests for the core loop.
 - [ ] Tenant isolation tests: no query returns another studio's data; role checks on every server action.
-- [ ] Error handling for what users actually hit: double booking, full session race, expired pack, duplicate webhook, timezone edges.
+- [ ] Error handling for what users actually hit: double booking, full session race, expired pack, timezone edges.
 - [ ] Error monitoring (Sentry or similar) and structured logs.
 - Done when: the founder is comfortable putting it in front of a real studio.
 
@@ -73,7 +69,7 @@ Built in milestones, each one usable and committed before the next.
 ## Decisions
 
 - **2026-11-18 — Scope set by the founder.** First version, multi-tenant. Member side: profile, achievements, class history, buying packs, booking calendar. Admin side: members list, member detail with notes and history, calendars and slots, class templates, payments view, settings.
-- **Online pack purchases are in**, overriding the brief's "Do not build". Manual credit assignment by the coach also exists, for migration and flexibility.
+- **Payments are deferred.** The coach assigns plans to members by hand and can record the payment (amount, method, date) when doing so. Online pack purchases come later; the founder wants them, overriding the brief's "Do not build", but not in this version.
 - **Reminders and the consumption-versus-expiry view are out** of the first version, though they're in the brief's core proof. The ledger keeps the data needed to add them later.
 - **Pack validity:** single class 30 days, trimester 3 months, expiring pack 14 weeks; all editable per studio.
 - **No-show:** the coach can flag a no-show and decide whether the credit is consumed. Default is consumed, unless the member cancelled inside the window.
@@ -82,6 +78,6 @@ Built in milestones, each one usable and committed before the next.
 
 ## Open decisions
 
-1. **Payment provider for member purchases.** Creem.io is a merchant of record for digital goods. Its docs exclude human services and marketplaces reselling others' products, and in-person classes sold by many studios are both. Creem's split payments still route through one merchant store. Recommended: **Stripe Connect** (each studio connects its own Stripe account and receives the money directly). Keep Creem.io for FitManager's own subscription later. The checkout sits behind a `PaymentProvider` interface so the provider can change without touching the rules. Confirm with Creem support before ruling it out.
-2. **Pilot studio**: who, and whether their current spreadsheet can seed the test data.
-3. **FitManager's own subscription** (Creem.io): not needed for the pilot; decide pricing before the second studio.
+1. **Pilot studio**: who, and whether their current spreadsheet can seed the test data.
+2. **FitManager's own subscription** (Creem.io): not needed for the pilot; decide pricing before the second studio.
+3. **Payment provider for online pack purchases (later).** Creem.io is a merchant of record for digital goods; its docs exclude human services and marketplaces reselling others' products, so it likely can't sell studio class packs. Stripe Connect (each studio connects its own account) is the likely choice. Keep payment code behind a `PaymentProvider` interface when this is built.
