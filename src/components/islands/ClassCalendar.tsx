@@ -1,16 +1,10 @@
 /**
  * The class calendar (Schedule-X), shown in the studio's timezone whatever the viewer's device says.
  *  - coach: week/day/month/list views; clicking a class opens its roster page
- *  - member: clicking a class opens a dialog to book or cancel; the dialog posts the page's normal
- *    server form, so all booking rules run on the server
+ *  - member: a week board of our own (seven day columns); clicking a class opens a dialog to book or
+ *    cancel, which posts the page's normal server form, so all booking rules run on the server
  */
-import {
-  createViewDay,
-  createViewList,
-  createViewMonthGrid,
-  createViewWeek,
-  createViewWeekAgenda,
-} from "@schedule-x/calendar";
+import { createViewDay, createViewList, createViewMonthGrid, createViewWeek } from "@schedule-x/calendar";
 import type { CalendarEventExternal } from "@schedule-x/calendar";
 import { createCurrentTimePlugin } from "@schedule-x/current-time";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
@@ -113,32 +107,6 @@ function MonthEvent({ calendarEvent }: { calendarEvent: CalendarEventExternal })
   );
 }
 
-/** A class in the week agenda: one card per class, stacked per day, no hour grid. */
-function AgendaEvent({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
-  const s = calendarEvent.session as CalendarSession;
-  const timeZone = calendarEvent.tz as string;
-  const c = shades(s.color);
-  const past = s.cancelled || Date.parse(s.end) < Date.now();
-  return (
-    <div
-      className="fm-agenda-event"
-      style={{ background: c.container, color: c.onContainer, borderLeftColor: s.color, opacity: past ? 0.5 : 1 }}
-    >
-      <div className="fm-agenda-time">
-        {fmtTime(s.start, timeZone)}–{fmtTime(s.end, timeZone)}
-      </div>
-      <div className="fm-event-title">
-        <span aria-hidden="true">{s.icon}</span> {s.title}
-      </div>
-      {s.coachName && <div className="fm-event-meta">{tr("dialog.with", { name: s.coachName })}</div>}
-      <div className={s.myBookingId ? "fm-agenda-status fm-agenda-booked" : "fm-agenda-status"}>
-        {statusText(s, calendarEvent.mode as Props["mode"])}
-      </div>
-    </div>
-  );
-}
-
-/** Hours to show in the time grid: from the earliest class to the latest, not a fixed 06–22. */
 function hourRange(sessions: CalendarSession[], timeZone: string) {
   if (!sessions.length) return { start: 7, end: 21 };
   const hour = (iso: string) => Number(format(new Date(iso), "H", { in: tz(timeZone) }));
@@ -184,9 +152,186 @@ function EventBox({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
 }
 
 export default function ClassCalendar(props: Props) {
-  const { mode, sessions, timezone, today, selectedDate, sessionBaseUrl } = props;
   lang = props.locale;
   msgs = props.messages;
+  return props.mode === "member" ? <WeekBoard {...props} /> : <CoachCalendar {...props} />;
+}
+
+const addDaysIso = (date: string, n: number) => {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const mondayOf = (date: string) => {
+  const dow = new Date(`${date}T12:00:00Z`).getUTCDay(); // 0 = Sunday
+  return addDaysIso(date, -((dow + 6) % 7));
+};
+const fmtLocal = (date: string, pattern: string) =>
+  format(new Date(`${date}T12:00:00Z`), pattern, { in: tz("UTC"), locale: DATE_FNS_LOCALES[lang] });
+
+/**
+ * Members: the whole week at once, seven columns with each day's classes stacked under it (one
+ * column per day on phones, days without classes left out). Arrows move a week at a time.
+ */
+function WeekBoard(props: Props) {
+  const { sessions, timezone, today } = props;
+  const minWeek = mondayOf(props.minDate ?? today);
+  const [week, setWeek] = useState(() => {
+    const m = mondayOf(props.selectedDate);
+    return m < minWeek ? minWeek : m;
+  });
+  const [open, setOpen] = useState<CalendarSession | null>(null);
+  const lastWeek = useMemo(
+    () => (sessions.length ? mondayOf(localDay(sessions[sessions.length - 1]!.start, timezone)) : minWeek),
+    [sessions, timezone, minWeek],
+  );
+
+  const go = (next: string) => {
+    setWeek(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("date", next);
+    window.history.replaceState(null, "", url);
+  };
+
+  const days = Array.from({ length: 7 }, (_, i) => addDaysIso(week, i));
+  const byDay = useMemo(() => {
+    const map = new Map<string, CalendarSession[]>();
+    for (const s of sessions) {
+      const d = localDay(s.start, timezone);
+      map.set(d, [...(map.get(d) ?? []), s]);
+    }
+    return map;
+  }, [sessions, timezone]);
+  const end = days[6]!;
+  const sameMonth = week.slice(0, 7) === end.slice(0, 7);
+  const range = `${fmtLocal(week, sameMonth ? "d" : "d MMM")} – ${fmtLocal(end, "d MMM yyyy")}`;
+  const weekHasClasses = days.some((d) => byDay.get(d)?.length);
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 border-b border-stone-100 px-4 py-3">
+        <button
+          type="button"
+          className="btn btn-sm"
+          onClick={() => go(mondayOf(today))}
+          disabled={week === mondayOf(today)}
+        >
+          {tr("book.thisWeek")}
+        </button>
+        <div className="flex items-center">
+          <button
+            type="button"
+            className="rounded-lg p-2 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+            onClick={() => go(addDaysIso(week, -7))}
+            disabled={week <= minWeek}
+            aria-label={tr("book.prevWeek")}
+          >
+            <Chevron dir="left" />
+          </button>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+            onClick={() => go(addDaysIso(week, 7))}
+            disabled={week >= lastWeek}
+            aria-label={tr("book.nextWeek")}
+          >
+            <Chevron dir="right" />
+          </button>
+        </div>
+        <h2 className="text-base font-semibold tracking-tight">{capitalizeFirst(range)}</h2>
+      </div>
+
+      <div className="grid divide-y divide-stone-100 md:grid-cols-7 md:divide-x md:divide-y-0">
+        {days.map((d) => {
+          const list = byDay.get(d) ?? [];
+          const isToday = d === today;
+          const past = d < today;
+          return (
+            <section
+              key={d}
+              className={`${list.length === 0 ? "hidden md:block" : ""} min-w-0 p-2.5 md:min-h-64 ${past ? "bg-stone-50/70" : ""}`}
+              aria-label={capitalizeFirst(fmtLocal(d, DATE_PATTERNS[lang].dayLong))}
+            >
+              <header className="mb-2 flex items-center gap-2 px-1 md:flex-col md:gap-0.5 md:text-center">
+                <span className="text-xs font-medium tracking-wide text-stone-500 uppercase">{fmtLocal(d, "EEE")}</span>
+                <span
+                  className={`flex h-8 min-w-8 items-center justify-center rounded-full px-1.5 text-sm font-semibold ${
+                    isToday ? "bg-stone-900 text-white" : past ? "text-stone-400" : "text-stone-900"
+                  }`}
+                >
+                  {fmtLocal(d, "d")}
+                </span>
+              </header>
+              <div className="space-y-2">
+                {list.map((s) => (
+                  <ClassCard key={s.id} s={s} timeZone={timezone} onOpen={() => setOpen(s)} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      {!weekHasClasses && <p className="muted px-4 py-8 text-center">{tr("book.noClassesWeek")}</p>}
+      {open && createPortal(<BookingDialog session={open} {...props} onClose={() => setOpen(null)} />, document.body)}
+    </div>
+  );
+}
+
+function localDay(iso: string, timeZone: string) {
+  return format(new Date(iso), "yyyy-MM-dd", { in: tz(timeZone) });
+}
+
+function Chevron({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d={dir === "left" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ClassCard({ s, timeZone, onOpen }: { s: CalendarSession; timeZone: string; onOpen: () => void }) {
+  const c = shades(s.color);
+  const past = s.cancelled || Date.parse(s.end) < Date.now();
+  const full = !s.myBookingId && s.booked >= s.capacity;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="fm-agenda-event block w-full text-left"
+      style={{ background: c.container, color: c.onContainer, borderLeftColor: s.color, opacity: past ? 0.5 : 1 }}
+    >
+      <div className="fm-agenda-time">
+        {fmtTime(s.start, timeZone)}–{fmtTime(s.end, timeZone)}
+      </div>
+      <div className="fm-event-title">
+        <span aria-hidden="true">{s.icon}</span> {s.title}
+      </div>
+      {s.coachName && <div className="fm-event-meta">{tr("dialog.with", { name: s.coachName })}</div>}
+      <div
+        className={
+          s.myBookingId
+            ? "fm-agenda-status fm-agenda-booked"
+            : full
+              ? "fm-agenda-status opacity-70"
+              : "fm-agenda-status"
+        }
+      >
+        {statusText(s, "member")}
+      </div>
+    </button>
+  );
+}
+
+function CoachCalendar(props: Props) {
+  const { mode, sessions, timezone, today, selectedDate, sessionBaseUrl } = props;
   const [open, setOpen] = useState<CalendarSession | null>(null);
   const [narrow] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches);
 
@@ -222,10 +367,9 @@ export default function ClassCalendar(props: Props) {
 
   const calendarApp = useCalendarApp(
     {
-      // Members: a day strip with the chosen day's classes as cards (no empty hours), on any screen.
-      // Coaches: the hour grid for the whole week, trimmed to the hours that have classes; list on phones.
-      views: [createViewWeekAgenda(), createViewWeek(), createViewDay(), createViewMonthGrid(), createViewList()],
-      defaultView: mode === "member" ? "week-agenda" : narrow ? "list" : "week",
+      // The hour grid for the whole week, trimmed to the hours that have classes; list on phones.
+      views: [createViewWeek(), createViewDay(), createViewMonthGrid(), createViewList()],
+      defaultView: narrow ? "list" : "week",
       isResponsive: false,
       selectedDate: Temporal.PlainDate.from(selectedDate),
       timezone: timezone as never,
@@ -269,7 +413,6 @@ export default function ClassCalendar(props: Props) {
           timeGridEvent: EventBox,
           dateGridEvent: EventBox,
           monthGridEvent: MonthEvent,
-          weekAgendaEvent: AgendaEvent,
         }}
       />
       {/* Rendered on <body>, outside the calendar, so its sticky header can't cover the dialog. */}

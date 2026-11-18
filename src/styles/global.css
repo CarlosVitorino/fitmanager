@@ -221,39 +221,6 @@ body {
   opacity: 1;
 }
 
-/* Week agenda: the chosen day's classes as a grid of cards */
-.fm-calendar .sx__week-agenda-wrapper .sx__month-agenda-events {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #fafaf9;
-  border-top: 1px solid #e7e5e4;
-}
-.fm-calendar .sx__week-agenda-wrapper .sx__month-agenda-event {
-  margin: 0;
-  padding: 0;
-  background: transparent !important;
-  border: 0;
-}
-.fm-calendar .sx__week-agenda-wrapper .fm-agenda-event {
-  height: 100%;
-  padding: 10px 12px;
-  font-size: 0.875rem;
-}
-.fm-calendar .sx__week-agenda-wrapper .fm-agenda-time {
-  font-size: 1rem;
-}
-.fm-calendar .sx__month-agenda-day {
-  border-radius: 0.75rem;
-}
-.fm-calendar .sx__month-agenda-day--active {
-  background: #1c1917 !important;
-  color: #fff !important;
-  outline: none !important;
-  border-color: transparent !important;
-}
-
 /* Rich text: shared by the editor and wherever notes are shown */
 .fm-prose {
   font-size: 0.9rem;

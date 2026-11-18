@@ -38,10 +38,10 @@ const now = new Date();
       members: plural(memberRows.length, "members"),
     })}
   >
-    <a href={`${base}/admin/calendar`} class="btn">
+    <a href={`${base}/calendar`} class="btn">
       <CalendarDays size={16} /> {t("booking.today.calendar")}
     </a>
-    <a href={`${base}/admin/members`} class="btn btn-primary">
+    <a href={`${base}/members`} class="btn btn-primary">
       <UserPlus size={16} /> {t("booking.today.addPlan")}
     </a>
   </PageHeader>

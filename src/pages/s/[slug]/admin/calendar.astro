@@ -1,4 +1,5 @@
 ---
+import { Plus, X } from "@lucide/astro";
 import ClassCalendar from "../../../../components/islands/ClassCalendar";
 import { getLocale, messagesFor, t } from "../../../../i18n";
 import DateInput from "../../../../components/DateInput.astro";
@@ -63,7 +64,7 @@ const base = `/s/${ctx.slug}/admin`;
         .
       </p>
     </div>
-    <div class="flex flex-wrap gap-1">
+    <div class="flex flex-wrap items-center gap-1">
       <a href={link()} class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
         {t("booking.calendar.allCalendars")}
       </a>
@@ -72,6 +73,14 @@ const base = `/s/${ctx.slug}/admin`;
           {c.name}
         </a>
       ))}
+      <button
+        type="button"
+        class="btn btn-sm btn-primary ml-2"
+        onclick="document.getElementById('one-off').showModal()"
+        title={t("booking.calendar.oneOff")}
+      >
+        <Plus size={15} /> {t("booking.calendar.oneOffShort")}
+      </button>
     </div>
   </div>
 
@@ -89,10 +98,22 @@ const base = `/s/${ctx.slug}/admin`;
     messages={messagesFor("booking")}
   />
 
-  <details class="card mt-6 max-w-xl p-5">
-    <summary class="cursor-pointer font-medium">{t("booking.calendar.oneOff")}</summary>
-    <p class="muted mt-1">{t("booking.calendar.oneOffHint")}</p>
-    <form method="post" class="mt-4 grid grid-cols-2 gap-3">
+  <dialog
+    id="one-off"
+    class="m-auto w-[min(36rem,calc(100vw-2rem))] overflow-visible rounded-2xl bg-white p-6 text-stone-900 shadow-2xl backdrop:bg-stone-900/40"
+  >
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold">{t("booking.calendar.oneOff")}</h2>
+        <p class="muted mt-1">{t("booking.calendar.oneOffHint")}</p>
+      </div>
+      <form method="dialog">
+        <button class="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100" aria-label={t("common.close")}>
+          <X size={18} />
+        </button>
+      </form>
+    </div>
+    <form method="post" class="mt-5 grid grid-cols-2 gap-3">
       <input type="hidden" name="_action" value="oneOff" />
       <label class="block space-y-1">
         <span class="label">{t("booking.calendar.calendarLabel")}</span>
@@ -150,5 +171,5 @@ const base = `/s/${ctx.slug}/admin`;
       </label>
       <button class="btn btn-primary col-span-2">{t("booking.calendar.addClass")}</button>
     </form>
-  </details>
+  </dialog>
 </Studio>
