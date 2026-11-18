@@ -208,6 +208,7 @@ export interface SessionListItem {
   cancelled: boolean;
   calendarId: string;
   calendarName: string;
+  templateId: string;
   templateName: string;
   templateDescription: string | null;
   color: string;
@@ -241,6 +242,7 @@ export async function listSessions(
       cancelled: sql<boolean>`${classSession.cancelledAt} is not null`,
       calendarId: calendar.id,
       calendarName: calendar.name,
+      templateId: classTemplate.id,
       templateName: classTemplate.name,
       templateDescription: classTemplate.description,
       color: classTemplate.color,
@@ -290,7 +292,7 @@ export async function getSessionDetail(ctx: StudioContext, id: string) {
     .select({ templateId: classSession.templateId, coachId: classSession.coachId, slotId: classSession.slotId })
     .from(classSession)
     .where(eq(classSession.id, id));
-  return { ...s, ...raw!, roster };
+  return { ...s, coachId: raw!.coachId, slotId: raw!.slotId, roster };
 }
 
 async function listSessionsById(ctx: StudioContext, ids: string[]) {
@@ -317,4 +319,24 @@ export function listCoaches(ctx: StudioContext) {
     .innerJoin(user, eq(user.id, member.userId))
     .where(and(eq(member.organizationId, ctx.studioId), inArray(member.role, ["owner", "coach"])))
     .orderBy(asc(user.name));
+}
+
+/** Sessions shaped for the calendar island (plain JSON). */
+export function toCalendarSessions(list: SessionListItem[]) {
+  return list.map((s) => ({
+    id: s.id,
+    start: s.startsAt.toISOString(),
+    end: s.endsAt.toISOString(),
+    title: s.templateName,
+    icon: s.icon,
+    color: s.color,
+    templateId: s.templateId,
+    calendarName: s.calendarName,
+    coachName: s.coachName,
+    description: s.templateDescription,
+    booked: s.booked,
+    capacity: s.capacity,
+    cancelled: s.cancelled,
+    myBookingId: s.myBookingId,
+  }));
 }

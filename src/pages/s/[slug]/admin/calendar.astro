@@ -1,15 +1,23 @@
 ---
+import ClassCalendar from "../../../../components/islands/ClassCalendar";
+import DateField from "../../../../components/islands/DateField";
+import TimeField from "../../../../components/TimeField.astro";
 import Studio from "../../../../layouts/Studio.astro";
-import { addDays, isLocalDate, localDateOf, startOfWeek } from "../../../../domain/dates";
-import { formatDay, formatDate, formatTimeRange } from "../../../../lib/format";
+import { addDays, isLocalDate, localDateOf } from "../../../../domain/dates";
 import { handleActions, int, optStr, str } from "../../../../server/actions";
 import { listCalendars, listTemplates } from "../../../../server/catalog";
-import { createOneOffSession, listCoaches, listSessions, oneOffInput } from "../../../../server/schedule";
+import {
+  createOneOffSession,
+  listCoaches,
+  listSessions,
+  oneOffInput,
+  toCalendarSessions,
+} from "../../../../server/schedule";
 
 const ctx = Astro.locals.studio!;
 const today = localDateOf(new Date(), ctx.timezone);
-const weekParam = Astro.url.searchParams.get("week");
-const weekStart = startOfWeek(weekParam && isLocalDate(weekParam) ? weekParam : today);
+const dateParam = Astro.url.searchParams.get("date") ?? Astro.url.searchParams.get("week");
+const selectedDate = dateParam && isLocalDate(dateParam) ? dateParam : today;
 const calendarId = Astro.url.searchParams.get("calendar") || undefined;
 
 const result = await handleActions(Astro, {
@@ -32,98 +40,55 @@ const result = await handleActions(Astro, {
 if (result instanceof Response) return result;
 
 const [sessions, calendars, templates, coaches] = await Promise.all([
-  listSessions(ctx, weekStart, addDays(weekStart, 6), { calendarId, includeCancelled: true }),
+  // A generous window around the visible date; navigating further reloads the page with ?date=.
+  listSessions(ctx, addDays(selectedDate, -42), addDays(selectedDate, 70), { calendarId, includeCancelled: true }),
   listCalendars(ctx),
   listTemplates(ctx),
   listCoaches(ctx),
 ]);
-const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-const link = (week: string, cal = calendarId) => `?week=${week}${cal ? `&calendar=${cal}` : ""}`;
+const link = (cal?: string) => `?${new URLSearchParams({ ...(cal ? { calendar: cal } : {}), date: selectedDate })}`;
 const base = `/s/${ctx.slug}/admin`;
 ---
 
 <Studio title="Calendar" flash={result.flash} error={result.error} wide>
   <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-2">
-      <a href={link(addDays(weekStart, -7))} class="btn btn-sm" aria-label="Previous week">
-        ←
-      </a>
-      <a href={link(startOfWeek(today))} class="btn btn-sm">
-        This week
-      </a>
-      <a href={link(addDays(weekStart, 7))} class="btn btn-sm" aria-label="Next week">
-        →
-      </a>
-      <h1 class="ml-2 text-xl font-semibold">
-        {formatDate(weekStart)} – {formatDate(addDays(weekStart, 6))}
-      </h1>
+    <div>
+      <h1 class="text-2xl font-semibold">Calendar</h1>
+      <p class="muted">
+        Click a class to see who's booked. Weekly classes are set up in{" "}
+        <a class="underline" href={`${base}/calendars`}>
+          Calendars
+        </a>
+        .
+      </p>
     </div>
     <div class="flex flex-wrap gap-1">
-      <a href={link(weekStart, "")} class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
+      <a href={link()} class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
         All calendars
       </a>
       {calendars.map((c) => (
-        <a href={link(weekStart, c.id)} class:list={["btn btn-sm", calendarId === c.id && "btn-primary"]}>
+        <a href={link(c.id)} class:list={["btn btn-sm", calendarId === c.id && "btn-primary"]}>
           {c.name}
         </a>
       ))}
     </div>
   </div>
 
-  <div class="grid gap-3 md:grid-cols-7">
-    {days.map((d) => {
-      const list = sessions.filter((s) => s.localDate === d);
-      return (
-        <div
-          class:list={[
-            "min-h-32 rounded-xl border bg-white p-2",
-            d === today ? "border-stone-900" : "border-stone-200",
-          ]}
-        >
-          <div class:list={["mb-2 px-1 text-sm font-semibold", d === today ? "text-stone-900" : "text-stone-500"]}>
-            {formatDay(d)} {d === today && <span class="badge ml-1 bg-stone-900 text-white">Today</span>}
-          </div>
-          <div class="space-y-2">
-            {list.length === 0 && <p class="px-1 text-xs text-stone-400">No classes</p>}
-            {list.map((s) => {
-              const full = s.booked >= s.capacity;
-              return (
-                <a
-                  href={`${base}/sessions/${s.id}`}
-                  class:list={[
-                    "block rounded-lg border-l-4 p-2 text-xs hover:brightness-95",
-                    s.cancelled && "line-through opacity-50",
-                  ]}
-                  style={`border-left-color:${s.color};background:${s.color}12`}
-                >
-                  <div class="font-semibold text-stone-900">{formatTimeRange(s.startsAt, s.endsAt, ctx.timezone)}</div>
-                  <div class="font-medium" style={`color:${s.color}`}>
-                    {s.icon} {s.templateName}
-                  </div>
-                  <div class="mt-1 flex items-center justify-between text-stone-600">
-                    <span>{s.coachName ?? s.calendarName}</span>
-                    <span class:list={["badge", full ? "bg-amber-100 text-amber-800" : "bg-white text-stone-700"]}>
-                      {s.booked}/{s.capacity}
-                    </span>
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      );
-    })}
-  </div>
+  <ClassCalendar
+    client:only="react"
+    mode="coach"
+    sessions={toCalendarSessions(sessions)}
+    timezone={ctx.timezone}
+    today={today}
+    selectedDate={selectedDate}
+    sessionBaseUrl={`${base}/sessions`}
+    bookingCutoffMinutes={ctx.bookingCutoffMinutes}
+    cancellationCutoffMinutes={ctx.cancellationCutoffMinutes}
+  />
 
   <details class="card mt-6 max-w-xl p-5">
     <summary class="cursor-pointer font-medium">Add a one-off class</summary>
-    <p class="muted mt-1">
-      For a class that doesn't repeat. Weekly classes are set up in{" "}
-      <a class="underline" href={`${base}/calendars`}>
-        Calendars
-      </a>
-      .
-    </p>
+    <p class="muted mt-1">For a class that doesn't repeat, like a private session or a workshop.</p>
     <form method="post" class="mt-4 grid grid-cols-2 gap-3">
       <input type="hidden" name="_action" value="oneOff" />
       <label class="block space-y-1">
@@ -146,14 +111,22 @@ const base = `/s/${ctx.slug}/admin`;
           ))}
         </select>
       </label>
-      <label class="block space-y-1">
+      <div class="space-y-1">
         <span class="label">Date</span>
-        <input name="date" type="date" required class="input" value={today} />
-      </label>
-      <label class="block space-y-1">
+        <DateField
+          client:load
+          name="date"
+          value={selectedDate < today ? today : selectedDate}
+          today={today}
+          min={today}
+          required
+          ariaLabel="Date"
+        />
+      </div>
+      <div class="space-y-1">
         <span class="label">Starts at</span>
-        <input name="startTime" type="time" required class="input" value="18:00" />
-      </label>
+        <TimeField name="startTime" value="18:00" label="Start" />
+      </div>
       <label class="block space-y-1">
         <span class="label">Minutes</span>
         <input name="durationMinutes" type="number" min="5" required class="input" value="60" />

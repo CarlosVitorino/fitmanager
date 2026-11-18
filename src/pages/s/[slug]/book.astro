@@ -1,22 +1,24 @@
 ---
 import Studio from "../../../layouts/Studio.astro";
-import { minutesUntil } from "../../../domain/booking";
-import { addDays, localDateOf } from "../../../domain/dates";
-import { formatDayLong, formatMinutes, formatTimeRange, plural } from "../../../lib/format";
+import ClassCalendar from "../../../components/islands/ClassCalendar";
+import { addDays, isLocalDate, localDateOf } from "../../../domain/dates";
+import { formatDate, formatDayLong, formatMinutes, formatTime } from "../../../lib/format";
 import { handleActions, str } from "../../../server/actions";
 import { bookSelf, cancelOwnBooking } from "../../../server/bookings";
 import { listCalendars } from "../../../server/catalog";
 import { memberPacks } from "../../../server/packs";
-import { listSessions } from "../../../server/schedule";
+import { listSessions, SCHEDULE_HORIZON_DAYS, toCalendarSessions } from "../../../server/schedule";
 
 const ctx = Astro.locals.studio!;
 const today = localDateOf(new Date(), ctx.timezone);
 const calendarId = Astro.url.searchParams.get("calendar") || undefined;
+const dateParam = Astro.url.searchParams.get("date");
+const selectedDate = dateParam && isLocalDate(dateParam) && dateParam >= today ? dateParam : today;
 
 const result = await handleActions(Astro, {
   book: async (f) => {
     const { session } = await bookSelf(ctx, str(f, "sessionId"));
-    return `You're booked for ${formatDayLong(session.localDate)} at ${formatTimeRange(session.startsAt, session.endsAt, ctx.timezone).split("–")[0]}.`;
+    return `You're booked for ${formatDayLong(session.localDate)} at ${formatTime(session.startsAt, ctx.timezone)}.`;
   },
   cancel: async (f) => {
     const outcome = await cancelOwnBooking(ctx, str(f, "bookingId"));
@@ -28,25 +30,24 @@ const result = await handleActions(Astro, {
 if (result instanceof Response) return result;
 
 const [sessions, calendars, packs] = await Promise.all([
-  listSessions(ctx, today, addDays(today, 13), { calendarId, forMemberId: ctx.userId }),
+  listSessions(ctx, today, addDays(today, SCHEDULE_HORIZON_DAYS), { calendarId, forMemberId: ctx.userId }),
   listCalendars(ctx),
   memberPacks(ctx, ctx.userId),
 ]);
-const now = new Date();
-const upcoming = sessions.filter((s) => s.endsAt > now);
-const days = [...new Set(upcoming.map((s) => s.localDate))];
+const filterLink = (cal?: string) =>
+  `?${new URLSearchParams({ ...(cal ? { calendar: cal } : {}), date: selectedDate })}`;
 const credits = packs.filter((p) => p.status === "active").reduce((n, p) => n + p.available, 0);
 const nextExpiry = packs
   .filter((p) => p.status === "active" && p.available > 0 && p.expiresOn)
   .map((p) => p.expiresOn!)[0];
 ---
 
-<Studio title="Book a class" flash={result.flash} error={result.error}>
-  <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+<Studio title="Book a class" flash={result.flash} error={result.error} wide>
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
     <div>
       <h1 class="text-2xl font-semibold">Book a class</h1>
       <p class="muted">
-        Book until {formatMinutes(ctx.bookingCutoffMinutes)} before. Cancel up to{" "}
+        Tap a class to book it. Book until {formatMinutes(ctx.bookingCutoffMinutes)} before; cancel up to{" "}
         {formatMinutes(ctx.cancellationCutoffMinutes)} before to get your credit back.
       </p>
     </div>
@@ -54,18 +55,18 @@ const nextExpiry = packs
       <span class="text-2xl font-semibold tabular-nums">{credits}</span>
       <span class="text-sm leading-tight text-stone-600">
         {credits === 1 ? "credit" : "credits"} available
-        {nextExpiry && <span class="block text-xs text-stone-500">next expiry {formatDayLong(nextExpiry)}</span>}
+        {nextExpiry && <span class="block text-xs text-stone-500">next expiry {formatDate(nextExpiry)}</span>}
       </span>
     </a>
   </div>
 
   {calendars.length > 1 && (
-    <div class="mb-5 flex flex-wrap gap-1">
-      <a href="?" class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
+    <div class="mb-4 flex flex-wrap gap-1">
+      <a href={filterLink()} class:list={["btn btn-sm", !calendarId && "btn-primary"]}>
         All
       </a>
       {calendars.map((c) => (
-        <a href={`?calendar=${c.id}`} class:list={["btn btn-sm", calendarId === c.id && "btn-primary"]}>
+        <a href={filterLink(c.id)} class:list={["btn btn-sm", calendarId === c.id && "btn-primary"]}>
           {c.name}
         </a>
       ))}
@@ -73,7 +74,7 @@ const nextExpiry = packs
   )}
 
   {credits === 0 && (
-    <p class="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <p class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
       You have no credits right now. Ask your coach for a plan; see{" "}
       <a class="underline" href={`/s/${ctx.slug}/me#plans`}>
         the plans this studio offers
@@ -81,95 +82,20 @@ const nextExpiry = packs
       .
     </p>
   )}
-  {days.length === 0 && <p class="muted">No classes in the next two weeks.</p>}
 
-  <div class="space-y-6">
-    {days.map((d) => (
-      <section>
-        <h2 class="mb-2 text-sm font-semibold tracking-wide text-stone-500 uppercase">
-          {d === today ? "Today" : d === addDays(today, 1) ? "Tomorrow" : formatDayLong(d)}
-        </h2>
-        <div class="grid gap-3 sm:grid-cols-2">
-          {upcoming
-            .filter((s) => s.localDate === d)
-            .map((s) => {
-              const spots = s.capacity - s.booked;
-              const mins = minutesUntil(s.startsAt, now);
-              const closed = mins < ctx.bookingCutoffMinutes;
-              const late = mins < ctx.cancellationCutoffMinutes;
-              const started = s.startsAt <= now;
-              return (
-                <div
-                  class:list={["card flex gap-3 border-l-4 p-4", s.myBookingId && "ring-2 ring-emerald-500/60"]}
-                  style={`border-left-color:${s.color}`}
-                >
-                  <div
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl"
-                    style={`background:${s.color}1a`}
-                    aria-hidden="true"
-                  >
-                    {s.icon}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-baseline justify-between gap-2">
-                      <span class="font-semibold">{formatTimeRange(s.startsAt, s.endsAt, ctx.timezone)}</span>
-                      <span
-                        class:list={[
-                          "text-xs font-medium",
-                          spots <= 0 ? "text-red-600" : spots <= 2 ? "text-amber-700" : "text-stone-500",
-                        ]}
-                      >
-                        {spots <= 0 ? "Full" : `${plural(spots, "spot")} left`}
-                      </span>
-                    </div>
-                    <div class="font-medium" style={`color:${s.color}`}>
-                      {s.templateName}
-                    </div>
-                    <div class="muted text-xs">
-                      {s.coachName ? `with ${s.coachName}` : s.calendarName}
-                      {s.templateDescription && ` · ${s.templateDescription}`}
-                    </div>
-                    <div class="mt-3">
-                      {s.myBookingId ? (
-                        <form method="post" class="flex items-center justify-between gap-2">
-                          <span class="badge bg-emerald-100 text-emerald-800">✓ You're booked</span>
-                          <input type="hidden" name="_action" value="cancel" />
-                          <input type="hidden" name="bookingId" value={s.myBookingId} />
-                          {!started && (
-                            <button
-                              class="btn btn-sm"
-                              onclick={
-                                late
-                                  ? "return confirm('This is inside the cancellation window, so your credit will still be used. Cancel anyway?')"
-                                  : undefined
-                              }
-                            >
-                              Cancel{late && " (credit used)"}
-                            </button>
-                          )}
-                        </form>
-                      ) : started ? (
-                        <span class="muted text-xs">Started</span>
-                      ) : closed ? (
-                        <span class="muted text-xs">Booking closed</span>
-                      ) : spots <= 0 ? (
-                        <span class="muted text-xs">Ask your coach if a spot opens</span>
-                      ) : (
-                        <form method="post">
-                          <input type="hidden" name="_action" value="book" />
-                          <input type="hidden" name="sessionId" value={s.id} />
-                          <button class="btn btn-primary btn-sm w-full sm:w-auto" disabled={credits === 0}>
-                            Book · 1 credit
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      </section>
-    ))}
-  </div>
+  <ClassCalendar
+    client:only="react"
+    mode="member"
+    sessions={toCalendarSessions(sessions)}
+    timezone={ctx.timezone}
+    today={today}
+    selectedDate={selectedDate}
+    minDate={today}
+    bookingCutoffMinutes={ctx.bookingCutoffMinutes}
+    cancellationCutoffMinutes={ctx.cancellationCutoffMinutes}
+    credits={credits}
+  />
+  <noscript>
+    <p class="muted mt-4">The calendar needs JavaScript.</p>
+  </noscript>
 </Studio>

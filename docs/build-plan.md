@@ -35,7 +35,7 @@ Built in milestones, each one usable and committed before the next.
 - [x] Pack types: single class (1 entry, 30 days), trimester (10 entries, 3 months), expiring (10 entries, 14 weeks). Price, entries and validity editable per studio.
 - [x] Calendars (e.g. Private classes, Group classes) with recurring weekly slots: day, time, duration, capacity, coach, class template. Sessions generated ahead from the recurrence; single sessions can be edited or cancelled.
 - [x] Class templates: "General class" by default; admin creates others with name, description, colour, icon.
-- [x] Admin week view of sessions: hand-built day columns, not a calendar library (see Decisions).
+- [x] Calendar: Schedule-X week/day/month/list views for coaches and members, in the studio's timezone (see Decisions).
 
 ### 3c. Member side
 - [x] Join a studio by invite link; sign up / sign in.
@@ -83,7 +83,10 @@ Built in milestones, each one usable and committed before the next.
 - **Studio settings are kept in their own table** (`studio_settings`), not on Better Auth's organization table, so auth upgrades never touch them. Timezone is chosen when the studio is created.
 - **Logins are server-rendered forms**, so login and signup work without JavaScript. Astro's origin check blocks cross-site form posts.
 - **Not a member and no such studio both return 404**, so studio addresses can't be probed.
-- **No calendar library.** The coach week view is seven server-rendered day columns and the member view is a day list of cards. Both are simple, work on phones, and need no JavaScript. Schedule-X stays an option if coaches ask for a drag-and-drop time grid.
+- **Calendar: Schedule-X** (MIT, v4) for both the coach calendar and member booking, replacing the first hand-built lists at the founder's request. Verified: licence, React bindings, timezone support (it shows classes in the studio's timezone whatever the device's), click handling. Phones open on its list view; its week arrows are re-enabled on small screens with CSS. The list view can't take a custom component, so class status ("3 spots left", "✓ Booked") is put in the title there.
+- **Members book from a dialog** on the calendar. The dialog posts the page's normal server form, so every booking rule still runs on the server.
+- **Date picker: react-day-picker** (MIT) in a small `DateField` island that submits a plain `YYYY-MM-DD`, replacing the browser's native pickers, which look different in every browser. Times are two 24-hour selects (`TimeField`).
+- **Date formatting: date-fns + @date-fns/tz**, all in `src/lib/format.ts`. The founder asked for Moment.js; we chose date-fns instead because Moment is in maintenance mode and date-fns already came with the date picker. Instants are always shown in the studio's timezone; calendar days are formatted as-is.
 - **Late cancellation frees the spot** for someone else; the credit is still used. Cancelling a whole class returns every credit.
 - **Coaches can book members past the cutoff, into full classes, and into past classes** (to fix the record). A credit is still needed; there's no "free" booking, a coach adds a credit with a reason instead.
 - **Moving a booking** returns the old credit and reserves a new one, so the closest-to-expiry rule still applies to the new date.
