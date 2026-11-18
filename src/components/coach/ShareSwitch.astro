@@ -1,0 +1,35 @@
+---
+/** One "visible to member" switch for a fitness profile section. Posts immediately. */
+import { Eye, EyeOff } from "@lucide/astro";
+
+interface Props {
+  section: string;
+  label: string;
+  shared: boolean;
+}
+const { section, label, shared } = Astro.props;
+---
+
+<form method="post" class="flex items-center justify-between gap-3 py-2">
+  <input type="hidden" name="_action" value="share" />
+  <input type="hidden" name="section" value={section} />
+  <input type="hidden" name="value" value={shared ? "0" : "1"} />
+  <span class="flex items-center gap-2 text-sm">
+    {shared ? <Eye size={15} class="text-emerald-600" /> : <EyeOff size={15} class="text-stone-400" />}
+    {label}
+  </span>
+  <button
+    class:list={["relative h-6 w-11 rounded-full transition", shared ? "bg-emerald-500" : "bg-stone-300"]}
+    role="switch"
+    aria-checked={shared ? "true" : "false"}
+    aria-label={`${label}: ${shared ? "shared with member" : "coaches only"}`}
+    title={shared ? "Shared with the member. Click to hide." : "Coaches only. Click to share."}
+  >
+    <span
+      class:list={[
+        "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+        shared ? "left-[22px]" : "left-0.5",
+      ]}
+    ></span>
+  </button>
+</form>

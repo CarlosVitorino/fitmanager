@@ -96,6 +96,12 @@ Built in milestones, each one usable and committed before the next.
 - **New studios start with** a General class, Group and Private calendars, and the three plans (prices left empty).
 - **Currency** is a studio setting (default EUR), used for plan prices and payments.
 
+- **Member home is about training, not plans** (founder, 2026-11-18): next class, progress chart, milestones, coach feedback and recent classes come first; the current plan sits in the sidebar as one compact card, since most members hold one plan at a time. Personal details and the shared fitness profile live on "My profile".
+- **Coach notes replaced by profiles + rich notes.** Personal profile (all optional: contact, date of birth, address, emergency contact), editable by member and staff. Fitness profile kept by coaches, modelled on common trainer intake forms: goals, training background, health & injuries with a clearance status, body-measurement check-ins and personal records. Each of the five sections has its own "visible to member" switch; health is coaches-only by default. Notes are rich text (TipTap) with a category, pin and shared/private choice.
+- **Rich text is sanitized on the server** (sanitize-html allowlist) before saving and rendered as HTML; typed markup stays text.
+- **Health data is sensitive** (special-category data under GDPR). It's only visible to the studio's coaches unless shared; a privacy notice and consent wording are needed before launch (Phase 4/5).
+- **Look and feel:** Inter typeface, Lucide icons, consistent page headers, stat tiles, avatars and empty states across pages.
+
 ## Open decisions
 
 1. **Pilot studio**: who, and whether their current spreadsheet can seed the test data.

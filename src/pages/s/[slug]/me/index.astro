@@ -1,0 +1,337 @@
+---
+import {
+  Award,
+  CalendarCheck,
+  CalendarDays,
+  CalendarPlus,
+  Clock,
+  Flame,
+  MessageSquareText,
+  Sparkles,
+  Target,
+  Trophy,
+} from "@lucide/astro";
+import BookingStatus from "../../../../components/BookingStatus.astro";
+import EmptyState from "../../../../components/EmptyState.astro";
+import PageHeader from "../../../../components/PageHeader.astro";
+import Section from "../../../../components/Section.astro";
+import StatTile from "../../../../components/StatTile.astro";
+import AttendanceChart from "../../../../components/profile/AttendanceChart.astro";
+import CurrentPlan from "../../../../components/profile/CurrentPlan.astro";
+import NoteCard from "../../../../components/profile/NoteCard.astro";
+import Studio from "../../../../layouts/Studio.astro";
+import { localDateOf } from "../../../../domain/dates";
+import { describeValidity } from "../../../../domain/packs";
+import { weeklyCounts } from "../../../../domain/progress";
+import { formatDate, formatDay, formatDayLong, formatMoney, formatTime, plural } from "../../../../lib/format";
+import { handleActions, str } from "../../../../server/actions";
+import { cancelOwnBooking } from "../../../../server/bookings";
+import { listPackTypes } from "../../../../server/catalog";
+import {
+  attendedDates,
+  classHistory,
+  getMember,
+  listNotes,
+  listPayments,
+  memberAchievements,
+} from "../../../../server/members";
+import { memberPacks, validityOf } from "../../../../server/packs";
+import { getFitness } from "../../../../server/profiles";
+import { isStaff } from "../../../../server/authz";
+
+const ctx = Astro.locals.studio!;
+const base = `/s/${ctx.slug}`;
+
+const result = await handleActions(Astro, {
+  cancel: async (f) => {
+    const outcome = await cancelOwnBooking(ctx, str(f, "bookingId"));
+    return outcome === "released"
+      ? "Booking cancelled. Your credit is back."
+      : "Booking cancelled. It was inside the cancellation window, so the credit is used.";
+  },
+});
+if (result instanceof Response) return result;
+
+const [me, packs, history, notes, payments, plans, fitness] = await Promise.all([
+  getMember(ctx, ctx.userId),
+  memberPacks(ctx, ctx.userId),
+  classHistory(ctx, ctx.userId),
+  listNotes(ctx, ctx.userId),
+  listPayments(ctx, { memberId: ctx.userId }),
+  listPackTypes(ctx),
+  getFitness(ctx, ctx.userId),
+]);
+const today = localDateOf(new Date(), ctx.timezone);
+const a = memberAchievements(ctx, history);
+const attended = attendedDates(history);
+const weeks = weeklyCounts(attended, today, 12);
+const thisMonth = attended.filter((d) => d.slice(0, 7) === today.slice(0, 7)).length;
+const now = new Date();
+const upcoming = history.filter((h) => h.status === "booked" && h.startsAt > now && !h.sessionCancelled).reverse();
+const next = upcoming[0];
+const recent = history.filter((h) => !(h.status === "booked" && h.startsAt > now && !h.sessionCancelled)).slice(0, 8);
+const reached = a.milestones.filter((m) => m.reachedOn);
+const minsToNext = next ? Math.floor((next.startsAt.getTime() - now.getTime()) / 60_000) : 0;
+const lateCancel = minsToNext < ctx.cancellationCutoffMinutes;
+const firstName = me.name.split(" ")[0];
+---
+
+<Studio title="Home" flash={result.flash} error={result.error}>
+  <PageHeader title={`Hi, ${firstName}`} subtitle={`Your training at ${ctx.name}`}>
+    {isStaff(ctx.role) && (
+      <a href={base} class="btn">
+        Back to studio
+      </a>
+    )}
+    <a href={`${base}/book`} class="btn btn-primary">
+      <CalendarPlus size={16} /> Book a class
+    </a>
+  </PageHeader>
+
+  <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <StatTile label="classes done" value={a.totalClasses} tone="stone">
+      <CalendarCheck slot="icon" size={20} />
+    </StatTile>
+    <StatTile
+      label="week streak"
+      value={a.currentStreakWeeks}
+      hint={a.longestStreakWeeks > a.currentStreakWeeks ? `best ${a.longestStreakWeeks}` : undefined}
+      tone="amber"
+    >
+      <Flame slot="icon" size={20} />
+    </StatTile>
+    <StatTile label="this month" value={thisMonth} tone="sky">
+      <CalendarDays slot="icon" size={20} />
+    </StatTile>
+    <StatTile
+      label={a.nextMilestone ? `to reach ${a.nextMilestone.count} classes` : "milestones reached"}
+      value={a.nextMilestone ? a.nextMilestone.remaining : reached.length}
+      tone="violet"
+    >
+      <Trophy slot="icon" size={20} />
+    </StatTile>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+    <div class="space-y-6">
+      <Section title="Your next class">
+        <CalendarDays slot="icon" size={18} />
+        {next ? (
+          <div>
+            <div class="flex flex-wrap items-center gap-4 rounded-xl p-4" style={`background:${next.color}14`}>
+              <div
+                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-3xl"
+                style={`background:${next.color}26`}
+                aria-hidden="true"
+              >
+                {next.icon}
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-lg font-semibold" style={`color:${next.color}`}>
+                  {next.templateName}
+                </p>
+                <p class="text-sm text-stone-700">
+                  {formatDayLong(next.localDate)} · {formatTime(next.startsAt, ctx.timezone)}
+                </p>
+                <p class="text-xs text-stone-500">{next.calendarName}</p>
+              </div>
+              <form method="post" class="text-right">
+                <input type="hidden" name="_action" value="cancel" />
+                <input type="hidden" name="bookingId" value={next.bookingId} />
+                <button
+                  class="btn btn-sm"
+                  onclick={
+                    lateCancel
+                      ? "return confirm('This is inside the cancellation window, so your credit will still be used. Cancel anyway?')"
+                      : undefined
+                  }
+                >
+                  Cancel
+                </button>
+                {lateCancel && <p class="mt-1 text-[11px] text-amber-700">credit won't be returned</p>}
+              </form>
+            </div>
+            {upcoming.length > 1 && (
+              <ul class="mt-3 divide-y divide-stone-100">
+                {upcoming.slice(1).map((h) => (
+                  <li class="flex items-center gap-3 py-2.5 text-sm">
+                    <span class="w-28 shrink-0 font-medium">{formatDay(h.localDate)}</span>
+                    <span class="w-12 shrink-0 text-stone-500 tabular-nums">
+                      {formatTime(h.startsAt, ctx.timezone)}
+                    </span>
+                    <span class="truncate" style={`color:${h.color}`}>
+                      {h.icon} {h.templateName}
+                    </span>
+                    <form method="post" class="ml-auto">
+                      <input type="hidden" name="_action" value="cancel" />
+                      <input type="hidden" name="bookingId" value={h.bookingId} />
+                      <button class="text-xs text-stone-500 underline hover:text-stone-900">Cancel</button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            title="Nothing booked yet"
+            text="Pick a class from the calendar. It takes one credit, and you can cancel in time to get it back."
+          >
+            <CalendarDays slot="icon" size={20} />
+            <a href={`${base}/book`} class="btn btn-primary btn-sm">
+              Book a class
+            </a>
+          </EmptyState>
+        )}
+      </Section>
+
+      <Section title="Your progress" description="Classes per week, last 12 weeks">
+        <Sparkles slot="icon" size={18} />
+        <AttendanceChart weeks={weeks} />
+        <div class="mt-5 flex flex-wrap gap-2 border-t border-stone-100 pt-4">
+          {a.milestones.slice(0, 6).map((m) => (
+            <span
+              class:list={[
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+                m.reachedOn ? "bg-amber-100 text-amber-900" : "bg-stone-100 text-stone-400",
+              ]}
+              title={m.reachedOn ? `Reached ${formatDate(m.reachedOn)}` : "Not reached yet"}
+            >
+              <Award size={13} />
+              {m.count === 1 ? "First class" : `${m.count} classes`}
+            </span>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="From your coach">
+        <MessageSquareText slot="icon" size={18} />
+        {notes.length ? (
+          <div class="space-y-3">
+            {notes.slice(0, 3).map((n) => (
+              <NoteCard note={n} timezone={ctx.timezone} />
+            ))}
+            {notes.length > 3 && (
+              <details>
+                <summary class="muted cursor-pointer">Older notes ({notes.length - 3})</summary>
+                <div class="mt-3 space-y-3">
+                  {notes.slice(3).map((n) => (
+                    <NoteCard note={n} timezone={ctx.timezone} />
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            title="No notes yet"
+            text="Feedback and plans your coach shares with you will show up here."
+            compact
+          >
+            <MessageSquareText slot="icon" size={20} />
+          </EmptyState>
+        )}
+      </Section>
+
+      <Section title="Recent classes">
+        <Clock slot="icon" size={18} />
+        {recent.length ? (
+          <ul class="divide-y divide-stone-100">
+            {recent.map((h) => (
+              <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm">
+                <span class="w-28 shrink-0 font-medium">{formatDay(h.localDate)}</span>
+                <span class="w-12 shrink-0 text-stone-500 tabular-nums">{formatTime(h.startsAt, ctx.timezone)}</span>
+                <span style={`color:${h.color}`}>
+                  {h.icon} {h.templateName}
+                </span>
+                <span class="ml-auto">
+                  <BookingStatus
+                    status={h.status}
+                    charged={h.charged}
+                    noShow={h.noShow}
+                    settled={h.settled}
+                    sessionCancelled={h.sessionCancelled}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState title="No classes yet" compact>
+            <Clock slot="icon" size={20} />
+          </EmptyState>
+        )}
+      </Section>
+    </div>
+
+    <aside class="space-y-6">
+      <div class="card p-5">
+        <CurrentPlan packs={packs} timezone={ctx.timezone}>
+          <p slot="empty" class="mt-1 text-sm text-stone-500">
+            Ask your coach to add one of the plans below.
+          </p>
+        </CurrentPlan>
+      </div>
+
+      {(fitness.goals.length > 0 || fitness.shared.goals) && (
+        <a href={`${base}/me/profile`} class="card block p-5 transition hover:border-stone-300">
+          <p class="eyebrow flex items-center gap-1.5">
+            <Target size={13} /> Your goals
+          </p>
+          {fitness.goals.length ? (
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              {fitness.goals.map((g) => (
+                <span class="chip">{g}</span>
+              ))}
+            </div>
+          ) : (
+            <p class="mt-2 text-sm text-stone-500">Your coach hasn't set goals with you yet.</p>
+          )}
+          <p class="mt-3 text-xs font-medium text-stone-600">See your fitness profile →</p>
+        </a>
+      )}
+
+      <Section title="Plans this studio offers" description="Ask your coach to add one to your account.">
+        <ul class="space-y-3">
+          {plans.map((p) => (
+            <li class="text-sm">
+              <div class="flex justify-between gap-2 font-medium">
+                <span>{p.name}</span>
+                <span class="tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
+              </div>
+              <div class="text-xs text-stone-500">
+                {plural(p.entries, "class", "classes")} · {describeValidity(validityOf(p)).toLowerCase()}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      {(payments.length > 0 || packs.some((p) => p.status === "expired" || p.status === "used_up")) && (
+        <details class="card p-5">
+          <summary class="cursor-pointer text-sm font-semibold">Plan & payment history</summary>
+          <ul class="mt-3 space-y-2 text-sm">
+            {packs
+              .filter((p) => p.status === "expired" || p.status === "used_up")
+              .map((p) => (
+                <li class="flex justify-between gap-2">
+                  <span class="text-stone-600">{p.name}</span>
+                  <span class="text-xs text-stone-500">
+                    {p.status === "expired" ? `expired ${formatDate(p.expiresOn!)}` : "used up"}
+                  </span>
+                </li>
+              ))}
+            {payments.map((p) => (
+              <li class="flex justify-between gap-2">
+                <span class="text-stone-600">
+                  {formatDate(p.paidOn)} <span class="text-xs text-stone-400">· {p.method}</span>
+                </span>
+                <span class="font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </aside>
+  </div>
+</Studio>

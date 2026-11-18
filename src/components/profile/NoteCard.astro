@@ -1,0 +1,51 @@
+---
+import { EyeOff, Pin, Users } from "@lucide/astro";
+import { formatInstant } from "../../lib/format";
+import { NOTE_CATEGORY, type NoteCategory } from "../../lib/notes";
+
+interface Props {
+  note: {
+    body: string;
+    category: NoteCategory;
+    pinned: boolean;
+    visibility: "private" | "shared";
+    authorName: string | null;
+    createdAt: Date;
+  };
+  timezone: string;
+  showVisibility?: boolean;
+}
+const { note, timezone, showVisibility = false } = Astro.props;
+const cat = NOTE_CATEGORY[note.category] ?? NOTE_CATEGORY.general;
+---
+
+<article
+  class:list={[
+    "rounded-xl border p-4",
+    note.visibility === "private" && showVisibility ? "border-amber-200 bg-amber-50/40" : "border-stone-200 bg-white",
+  ]}
+>
+  <header class="mb-2 flex flex-wrap items-center gap-2">
+    <span class:list={["badge", cat.cls]}>{cat.label}</span>
+    {note.pinned && (
+      <span class="badge gap-1 bg-stone-900 text-white">
+        <Pin size={11} /> Pinned
+      </span>
+    )}
+    {showVisibility &&
+      (note.visibility === "private" ? (
+        <span class="badge gap-1 bg-amber-100 text-amber-800">
+          <EyeOff size={11} /> Coaches only
+        </span>
+      ) : (
+        <span class="badge gap-1 bg-sky-50 text-sky-700">
+          <Users size={11} /> Shared with member
+        </span>
+      ))}
+    <span class="ml-auto text-xs text-stone-400">
+      {note.authorName ?? "Coach"} · {formatInstant(note.createdAt, timezone)}
+    </span>
+  </header>
+  <div class="fm-prose" set:html={note.body} />
+  <slot />
+</article>

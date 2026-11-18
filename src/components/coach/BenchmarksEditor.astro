@@ -1,0 +1,83 @@
+---
+import { Plus, Trash } from "@lucide/astro";
+import DateField from "../islands/DateField";
+import { BENCHMARK_UNITS } from "../../db/schema";
+import { formatDate } from "../../lib/format";
+
+interface Props {
+  rows: { id: string; exercise: string; value: number; unit: string; recordedOn: string; note: string | null }[];
+  exercises: string[];
+  today: string;
+}
+const { rows, exercises, today } = Astro.props;
+---
+
+<details>
+  <summary class="btn btn-sm list-none">
+    <Plus size={14} /> Add a result
+  </summary>
+  <form
+    method="post"
+    class="mt-3 grid grid-cols-2 gap-3 rounded-xl border border-stone-200 bg-stone-50 p-4 sm:grid-cols-4"
+  >
+    <input type="hidden" name="_action" value="benchmark" />
+    <label class="col-span-2 block space-y-1">
+      <span class="label">Exercise</span>
+      <input name="exercise" required list="exercise-list" class="input" placeholder="e.g. Back squat" />
+      <datalist id="exercise-list">
+        {exercises.map((e) => (
+          <option value={e} />
+        ))}
+      </datalist>
+    </label>
+    <label class="block space-y-1">
+      <span class="label">Result</span>
+      <input name="value" required inputmode="decimal" class="input" />
+    </label>
+    <label class="block space-y-1">
+      <span class="label">Unit</span>
+      <select name="unit" class="input">
+        {BENCHMARK_UNITS.map((u) => (
+          <option value={u}>{u}</option>
+        ))}
+      </select>
+    </label>
+    <div class="col-span-2 space-y-1">
+      <span class="label">Date</span>
+      <DateField client:load name="recordedOn" value={today} today={today} required ariaLabel="Recorded on" />
+    </div>
+    <label class="col-span-2 block space-y-1">
+      <span class="label">Note</span>
+      <input name="note" class="input" placeholder="Optional, e.g. 3 reps, belt" />
+    </label>
+    <button class="btn btn-primary col-span-2 sm:col-span-1">Save result</button>
+  </form>
+</details>
+
+{rows.length > 0 && (
+  <ul class="mt-4 divide-y divide-stone-100 text-sm">
+    {rows.map((r) => (
+      <li class="flex items-center gap-3 py-2">
+        <span class="w-24 shrink-0 text-stone-500">{formatDate(r.recordedOn)}</span>
+        <span class="flex-1">
+          {r.exercise}
+          {r.note && <span class="text-xs text-stone-500"> · {r.note}</span>}
+        </span>
+        <span class="font-medium tabular-nums">
+          {r.value} {r.unit}
+        </span>
+        <form method="post">
+          <input type="hidden" name="_action" value="deleteBenchmark" />
+          <input type="hidden" name="id" value={r.id} />
+          <button
+            class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
+            aria-label="Delete result"
+            onclick="return confirm('Delete this result?')"
+          >
+            <Trash size={14} />
+          </button>
+        </form>
+      </li>
+    ))}
+  </ul>
+)}

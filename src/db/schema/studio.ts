@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -52,16 +53,100 @@ export const studioSettings = pgTable("studio_settings", {
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Per-studio member details beyond the login account. */
+/** Personal details for a member in a studio. Nothing is mandatory; the member and staff can edit it. */
 export const memberProfile = pgTable(
   "member_profile",
   {
     studioId: studioId(),
     userId: memberRef(),
     phone: text(),
+    dateOfBirth: localDate(),
+    gender: text(),
+    addressLine: text(),
+    city: text(),
+    postalCode: text(),
+    country: text(),
+    emergencyName: text(),
+    emergencyPhone: text(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex().on(t.studioId, t.userId)],
+);
+
+export const EXPERIENCE_LEVELS = ["new", "some", "regular", "advanced"] as const;
+export const CLEARANCE = ["unknown", "cleared", "needs_clearance"] as const;
+
+/**
+ * The coach's record of a member's training: goals, background, health. Each section can be shared
+ * with the member or kept to coaches. Rich-text fields hold sanitized HTML.
+ */
+export const fitnessProfile = pgTable(
+  "fitness_profile",
+  {
+    studioId: studioId(),
+    userId: memberRef(),
+    goals: jsonb().$type<string[]>().notNull().default([]),
+    goalNotes: text(),
+    targetDate: localDate(),
+    experience: text({ enum: EXPERIENCE_LEVELS }),
+    trainingNotes: text(),
+    clearance: text({ enum: CLEARANCE }).notNull().default("unknown"),
+    injuries: text(),
+    medical: text(),
+    shareGoals: boolean().notNull().default(true),
+    shareBackground: boolean().notNull().default(true),
+    shareHealth: boolean().notNull().default(false),
+    shareMeasurements: boolean().notNull().default(true),
+    shareBenchmarks: boolean().notNull().default(true),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedBy: userRef(),
+  },
+  (t) => [uniqueIndex().on(t.studioId, t.userId)],
+);
+
+/** Body measurements over time. Every value is optional. */
+export const bodyMeasurement = pgTable(
+  "body_measurement",
+  {
+    id: id(),
+    studioId: studioId(),
+    memberId: memberRef(),
+    measuredOn: localDate().notNull(),
+    weightKg: doublePrecision(),
+    bodyFatPct: doublePrecision(),
+    waistCm: doublePrecision(),
+    hipsCm: doublePrecision(),
+    chestCm: doublePrecision(),
+    armCm: doublePrecision(),
+    thighCm: doublePrecision(),
+    restingHr: integer(),
+    note: text(),
+    createdBy: userRef(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.studioId, t.memberId, t.measuredOn)],
+);
+
+export const BENCHMARK_UNITS = ["kg", "reps", "seconds", "minutes", "metres", "km", "cm"] as const;
+/** Units where a smaller result is better (e.g. a 5 km run time). */
+export const LOWER_IS_BETTER_UNITS = ["seconds", "minutes"] as const;
+
+/** Performance results over time: "Back squat 60 kg", "5 km run 26 minutes". */
+export const benchmark = pgTable(
+  "benchmark",
+  {
+    id: id(),
+    studioId: studioId(),
+    memberId: memberRef(),
+    exercise: text().notNull(),
+    value: doublePrecision().notNull(),
+    unit: text({ enum: BENCHMARK_UNITS }).notNull(),
+    recordedOn: localDate().notNull(),
+    note: text(),
+    createdBy: userRef(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.studioId, t.memberId, t.exercise)],
 );
 
 /** A plan the studio offers: single class, trimester, 10-pack… */
@@ -282,7 +367,9 @@ export const booking = pgTable(
   ],
 );
 
-/** Coach notes about a member. Private notes are never shown to the member. */
+export const NOTE_CATEGORIES = ["general", "progress", "programme", "nutrition", "health"] as const;
+
+/** Coach notes about a member (sanitized HTML). Private notes are never shown to the member. */
 export const memberNote = pgTable(
   "member_note",
   {
@@ -290,6 +377,8 @@ export const memberNote = pgTable(
     studioId: studioId(),
     memberId: memberRef(),
     visibility: text({ enum: ["private", "shared"] }).notNull(),
+    category: text({ enum: NOTE_CATEGORIES }).notNull().default("general"),
+    pinned: boolean().notNull().default(false),
     body: text().notNull(),
     authorId: userRef(),
     createdAt: createdAt(),

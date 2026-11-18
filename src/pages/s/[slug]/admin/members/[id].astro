@@ -1,28 +1,57 @@
 ---
-import DateField from "../../../../../components/islands/DateField";
-import BookingControls from "../../../../../components/admin/BookingControls.astro";
+import {
+  CalendarCheck,
+  CalendarDays,
+  CircleAlert,
+  ClipboardList,
+  CreditCard,
+  HeartPulse,
+  RotateCcwClock as HistoryIcon,
+  LayoutDashboard,
+  Mail,
+  MessageSquareText,
+  Phone,
+  Pin,
+  PinOff,
+  Ruler,
+  ShieldAlert,
+  Target,
+  Trash,
+  Trophy,
+  UserRound,
+} from "@lucide/astro";
+import Avatar from "../../../../../components/Avatar.astro";
 import BookingStatus from "../../../../../components/BookingStatus.astro";
+import EmptyState from "../../../../../components/EmptyState.astro";
 import PackCard from "../../../../../components/PackCard.astro";
 import Section from "../../../../../components/Section.astro";
+import BookingControls from "../../../../../components/admin/BookingControls.astro";
+import BenchmarksEditor from "../../../../../components/coach/BenchmarksEditor.astro";
+import FitnessEditor from "../../../../../components/coach/FitnessEditor.astro";
+import MeasurementsEditor from "../../../../../components/coach/MeasurementsEditor.astro";
+import ShareSwitch from "../../../../../components/coach/ShareSwitch.astro";
+import DateField from "../../../../../components/islands/DateField";
+import RichTextEditor from "../../../../../components/islands/RichTextEditor";
+import AttendanceChart from "../../../../../components/profile/AttendanceChart.astro";
+import CurrentPlan from "../../../../../components/profile/CurrentPlan.astro";
+import FitnessView from "../../../../../components/profile/FitnessView.astro";
+import NoteCard from "../../../../../components/profile/NoteCard.astro";
+import PersonalForm from "../../../../../components/profile/PersonalForm.astro";
 import Studio from "../../../../../layouts/Studio.astro";
+import { PAYMENT_METHODS } from "../../../../../db/schema";
 import { localDateOf } from "../../../../../domain/dates";
 import { describeValidity } from "../../../../../domain/packs";
-import {
-  formatDate,
-  formatDay,
-  formatInstant,
-  formatMoney,
-  formatTime,
-  initials,
-  plural,
-} from "../../../../../lib/format";
-import { handleActions, int, money, optStr, str } from "../../../../../server/actions";
+import { ageOn, weeklyCounts } from "../../../../../domain/progress";
+import { formatDate, formatDay, formatInstant, formatMoney, formatTime, plural } from "../../../../../lib/format";
+import { NOTE_CATEGORY, type NoteCategory } from "../../../../../lib/notes";
+import { bool, decimal, handleActions, int, money, optStr, str } from "../../../../../server/actions";
 import { can, isRole } from "../../../../../server/authz";
 import { bookingActions } from "../../../../../server/booking-actions";
 import { listPackTypes } from "../../../../../server/catalog";
 import { badRequest } from "../../../../../server/errors";
 import {
   addNote,
+  attendedDates,
   classHistory,
   deleteNote,
   deletePayment,
@@ -31,23 +60,138 @@ import {
   listPayments,
   memberAchievements,
   memberAudit,
-  noteInput,
-  profileInput,
   recordPayment,
+  setNotePinned,
   setRole,
   updateNote,
-  updateProfile,
 } from "../../../../../server/members";
 import { adjustCredits, assignPlan, memberPacks, validityOf } from "../../../../../server/packs";
+import { personalAction } from "../../../../../server/profile-actions";
+import {
+  addBenchmark,
+  addMeasurement,
+  benchmarkInput,
+  deleteBenchmark,
+  deleteMeasurement,
+  fitnessInput,
+  getFitness,
+  getPersonal,
+  knownExercises,
+  listBenchmarks,
+  listMeasurements,
+  measurementInput,
+  saveFitness,
+  SECTIONS,
+  setSectionShared,
+  type Section as FitnessSection,
+} from "../../../../../server/profiles";
 import { upcomingSessions } from "../../../../../server/schedule";
-import { PAYMENT_METHODS } from "../../../../../db/schema";
 
 const ctx = Astro.locals.studio!;
 const memberId = Astro.params.id!;
 const today = localDateOf(new Date(), ctx.timezone);
+const tab = Astro.url.searchParams.get("tab") ?? "overview";
+const noteFilter = Astro.url.searchParams.get("category");
 
 const result = await handleActions(Astro, {
   ...bookingActions(ctx),
+  personal: personalAction(ctx, memberId),
+  fitness: async (f) => {
+    const other = str(f, "otherGoals")
+      .split(",")
+      .map((g) => g.trim())
+      .filter(Boolean);
+    const experience = optStr(f, "experience");
+    await saveFitness(
+      ctx,
+      memberId,
+      fitnessInput.parse({
+        goals: [...f.getAll("goals").map(String), ...other],
+        goalNotes: optStr(f, "goalNotes"),
+        targetDate: optStr(f, "targetDate"),
+        experience,
+        trainingNotes: optStr(f, "trainingNotes"),
+        clearance: str(f, "clearance") || "unknown",
+        injuries: optStr(f, "injuries"),
+        medical: optStr(f, "medical"),
+      }),
+    );
+    return "Fitness profile saved.";
+  },
+  share: async (f) => {
+    const section = str(f, "section");
+    if (!(SECTIONS as readonly string[]).includes(section)) throw badRequest("Unknown section");
+    const value = bool(f, "value");
+    await setSectionShared(ctx, memberId, section as FitnessSection, value);
+    return value ? "Now visible to the member." : "Hidden from the member.";
+  },
+  measurement: async (f) => {
+    await addMeasurement(
+      ctx,
+      memberId,
+      measurementInput.parse({
+        measuredOn: str(f, "measuredOn"),
+        weightKg: decimal(f, "weightKg", "weight"),
+        bodyFatPct: decimal(f, "bodyFatPct", "body fat"),
+        waistCm: decimal(f, "waistCm", "waist"),
+        hipsCm: decimal(f, "hipsCm", "hips"),
+        chestCm: decimal(f, "chestCm", "chest"),
+        armCm: decimal(f, "armCm", "arm"),
+        thighCm: decimal(f, "thighCm", "thigh"),
+        restingHr: decimal(f, "restingHr", "resting heart rate"),
+        note: optStr(f, "note"),
+      }),
+    );
+    return "Check-in saved.";
+  },
+  deleteMeasurement: async (f) => {
+    await deleteMeasurement(ctx, str(f, "id"));
+    return "Check-in deleted.";
+  },
+  benchmark: async (f) => {
+    await addBenchmark(
+      ctx,
+      memberId,
+      benchmarkInput.parse({
+        exercise: str(f, "exercise"),
+        value: decimal(f, "value", "result"),
+        unit: str(f, "unit"),
+        recordedOn: str(f, "recordedOn"),
+        note: optStr(f, "note"),
+      }),
+    );
+    return "Result saved.";
+  },
+  deleteBenchmark: async (f) => {
+    await deleteBenchmark(ctx, str(f, "id"));
+    return "Result deleted.";
+  },
+  note: async (f) => {
+    await addNote(ctx, memberId, {
+      body: str(f, "body"),
+      visibility: str(f, "visibility") as "private" | "shared",
+      category: str(f, "category") as NoteCategory,
+      pinned: bool(f, "pinned"),
+    });
+    return "Note saved.";
+  },
+  editNote: async (f) => {
+    await updateNote(ctx, str(f, "noteId"), {
+      body: str(f, "body"),
+      visibility: str(f, "visibility") as "private" | "shared",
+      category: str(f, "category") as NoteCategory,
+      pinned: bool(f, "pinned"),
+    });
+    return "Note saved.";
+  },
+  pinNote: async (f) => {
+    await setNotePinned(ctx, str(f, "noteId"), bool(f, "value"));
+    return bool(f, "value") ? "Note pinned." : "Note unpinned.";
+  },
+  deleteNote: async (f) => {
+    await deleteNote(ctx, str(f, "noteId"));
+    return "Note deleted.";
+  },
   assign: async (f) => {
     const amount = money(f, "amount");
     await assignPlan(ctx, {
@@ -72,22 +216,6 @@ const result = await handleActions(Astro, {
     await adjustCredits(ctx, { packId: str(f, "packId"), delta, reason: str(f, "reason") });
     return `${delta > 0 ? "Added" : "Removed"} ${plural(Math.abs(delta), "credit")}.`;
   },
-  note: async (f) => {
-    await addNote(ctx, memberId, noteInput.parse({ body: str(f, "body"), visibility: str(f, "visibility") }));
-    return "Note saved.";
-  },
-  editNote: async (f) => {
-    await updateNote(
-      ctx,
-      str(f, "noteId"),
-      noteInput.parse({ body: str(f, "body"), visibility: str(f, "visibility") }),
-    );
-    return "Note saved.";
-  },
-  deleteNote: async (f) => {
-    await deleteNote(ctx, str(f, "noteId"));
-    return "Note deleted.";
-  },
   payment: async (f) => {
     const amount = money(f, "amount");
     if (amount === null) throw badRequest("Enter the amount paid");
@@ -104,10 +232,6 @@ const result = await handleActions(Astro, {
     await deletePayment(ctx, str(f, "paymentId"));
     return "Payment deleted.";
   },
-  profile: async (f) => {
-    await updateProfile(ctx, memberId, profileInput.parse({ name: str(f, "name"), phone: str(f, "phone") }));
-    return "Profile saved.";
-  },
   role: async (f) => {
     const role = str(f, "role");
     if (!isRole(role)) throw badRequest("Unknown role");
@@ -117,8 +241,23 @@ const result = await handleActions(Astro, {
 });
 if (result instanceof Response) return result;
 
-const [m, packs, history, notes, payments, plans, log, upcomingAll] = await Promise.all([
+const [
+  m,
+  personal,
+  packs,
+  history,
+  notes,
+  payments,
+  plans,
+  log,
+  upcomingAll,
+  fitness,
+  measurements,
+  benchmarks,
+  exercises,
+] = await Promise.all([
   getMember(ctx, memberId),
+  getPersonal(ctx, memberId),
   memberPacks(ctx, memberId),
   classHistory(ctx, memberId),
   listNotes(ctx, memberId),
@@ -126,8 +265,13 @@ const [m, packs, history, notes, payments, plans, log, upcomingAll] = await Prom
   listPackTypes(ctx),
   memberAudit(ctx, memberId),
   upcomingSessions(ctx),
+  getFitness(ctx, memberId),
+  listMeasurements(ctx, memberId),
+  listBenchmarks(ctx, memberId),
+  knownExercises(ctx),
 ]);
 const a = memberAchievements(ctx, history);
+const weeks = weeklyCounts(attendedDates(history), today, 12);
 const now = new Date();
 const upcoming = history.filter((h) => h.status === "booked" && h.startsAt > now && !h.sessionCancelled).reverse();
 const past = history.filter((h) => !(h.status === "booked" && h.startsAt > now && !h.sessionCancelled));
@@ -136,8 +280,10 @@ const old = packs.filter((p) => p.status === "expired" || p.status === "used_up"
 const credits = current.reduce((n, p) => n + p.available, 0);
 const totalPaid = payments.reduce((n, p) => n + p.amountCents, 0);
 const canCredits = can(ctx.role, "credits:manage");
+const pinned = notes.filter((n) => n.pinned);
+const shownNotes = noteFilter ? notes.filter((n) => n.category === noteFilter) : notes;
 const editingNote = Astro.url.searchParams.get("note");
-const tab = Astro.url.searchParams.get("tab") ?? "plans";
+const self = Astro.url.pathname;
 const moveTargets = (sessionId: string) =>
   upcomingAll
     .filter((u) => u.id !== sessionId)
@@ -160,67 +306,431 @@ const auditText: Record<string, (d: Record<string, unknown>) => string> = {
   "payment.deleted": (d) => `Payment deleted: ${formatMoney(d.amountCents as number, ctx.currency)} from ${d.paidOn}`,
 };
 const tabs = [
-  ["plans", "Plans & credits"],
-  ["classes", `Classes (${history.length})`],
-  ["notes", `Notes (${notes.length})`],
-  ["payments", `Payments (${payments.length})`],
-  ["activity", "Activity"],
+  ["overview", "Overview", LayoutDashboard],
+  ["personal", "Personal", UserRound],
+  ["fitness", "Fitness", HeartPulse],
+  ["notes", `Notes${notes.length ? ` · ${notes.length}` : ""}`, MessageSquareText],
+  ["plans", "Plans & payments", CreditCard],
+  ["classes", `Classes${history.length ? ` · ${history.length}` : ""}`, CalendarDays],
+  ["activity", "Activity", HistoryIcon],
 ] as const;
+const SECTION_LABELS: Record<FitnessSection, string> = {
+  goals: "Goals",
+  background: "Training background",
+  health: "Health & injuries",
+  measurements: "Body measurements",
+  benchmarks: "Personal records",
+};
 ---
 
 <Studio title={m.name} flash={result.flash} error={result.error}>
-  <a href={`/s/${ctx.slug}/admin/members`} class="muted hover:underline">
+  <a href={`/s/${ctx.slug}/admin/members`} class="mb-3 inline-flex text-sm text-stone-500 hover:text-stone-900">
     ← Members
   </a>
-  <div class="mt-2 mb-6 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-4">
-      <span class="flex h-14 w-14 items-center justify-center rounded-full bg-stone-900 text-lg font-semibold text-white">
-        {initials(m.name)}
-      </span>
-      <div>
-        <h1 class="flex items-center gap-2 text-2xl font-semibold">
-          {m.name} {m.role !== "member" && <span class="badge bg-stone-900 text-white capitalize">{m.role}</span>}
+
+  <div class="card mb-6 p-5">
+    <div class="flex flex-wrap items-center gap-5">
+      <Avatar name={m.name} size="xl" />
+      <div class="min-w-0 flex-1">
+        <h1 class="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
+          {m.name}
+          {m.role !== "member" && <span class="badge bg-stone-900 text-white capitalize">{m.role}</span>}
+          {fitness.clearance === "needs_clearance" && (
+            <span class="badge gap-1 bg-rose-50 text-rose-700">
+              <ShieldAlert size={12} /> Needs medical clearance
+            </span>
+          )}
         </h1>
-        <p class="muted">
-          {m.email}
-          {m.phone && ` · ${m.phone}`} · member since {formatDate(localDateOf(m.joinedAt, ctx.timezone))}
+        <p class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
+          <span class="inline-flex items-center gap-1.5">
+            <Mail size={14} /> {m.email}
+          </span>
+          {personal.phone && (
+            <a href={`tel:${personal.phone}`} class="inline-flex items-center gap-1.5 hover:text-stone-900">
+              <Phone size={14} /> {personal.phone}
+            </a>
+          )}
+          {personal.dateOfBirth && <span>{ageOn(personal.dateOfBirth, today)} years</span>}
+          <span>Member since {formatDate(localDateOf(m.joinedAt, ctx.timezone))}</span>
         </p>
+        {fitness.goals.length > 0 && (
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            {fitness.goals.map((g) => (
+              <span class="chip">{g}</span>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
-    <div class="flex gap-6 text-center">
-      <div>
-        <div class="text-2xl font-semibold tabular-nums">{credits}</div>
-        <div class="muted text-xs">credits free</div>
-      </div>
-      <div>
-        <div class="text-2xl font-semibold tabular-nums">{a.totalClasses}</div>
-        <div class="muted text-xs">classes done</div>
-      </div>
-      <div>
-        <div class="text-2xl font-semibold tabular-nums">{a.currentStreakWeeks}🔥</div>
-        <div class="muted text-xs">week streak</div>
-      </div>
-      <div>
-        <div class="text-2xl font-semibold tabular-nums">{upcoming.length}</div>
-        <div class="muted text-xs">booked</div>
+      <div class="grid grid-cols-4 gap-4 text-center">
+        <div>
+          <div class="text-2xl font-semibold tabular-nums">{credits}</div>
+          <div class="text-xs text-stone-500">credits</div>
+        </div>
+        <div>
+          <div class="text-2xl font-semibold tabular-nums">{a.totalClasses}</div>
+          <div class="text-xs text-stone-500">classes</div>
+        </div>
+        <div>
+          <div class="text-2xl font-semibold tabular-nums">{a.currentStreakWeeks}</div>
+          <div class="text-xs text-stone-500">wk streak</div>
+        </div>
+        <div>
+          <div class="text-2xl font-semibold tabular-nums">{upcoming.length}</div>
+          <div class="text-xs text-stone-500">booked</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <nav class="mb-5 flex gap-1 overflow-x-auto border-b border-stone-200">
-    {tabs.map(([key, label]) => (
+  <nav class="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-stone-200/60 p-1">
+    {tabs.map(([key, label, Icon]) => (
       <a
         href={`?tab=${key}`}
         class:list={[
-          "-mb-px border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap",
-          tab === key ? "border-stone-900 text-stone-900" : "border-transparent text-stone-500 hover:text-stone-800",
+          "inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap transition",
+          tab === key ? "bg-white text-stone-900 shadow-sm" : "text-stone-600 hover:text-stone-900",
         ]}
       >
+        <Icon size={15} />
         {label}
       </a>
     ))}
   </nav>
 
+  {/* ---------------- Overview ---------------- */}
+  {tab === "overview" && (
+    <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+      <div class="space-y-6">
+        {(fitness.clearance === "needs_clearance" || fitness.injuries) && (
+          <div class="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50/60 p-4">
+            <CircleAlert size={20} class="mt-0.5 shrink-0 text-rose-600" />
+            <div class="min-w-0">
+              <p class="font-medium text-rose-900">Health notes</p>
+              {fitness.clearance === "needs_clearance" && (
+                <p class="text-sm text-rose-800">Needs a doctor's clearance before hard training.</p>
+              )}
+              {fitness.injuries && <div class="fm-prose mt-1 text-rose-900" set:html={fitness.injuries} />}
+            </div>
+          </div>
+        )}
+        <Section title="Upcoming classes">
+          <CalendarDays slot="icon" size={18} />
+          {upcoming.length === 0 ? (
+            <EmptyState title="Nothing booked" compact>
+              <CalendarDays slot="icon" size={20} />
+            </EmptyState>
+          ) : (
+            <ul class="divide-y divide-stone-100">
+              {upcoming.map((h) => (
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                  <a href={`/s/${ctx.slug}/admin/sessions/${h.sessionId}`} class="hover:underline">
+                    <span class="font-medium">
+                      {formatDay(h.localDate)} · {formatTime(h.startsAt, ctx.timezone)}
+                    </span>
+                    <span class="ml-2" style={`color:${h.color}`}>
+                      {h.icon} {h.templateName}
+                    </span>
+                  </a>
+                  <BookingControls
+                    bookingId={h.bookingId}
+                    status={h.status}
+                    charged={h.charged}
+                    noShow={h.noShow}
+                    started={false}
+                    moveTargets={moveTargets(h.sessionId)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+        <Section title="Attendance" description="Classes per week, last 12 weeks">
+          <CalendarCheck slot="icon" size={18} />
+          <AttendanceChart weeks={weeks} />
+        </Section>
+        <Section title={pinned.length ? "Pinned notes" : "Latest note"}>
+          <MessageSquareText slot="icon" size={18} />
+          <a slot="actions" href="?tab=notes" class="text-sm text-stone-500 hover:text-stone-900">
+            All notes →
+          </a>
+          {notes.length === 0 ? (
+            <EmptyState title="No notes yet" compact>
+              <MessageSquareText slot="icon" size={20} />
+              <a href="?tab=notes" class="btn btn-sm">
+                Write the first note
+              </a>
+            </EmptyState>
+          ) : (
+            <div class="space-y-3">
+              {(pinned.length ? pinned : notes.slice(0, 1)).map((n) => (
+                <NoteCard note={n} timezone={ctx.timezone} showVisibility />
+              ))}
+            </div>
+          )}
+        </Section>
+      </div>
+      <aside class="space-y-6">
+        <div class="card p-5">
+          <CurrentPlan packs={packs} timezone={ctx.timezone}>
+            {canCredits && (
+              <a href="?tab=plans" class="btn btn-sm mt-4 w-full">
+                Manage plans
+              </a>
+            )}
+            {canCredits && (
+              <a slot="empty" href="?tab=plans" class="btn btn-primary btn-sm mt-3 w-full">
+                Add a plan
+              </a>
+            )}
+          </CurrentPlan>
+        </div>
+        <Section title="Contact">
+          <UserRound slot="icon" size={18} />
+          <dl class="space-y-2 text-sm">
+            <div>
+              <dt class="text-xs text-stone-500">Email</dt>
+              <dd>
+                <a href={`mailto:${m.email}`} class="hover:underline">
+                  {m.email}
+                </a>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs text-stone-500">Phone</dt>
+              <dd>{personal.phone ?? <span class="text-stone-400">—</span>}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-stone-500">Emergency contact</dt>
+              <dd>
+                {personal.emergencyName ? (
+                  `${personal.emergencyName}${personal.emergencyPhone ? ` · ${personal.emergencyPhone}` : ""}`
+                ) : (
+                  <span class="text-stone-400">—</span>
+                )}
+              </dd>
+            </div>
+          </dl>
+          <a href="?tab=personal" class="mt-3 inline-block text-xs font-medium text-stone-600 hover:text-stone-900">
+            Edit details →
+          </a>
+        </Section>
+      </aside>
+    </div>
+  )}
+
+  {/* ---------------- Personal ---------------- */}
+  {tab === "personal" && (
+    <div class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+      <Section title="Personal profile" description="Nothing here is required. The member can edit these details too.">
+        <UserRound slot="icon" size={18} />
+        <PersonalForm p={personal} today={today} redirect={`${self}?tab=personal`} />
+      </Section>
+      {can(ctx.role, "staff:manage") && m.userId !== ctx.userId && (
+        <form method="post" class="card h-fit space-y-3 p-5">
+          <h2 class="h2">Role in the studio</h2>
+          <input type="hidden" name="_action" value="role" />
+          <input type="hidden" name="_redirect" value={`${self}?tab=personal`} />
+          <select name="role" class="input">
+            <option value="member" selected={m.role === "member"}>
+              Member
+            </option>
+            <option value="coach" selected={m.role === "coach"}>
+              Coach: manages classes, members and credits
+            </option>
+            <option value="owner" selected={m.role === "owner"}>
+              Owner: also settings and staff
+            </option>
+          </select>
+          <button class="btn w-full">Change role</button>
+        </form>
+      )}
+    </div>
+  )}
+
+  {/* ---------------- Fitness ---------------- */}
+  {tab === "fitness" && (
+    <div class="grid gap-6 lg:grid-cols-[1fr_18rem]">
+      <div class="space-y-6">
+        <FitnessEditor p={fitness} today={today} />
+        <Section title="Body measurements" description="Check-ins over time. Leave out anything you didn't measure.">
+          <Ruler slot="icon" size={18} />
+          <MeasurementsEditor rows={measurements} today={today} />
+        </Section>
+        <Section
+          title="Personal records"
+          description="Strength, endurance and skill results. Best results are worked out automatically."
+        >
+          <Trophy slot="icon" size={18} />
+          <BenchmarksEditor rows={benchmarks} exercises={exercises} today={today} />
+        </Section>
+        <div>
+          <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <Target size={18} class="text-stone-400" /> Summary
+          </h2>
+          <FitnessView profile={fitness} measurements={measurements} benchmarks={benchmarks} />
+        </div>
+      </div>
+      <aside class="space-y-4">
+        <div class="card sticky top-20 p-5">
+          <h2 class="h2">What {m.name.split(" ")[0]} can see</h2>
+          <p class="muted mb-2">Shared sections appear on their profile page.</p>
+          <div class="divide-y divide-stone-100">
+            {SECTIONS.map((s) => (
+              <ShareSwitch section={s} label={SECTION_LABELS[s]} shared={fitness.shared[s]} />
+            ))}
+          </div>
+          <p class="mt-3 text-xs text-stone-500">Health details are coaches-only by default.</p>
+        </div>
+      </aside>
+    </div>
+  )}
+
+  {/* ---------------- Notes ---------------- */}
+  {tab === "notes" && (
+    <div class="grid gap-6 lg:grid-cols-[1fr_24rem]">
+      <div>
+        <div class="mb-4 flex flex-wrap gap-1.5">
+          <a href="?tab=notes" class:list={["btn btn-sm", !noteFilter && "btn-primary"]}>
+            All
+          </a>
+          {Object.entries(NOTE_CATEGORY).map(([k, v]) => (
+            <a href={`?tab=notes&category=${k}`} class:list={["btn btn-sm", noteFilter === k && "btn-primary"]}>
+              {v.label}
+            </a>
+          ))}
+        </div>
+        {shownNotes.length === 0 ? (
+          <div class="card">
+            <EmptyState
+              title="No notes here yet"
+              text="Session feedback, programme changes, nutrition tips… Share them with the member or keep them for coaches."
+            >
+              <ClipboardList slot="icon" size={20} />
+            </EmptyState>
+          </div>
+        ) : (
+          <div class="space-y-3">
+            {shownNotes.map((n) =>
+              editingNote === n.id ? (
+                <form method="post" class="card space-y-3 p-4">
+                  <input type="hidden" name="_action" value="editNote" />
+                  <input type="hidden" name="noteId" value={n.id} />
+                  <input type="hidden" name="_redirect" value={`${self}?tab=notes`} />
+                  <RichTextEditor client:load name="body" value={n.body} minHeight={8} ariaLabel="Note" />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <select name="category" class="input w-auto">
+                      {Object.entries(NOTE_CATEGORY).map(([k, v]) => (
+                        <option value={k} selected={n.category === k}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select name="visibility" class="input w-auto">
+                      <option value="private" selected={n.visibility === "private"}>
+                        Coaches only
+                      </option>
+                      <option value="shared" selected={n.visibility === "shared"}>
+                        Shared with member
+                      </option>
+                    </select>
+                    <label class="flex items-center gap-1.5 text-sm">
+                      <input type="checkbox" name="pinned" checked={n.pinned} /> Pinned
+                    </label>
+                    <span class="ml-auto flex gap-2">
+                      <a href="?tab=notes" class="btn btn-sm">
+                        Cancel
+                      </a>
+                      <button class="btn btn-primary btn-sm">Save</button>
+                    </span>
+                  </div>
+                </form>
+              ) : (
+                <NoteCard note={n} timezone={ctx.timezone} showVisibility>
+                  <div class="mt-3 flex justify-end gap-1 border-t border-stone-100 pt-2">
+                    <form method="post">
+                      <input type="hidden" name="_action" value="pinNote" />
+                      <input type="hidden" name="noteId" value={n.id} />
+                      <input type="hidden" name="value" value={n.pinned ? "0" : "1"} />
+                      <button class="btn btn-sm border-transparent shadow-none">
+                        {n.pinned ? (
+                          <>
+                            <PinOff size={13} /> Unpin
+                          </>
+                        ) : (
+                          <>
+                            <Pin size={13} /> Pin
+                          </>
+                        )}
+                      </button>
+                    </form>
+                    <a href={`?tab=notes&note=${n.id}`} class="btn btn-sm border-transparent shadow-none">
+                      Edit
+                    </a>
+                    <form method="post">
+                      <input type="hidden" name="_action" value="deleteNote" />
+                      <input type="hidden" name="noteId" value={n.id} />
+                      <button
+                        class="btn btn-sm border-transparent text-red-600 shadow-none hover:bg-red-50"
+                        onclick="return confirm('Delete this note?')"
+                      >
+                        <Trash size={13} /> Delete
+                      </button>
+                    </form>
+                  </div>
+                </NoteCard>
+              ),
+            )}
+          </div>
+        )}
+      </div>
+      <form method="post" class="card h-fit space-y-4 p-5 lg:sticky lg:top-20">
+        <h2 class="h2">New note</h2>
+        <input type="hidden" name="_action" value="note" />
+        <RichTextEditor
+          client:load
+          name="body"
+          placeholder="Session feedback, programme changes, things to remember…"
+          minHeight={9}
+          ariaLabel="New note"
+        />
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block space-y-1">
+            <span class="label">Category</span>
+            <select name="category" class="input">
+              {Object.entries(NOTE_CATEGORY).map(([k, v]) => (
+                <option value={k} selected={k === (noteFilter ?? "general")}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label class="flex items-end gap-2 pb-2 text-sm">
+            <input type="checkbox" name="pinned" /> Pin to top
+          </label>
+        </div>
+        <fieldset class="grid grid-cols-2 gap-2">
+          <legend class="label mb-1">Who can see it</legend>
+          <label class="cursor-pointer">
+            <input type="radio" name="visibility" value="private" checked class="peer sr-only" />
+            <span class="block rounded-lg border border-stone-300 p-2.5 text-sm peer-checked:border-stone-900 peer-checked:ring-1 peer-checked:ring-stone-900">
+              <b class="block">Coaches only</b>
+              <span class="text-xs text-stone-500">Private record</span>
+            </span>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="visibility" value="shared" class="peer sr-only" />
+            <span class="block rounded-lg border border-stone-300 p-2.5 text-sm peer-checked:border-stone-900 peer-checked:ring-1 peer-checked:ring-stone-900">
+              <b class="block">Share with {m.name.split(" ")[0]}</b>
+              <span class="text-xs text-stone-500">Shows on their home</span>
+            </span>
+          </label>
+        </fieldset>
+        <button class="btn btn-primary w-full">Save note</button>
+      </form>
+    </div>
+  )}
+
+  {/* ---------------- Plans & payments ---------------- */}
   {tab === "plans" && (
     <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div class="space-y-6">
@@ -267,35 +777,79 @@ const tabs = [
             </details>
           )}
         </Section>
-
-        <Section title="Upcoming classes">
-          {upcoming.length === 0 && <p class="muted">Nothing booked.</p>}
-          <ul class="divide-y divide-stone-100">
-            {upcoming.map((h) => (
-              <li class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                <a href={`/s/${ctx.slug}/admin/sessions/${h.sessionId}`} class="hover:underline">
-                  <span class="font-medium">
-                    {formatDay(h.localDate)} · {formatTime(h.startsAt, ctx.timezone)}
-                  </span>
-                  <span class="ml-2" style={`color:${h.color}`}>
-                    {h.icon} {h.templateName}
-                  </span>
-                  <span class="muted block text-xs">{h.packName}</span>
-                </a>
-                <BookingControls
-                  bookingId={h.bookingId}
-                  status={h.status}
-                  charged={h.charged}
-                  noShow={h.noShow}
-                  started={false}
-                  moveTargets={moveTargets(h.sessionId)}
+        <Section title="Payments" description={`${formatMoney(totalPaid, ctx.currency)} in total`}>
+          <CreditCard slot="icon" size={18} />
+          {payments.length === 0 ? (
+            <p class="muted">No payments recorded.</p>
+          ) : (
+            <table class="table">
+              <tbody>
+                {payments.map((p) => (
+                  <tr>
+                    <td>{formatDate(p.paidOn)}</td>
+                    <td>
+                      {p.packName ?? "—"}
+                      {p.note && <span class="block text-xs text-stone-500">{p.note}</span>}
+                    </td>
+                    <td class="capitalize">{p.method}</td>
+                    <td class="text-right font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</td>
+                    <td class="text-right">
+                      {canCredits && (
+                        <form method="post">
+                          <input type="hidden" name="paymentId" value={p.id} />
+                          <button
+                            class="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                            name="_action"
+                            value="deletePayment"
+                            aria-label="Delete payment"
+                            onclick="return confirm('Delete this payment record?')"
+                          >
+                            <Trash size={14} />
+                          </button>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {canCredits && (
+            <details class="mt-4">
+              <summary class="btn btn-sm list-none">Record a payment</summary>
+              <form
+                method="post"
+                class="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4"
+              >
+                <input type="hidden" name="_action" value="payment" />
+                <input
+                  name="amount"
+                  inputmode="decimal"
+                  required
+                  placeholder={`Amount (${ctx.currency})`}
+                  class="input"
                 />
-              </li>
-            ))}
-          </ul>
+                <select name="method" class="input">
+                  {PAYMENT_METHODS.map((pm) => (
+                    <option value={pm}>{pm}</option>
+                  ))}
+                </select>
+                <DateField client:load name="paidOn" value={today} today={today} ariaLabel="Paid on" />
+                <select name="packId" class="input">
+                  <option value="">Not linked to a plan</option>
+                  {packs.map((p) => (
+                    <option value={p.id}>
+                      {p.name} (from {formatDate(p.startsOn)})
+                    </option>
+                  ))}
+                </select>
+                <input name="note" placeholder="Note (optional)" class="input col-span-2" />
+                <button class="btn btn-primary col-span-2">Record payment</button>
+              </form>
+            </details>
+          )}
         </Section>
       </div>
-
       {canCredits && (
         <form method="post" class="card h-fit space-y-3 p-5">
           <h2 class="h2">Add a plan</h2>
@@ -310,14 +864,14 @@ const tabs = [
               ))}
             </select>
           </label>
-          <label class="block space-y-1">
+          <div class="space-y-1">
             <span class="label">Starts on</span>
             <DateField client:load name="startsOn" value={today} today={today} required ariaLabel="Starts on" />
-            <span class="text-xs text-stone-500">
+            <span class="block text-xs text-stone-500">
               Expiry is counted from this day. Set it in the past to carry over an existing plan.
             </span>
-          </label>
-          <fieldset class="space-y-2 rounded-lg bg-stone-50 p-3">
+          </div>
+          <fieldset class="space-y-2 rounded-xl bg-stone-50 p-3">
             <legend class="label px-1">
               Payment <span class="font-normal text-stone-400">(optional)</span>
             </legend>
@@ -325,9 +879,7 @@ const tabs = [
               <input name="amount" inputmode="decimal" placeholder={`Amount (${ctx.currency})`} class="input" />
               <select name="method" class="input">
                 {PAYMENT_METHODS.map((pm) => (
-                  <option value={pm} class="capitalize">
-                    {pm}
-                  </option>
+                  <option value={pm}>{pm}</option>
                 ))}
               </select>
             </div>
@@ -340,23 +892,30 @@ const tabs = [
     </div>
   )}
 
+  {/* ---------------- Classes ---------------- */}
   {tab === "classes" && (
     <Section
       title="Class history"
       description="Credits are used when a class starts, including no-shows. Waive a credit if the member shouldn't be charged."
     >
-      {past.length === 0 && <p class="muted">No classes yet.</p>}
-      <ul class="divide-y divide-stone-100">
-        {past.map((h) => (
-          <li class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-            <a href={`/s/${ctx.slug}/admin/sessions/${h.sessionId}`} class="hover:underline">
-              <span class="font-medium">
-                {formatDay(h.localDate)} · {formatTime(h.startsAt, ctx.timezone)}
-              </span>
-              <span class="ml-2" style={`color:${h.color}`}>
-                {h.icon} {h.templateName}
-              </span>
-              <span class="ml-2">
+      <CalendarDays slot="icon" size={18} />
+      {past.length === 0 ? (
+        <EmptyState title="No classes yet" compact>
+          <CalendarDays slot="icon" size={20} />
+        </EmptyState>
+      ) : (
+        <ul class="divide-y divide-stone-100">
+          {past.map((h) => (
+            <li class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+              <a
+                href={`/s/${ctx.slug}/admin/sessions/${h.sessionId}`}
+                class="flex flex-wrap items-center gap-2 hover:underline"
+              >
+                <span class="w-28 font-medium">{formatDay(h.localDate)}</span>
+                <span class="w-12 text-stone-500 tabular-nums">{formatTime(h.startsAt, ctx.timezone)}</span>
+                <span style={`color:${h.color}`}>
+                  {h.icon} {h.templateName}
+                </span>
                 <BookingStatus
                   status={h.status}
                   charged={h.charged}
@@ -364,229 +923,44 @@ const tabs = [
                   settled={h.settled}
                   sessionCancelled={h.sessionCancelled}
                 />
-              </span>
-            </a>
-            {!h.sessionCancelled && h.status !== "cancelled" && (
-              <BookingControls
-                bookingId={h.bookingId}
-                status={h.status}
-                charged={h.charged}
-                noShow={h.noShow}
-                started={h.startsAt <= now}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
-    </Section>
-  )}
-
-  {tab === "notes" && (
-    <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
-      <Section title="Fitness notes">
-        {notes.length === 0 && <p class="muted">No notes yet.</p>}
-        <ul class="space-y-3">
-          {notes.map((n) =>
-            editingNote === n.id ? (
-              <form method="post" class="space-y-2 rounded-lg border border-stone-300 p-3">
-                <input type="hidden" name="_action" value="editNote" />
-                <input type="hidden" name="noteId" value={n.id} />
-                <input type="hidden" name="_redirect" value={`${Astro.url.pathname}?tab=notes`} />
-                <textarea name="body" rows="4" class="input">{n.body}</textarea>
-                <div class="flex items-center gap-2">
-                  <select name="visibility" class="input w-auto">
-                    <option value="private" selected={n.visibility === "private"}>
-                      Private (coaches only)
-                    </option>
-                    <option value="shared" selected={n.visibility === "shared"}>
-                      Shared with member
-                    </option>
-                  </select>
-                  <button class="btn btn-primary btn-sm">Save</button>
-                  <a href="?tab=notes" class="btn btn-sm">
-                    Cancel
-                  </a>
-                </div>
-              </form>
-            ) : (
-              <li
-                class:list={[
-                  "rounded-lg border p-3 text-sm",
-                  n.visibility === "private" ? "border-amber-200 bg-amber-50/50" : "border-stone-200",
-                ]}
-              >
-                <div class="mb-1 flex items-center justify-between gap-2">
-                  <span
-                    class:list={[
-                      "badge",
-                      n.visibility === "private" ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800",
-                    ]}
-                  >
-                    {n.visibility === "private" ? "🔒 Private" : "👁 Shared with member"}
-                  </span>
-                  <span class="flex gap-1">
-                    <a href={`?tab=notes&note=${n.id}`} class="btn btn-sm">
-                      Edit
-                    </a>
-                    <form method="post">
-                      <input type="hidden" name="noteId" value={n.id} />
-                      <button
-                        class="btn btn-sm btn-danger"
-                        name="_action"
-                        value="deleteNote"
-                        onclick="return confirm('Delete this note?')"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  </span>
-                </div>
-                <p class="whitespace-pre-line">{n.body}</p>
-                <p class="muted mt-1 text-xs">
-                  {n.authorName} · {formatInstant(n.createdAt, ctx.timezone)}
-                </p>
-              </li>
-            ),
-          )}
-        </ul>
-      </Section>
-      <form method="post" class="card h-fit space-y-3 p-5">
-        <h2 class="h2">Add a note</h2>
-        <input type="hidden" name="_action" value="note" />
-        <textarea name="body" rows="5" required class="input" placeholder="Goals, injuries, progress…"></textarea>
-        <fieldset class="space-y-1 text-sm">
-          <label class="flex items-start gap-2">
-            <input type="radio" name="visibility" value="private" checked class="mt-1" />{" "}
-            <span>
-              <b>Private</b> — only coaches see it
-            </span>
-          </label>
-          <label class="flex items-start gap-2">
-            <input type="radio" name="visibility" value="shared" class="mt-1" />{" "}
-            <span>
-              <b>Shared</b> — the member sees it on their page
-            </span>
-          </label>
-        </fieldset>
-        <button class="btn btn-primary w-full">Save note</button>
-      </form>
-    </div>
-  )}
-
-  {tab === "payments" && (
-    <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
-      <Section title="Payment history" description={`${formatMoney(totalPaid, ctx.currency)} in total`}>
-        {payments.length === 0 && <p class="muted">No payments recorded.</p>}
-        <table class="table">
-          <tbody>
-            {payments.map((p) => (
-              <tr>
-                <td>{formatDate(p.paidOn)}</td>
-                <td>
-                  {p.packName ?? "—"}
-                  {p.note && <span class="muted block text-xs">{p.note}</span>}
-                </td>
-                <td class="capitalize">{p.method}</td>
-                <td class="text-right font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</td>
-                <td class="text-right">
-                  {canCredits && (
-                    <form method="post">
-                      <input type="hidden" name="paymentId" value={p.id} />
-                      <button
-                        class="btn btn-sm btn-danger"
-                        name="_action"
-                        value="deletePayment"
-                        onclick="return confirm('Delete this payment record?')"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Section>
-      {canCredits && (
-        <form method="post" class="card h-fit space-y-3 p-5">
-          <h2 class="h2">Record a payment</h2>
-          <p class="muted">
-            For payments not tied to adding a plan. Plans added with a payment show up here automatically.
-          </p>
-          <input type="hidden" name="_action" value="payment" />
-          <div class="grid grid-cols-2 gap-2">
-            <input name="amount" inputmode="decimal" required placeholder={`Amount (${ctx.currency})`} class="input" />
-            <select name="method" class="input">
-              {PAYMENT_METHODS.map((pm) => (
-                <option value={pm}>{pm}</option>
-              ))}
-            </select>
-          </div>
-          <DateField client:load name="paidOn" value={today} today={today} ariaLabel="Paid on" />
-          <select name="packId" class="input">
-            <option value="">Not linked to a plan</option>
-            {packs.map((p) => (
-              <option value={p.id}>
-                {p.name} (from {formatDate(p.startsOn)})
-              </option>
-            ))}
-          </select>
-          <input name="note" placeholder="Note (optional)" class="input" />
-          <button class="btn btn-primary w-full">Record payment</button>
-        </form>
-      )}
-    </div>
-  )}
-
-  {tab === "activity" && (
-    <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
-      <Section title="Changes by staff" description="Every manual change to this member's plans, credits and bookings.">
-        {log.length === 0 && <p class="muted">No manual changes.</p>}
-        <ul class="divide-y divide-stone-100 text-sm">
-          {log.map((l) => (
-            <li class="flex justify-between gap-3 py-2.5">
-              <span>{auditText[l.action]?.(l.details) ?? l.action}</span>
-              <span class="muted shrink-0 text-xs">
-                {l.actorName ?? "—"} · {formatInstant(l.createdAt, ctx.timezone)}
-              </span>
+              </a>
+              {!h.sessionCancelled && h.status !== "cancelled" && (
+                <BookingControls
+                  bookingId={h.bookingId}
+                  status={h.status}
+                  charged={h.charged}
+                  noShow={h.noShow}
+                  started={h.startsAt <= now}
+                />
+              )}
             </li>
           ))}
         </ul>
-      </Section>
-      <div class="space-y-6">
-        <form method="post" class="card space-y-3 p-5">
-          <h2 class="h2">Profile</h2>
-          <input type="hidden" name="_action" value="profile" />
-          <label class="block space-y-1">
-            <span class="label">Name</span>
-            <input name="name" required class="input" value={m.name} />
-          </label>
-          <label class="block space-y-1">
-            <span class="label">Phone</span>
-            <input name="phone" class="input" value={m.phone ?? ""} />
-          </label>
-          <button class="btn w-full">Save profile</button>
-        </form>
-        {can(ctx.role, "staff:manage") && m.userId !== ctx.userId && (
-          <form method="post" class="card space-y-3 p-5">
-            <h2 class="h2">Role</h2>
-            <input type="hidden" name="_action" value="role" />
-            <select name="role" class="input">
-              <option value="member" selected={m.role === "member"}>
-                Member
-              </option>
-              <option value="coach" selected={m.role === "coach"}>
-                Coach — manages classes, members and credits
-              </option>
-              <option value="owner" selected={m.role === "owner"}>
-                Owner — also settings and staff
-              </option>
-            </select>
-            <button class="btn w-full">Change role</button>
-          </form>
-        )}
-      </div>
-    </div>
+      )}
+    </Section>
+  )}
+
+  {/* ---------------- Activity ---------------- */}
+  {tab === "activity" && (
+    <Section title="Changes by staff" description="Every manual change to this member's plans, credits and bookings.">
+      <HistoryIcon slot="icon" size={18} />
+      {log.length === 0 ? (
+        <EmptyState title="No manual changes" compact>
+          <HistoryIcon slot="icon" size={20} />
+        </EmptyState>
+      ) : (
+        <ol class="relative ml-2 border-l border-stone-200">
+          {log.map((l) => (
+            <li class="mb-4 ml-5">
+              <span class="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-stone-400" />
+              <p class="text-sm">{auditText[l.action]?.(l.details) ?? l.action}</p>
+              <p class="text-xs text-stone-500">
+                {l.actorName ?? "—"} · {formatInstant(l.createdAt, ctx.timezone)}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Section>
   )}
 </Studio>

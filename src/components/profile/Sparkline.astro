@@ -1,0 +1,25 @@
+---
+interface Props {
+  points: number[];
+  color?: string;
+}
+const { points, color = "#1c1917" } = Astro.props;
+const w = 96;
+const h = 28;
+const min = Math.min(...points);
+const max = Math.max(...points);
+const span = max - min || 1;
+const xy = points.map(
+  (p, i) =>
+    [points.length === 1 ? w / 2 : (i / (points.length - 1)) * w, h - 3 - ((p - min) / span) * (h - 6)] as const,
+);
+const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+const last = xy[xy.length - 1]!;
+---
+
+<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} class="overflow-visible" aria-hidden="true">
+  {points.length > 1 && (
+    <path d={d} fill="none" stroke={color} stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+  )}
+  <circle cx={last[0]} cy={last[1]} r="2.5" fill={color} />
+</svg>

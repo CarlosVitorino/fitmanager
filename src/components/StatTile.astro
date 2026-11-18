@@ -1,0 +1,33 @@
+---
+interface Props {
+  label: string;
+  value: string | number;
+  hint?: string | undefined;
+  tone?: "stone" | "emerald" | "amber" | "sky" | "rose" | "violet";
+  href?: string | undefined;
+}
+const { label, value, hint, tone = "stone", href } = Astro.props;
+const tones = {
+  stone: "bg-stone-100 text-stone-700",
+  emerald: "bg-emerald-50 text-emerald-700",
+  amber: "bg-amber-50 text-amber-700",
+  sky: "bg-sky-50 text-sky-700",
+  rose: "bg-rose-50 text-rose-700",
+  violet: "bg-violet-50 text-violet-700",
+};
+const Tag = href ? "a" : "div";
+---
+
+<Tag
+  href={href}
+  class:list={["card flex items-start gap-3 p-4", href && "transition hover:border-stone-300 hover:shadow-md"]}
+>
+  <span class:list={["flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tones[tone]]}>
+    <slot name="icon" />
+  </span>
+  <span class="min-w-0">
+    <span class="block text-2xl leading-tight font-semibold tracking-tight text-stone-900 tabular-nums">{value}</span>
+    <span class="block text-sm text-stone-600">{label}</span>
+    {hint && <span class="block text-xs text-stone-400">{hint}</span>}
+  </span>
+</Tag>

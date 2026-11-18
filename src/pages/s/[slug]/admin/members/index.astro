@@ -1,7 +1,8 @@
 ---
+import Avatar from "../../../../../components/Avatar.astro";
 import Studio from "../../../../../layouts/Studio.astro";
 import { daysBetween, localDateOf } from "../../../../../domain/dates";
-import { formatDate, initials } from "../../../../../lib/format";
+import { formatDate } from "../../../../../lib/format";
 import { can } from "../../../../../server/authz";
 import { getSettings, listMembers } from "../../../../../server/members";
 
@@ -93,9 +94,7 @@ const base = `/s/${ctx.slug}/admin/members`;
             <tr class="hover:bg-stone-50">
               <td>
                 <a href={`${base}/${m.userId}`} class="flex items-center gap-3 font-medium hover:underline">
-                  <span class="flex h-8 w-8 items-center justify-center rounded-full bg-stone-200 text-xs font-semibold">
-                    {initials(m.name)}
-                  </span>
+                  <Avatar name={m.name} size="sm" />
                   {m.name}
                   {m.role !== "member" && <span class="badge bg-stone-900 text-white capitalize">{m.role}</span>}
                 </a>
