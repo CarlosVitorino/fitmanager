@@ -67,7 +67,8 @@ export async function listMembers(ctx: StudioContext): Promise<MemberRow[]> {
       nextExpiry: sql<
         string | null
       >`(select min(${pack.expiresOn})::text from ${pack} where ${pack.memberId} = ${user.id}
-        and ${pack.studioId} = ${ctx.studioId} and ${pack.expiredAt} is null and ${pack.expiresOn} >= ${today})`,
+        and ${pack.studioId} = ${ctx.studioId} and ${pack.expiredAt} is null and ${pack.expiresOn} >= ${today}
+        and (select coalesce(sum(${creditEntry.delta}), 0) from ${creditEntry} where ${creditEntry.packId} = ${pack.id}) > 0)`,
       lastClass: sql<Date | null>`(select max(${classSession.startsAt}) from ${booking}
         inner join ${classSession} on ${classSession.id} = ${booking.sessionId}
         where ${booking.memberId} = ${user.id} and ${booking.studioId} = ${ctx.studioId}

@@ -103,6 +103,14 @@ describe("members list and history", () => {
     expect(members.memberAchievements(s.member, history)).toMatchObject({ totalClasses: 1, currentStreakWeeks: 1 });
   });
 
+  it("doesn't show an expiry date for a plan that's used up", async () => {
+    await assignPlan(s.owner, { memberId: s.memberId, packTypeId: s.single.id, startsOn: today() });
+    const cls = await makeSession(s, 48);
+    await bookings.bookSelf(s.member, cls.id);
+    const row = (await members.listMembers(s.owner)).find((m) => m.userId === s.memberId)!;
+    expect(row).toMatchObject({ available: 0, nextExpiry: null });
+  });
+
   it("doesn't count no-shows as attended", async () => {
     await assignPlan(s.owner, { memberId: s.memberId, packTypeId: s.tenPack.id, startsOn: today() });
     const cls = await makeSession(s, 48);
