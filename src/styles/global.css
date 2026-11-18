@@ -19,6 +19,23 @@ body {
   background: #f6f5f3;
 }
 
+/* No lone word on a heading's last line, no one-word last line in running text. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd,
+  blockquote,
+  summary {
+    text-wrap: pretty;
+  }
+}
+
 @layer components {
   .card {
     @apply rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_2px_rgba(28,25,23,0.04),0_1px_8px_rgba(28,25,23,0.03)];

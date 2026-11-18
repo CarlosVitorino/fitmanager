@@ -151,7 +151,7 @@ const classTypes = t("site.home.classTypes").split(" · ");
           </div>
         </div>
 
-        <div class="relative mx-auto w-full max-w-2xl lg:mr-[-4rem] lg:max-w-none">
+        <div class="relative mx-auto w-full max-w-2xl lg:max-w-none xl:mr-[-4rem]">
           <BrowserFrame src={shot("today")} alt={t("site.home.shotAlt")} eager class="lg:rotate-[0.6deg]" />
           <PhoneFrame
             src={shot("phone-home")}
@@ -159,11 +159,11 @@ const classTypes = t("site.home.classTypes").split(" · ");
             eager
             class="absolute -bottom-16 left-1 w-[34%] max-w-[13rem] -rotate-3 sm:-left-10"
           />
-          <div class="chip absolute -top-5 right-6 rotate-2">
+          <div class="chip absolute -top-5 right-4 rotate-2">
             <TriangleAlert size={15} class="text-amber-600" />
             {t("site.home.chipLow")}
           </div>
-          <div class="chip absolute right-[-0.5rem] bottom-10 -rotate-2 sm:right-[-1.5rem]">
+          <div class="chip absolute right-2 bottom-10 -rotate-2 xl:right-[-1.5rem]">
             <Ticket size={15} class="text-ink" />
             {t("site.home.chipLeft")}
           </div>
@@ -188,7 +188,7 @@ const classTypes = t("site.home.classTypes").split(" · ");
       <h2 class="font-display text-5xl font-extrabold tracking-tight uppercase sm:text-6xl">
         {t("site.home.painTitle")}
       </h2>
-      <div class="mt-10 grid gap-5 md:grid-cols-3">
+      <div class="mt-10 grid gap-5 lg:grid-cols-3">
         {pains.map((p, i) => (
           <div
             class:list={[
@@ -278,11 +278,11 @@ const classTypes = t("site.home.classTypes").split(" · ");
           <span class="struck block max-w-5xl text-stone-500">{t("site.home.proof.question")}</span>
           <span class="mt-3 block text-volt">{t("site.home.proof.answer")}</span>
         </h2>
-        <div class="mt-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div class="mt-10 space-y-7">
           <p class="max-w-xl text-lg leading-relaxed text-stone-300">{t("site.home.proof.text")}</p>
-          <ul class="flex flex-wrap gap-2.5">
+          <ul class="flex flex-col items-start gap-2.5 md:flex-row md:items-center">
             {facts.map((f) => (
-              <li class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-stone-200">
+              <li class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm whitespace-nowrap text-stone-200">
                 <f.icon size={15} class="text-volt" />
                 {f.text}
               </li>
@@ -297,7 +297,7 @@ const classTypes = t("site.home.classTypes").split(" · ");
       <h2 class="font-display text-5xl font-extrabold tracking-tight uppercase sm:text-6xl">
         {t("site.home.howTitle")}
       </h2>
-      <ol class="mt-12 grid gap-6 md:grid-cols-3">
+      <ol class="mt-12 grid gap-6 lg:grid-cols-3">
         {steps.map(([title, text], i) => (
           <li class="relative rounded-2xl bg-white p-6 ring-1 ring-stone-200">
             <span class="font-display text-6xl leading-none font-extrabold text-stone-200">0{i + 1}</span>
@@ -306,7 +306,7 @@ const classTypes = t("site.home.classTypes").split(" · ");
             {i < 2 && (
               <ArrowRight
                 size={22}
-                class="absolute top-1/2 -right-5 z-10 hidden -translate-y-1/2 rounded-full bg-volt p-1 text-ink md:block"
+                class="absolute top-1/2 -right-5 z-10 hidden -translate-y-1/2 rounded-full bg-volt p-1 text-ink lg:block"
               />
             )}
           </li>
@@ -341,7 +341,7 @@ const classTypes = t("site.home.classTypes").split(" · ");
         <h2 class="relative max-w-2xl font-display text-5xl leading-[0.92] font-extrabold tracking-tight uppercase sm:text-7xl">
           {t("site.home.ctaTitle")}
         </h2>
-        <p class="relative mt-4 max-w-lg text-lg">{t("site.home.ctaText")}</p>
+        <p class="relative mt-4 max-w-lg text-lg text-balance">{t("site.home.ctaText")}</p>
         <div class="relative mt-8 flex flex-wrap gap-3">
           <a
             href="/signup?next=/studios/new"

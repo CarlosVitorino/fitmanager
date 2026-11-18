@@ -59,7 +59,9 @@ const year = new Date().getFullYear();
         </div>
       </nav>
     </header>
-    <slot />
+    <main class="overflow-x-clip">
+      <slot />
+    </main>
     <footer class="bg-ink text-stone-400">
       <div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:px-6">
         <div class="space-y-2">
