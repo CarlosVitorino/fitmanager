@@ -1,0 +1,93 @@
+---
+import Studio from "../../../../layouts/Studio.astro";
+import { addMonths, localDateOf } from "../../../../domain/dates";
+import { formatDate, formatMoney } from "../../../../lib/format";
+import { listPayments } from "../../../../server/members";
+
+const ctx = Astro.locals.studio!;
+const today = localDateOf(new Date(), ctx.timezone);
+const monthParam = Astro.url.searchParams.get("month");
+const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : today.slice(0, 7);
+const from = `${month}-01`;
+const end = new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 0)).toISOString().slice(0, 10);
+const payments = await listPayments(ctx, { from, to: end });
+const total = payments.reduce((n, p) => n + p.amountCents, 0);
+const byMethod = Object.entries(
+  payments.reduce<Record<string, number>>(
+    (acc, p) => ({ ...acc, [p.method]: (acc[p.method] ?? 0) + p.amountCents }),
+    {},
+  ),
+);
+const label = new Date(`${from}T12:00:00Z`).toLocaleDateString("en-GB", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+---
+
+<Studio title="Payments">
+  <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <a href={`?month=${addMonths(from, -1).slice(0, 7)}`} class="btn btn-sm" aria-label="Previous month">
+        ←
+      </a>
+      <a href={`?month=${addMonths(from, 1).slice(0, 7)}`} class="btn btn-sm" aria-label="Next month">
+        →
+      </a>
+      <h1 class="ml-2 text-2xl font-semibold">Payments · {label}</h1>
+    </div>
+  </div>
+  <p class="muted mb-5">Payments recorded by hand when adding plans or from a member's page.</p>
+
+  <div class="mb-5 grid gap-3 sm:grid-cols-4">
+    <div class="card p-4 sm:col-span-1">
+      <div class="text-2xl font-semibold tabular-nums">{formatMoney(total, ctx.currency)}</div>
+      <div class="muted">{payments.length} payments</div>
+    </div>
+    {byMethod.map(([method, cents]) => (
+      <div class="card p-4">
+        <div class="text-xl font-semibold tabular-nums">{formatMoney(cents, ctx.currency)}</div>
+        <div class="muted capitalize">{method}</div>
+      </div>
+    ))}
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Member</th>
+          <th>Plan</th>
+          <th>Method</th>
+          <th class="text-right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {payments.length === 0 && (
+          <tr>
+            <td colspan="5" class="py-8 text-center text-stone-500">
+              No payments this month.
+            </td>
+          </tr>
+        )}
+        {payments.map((p) => (
+          <tr>
+            <td>{formatDate(p.paidOn)}</td>
+            <td>
+              <a class="font-medium hover:underline" href={`/s/${ctx.slug}/admin/members/${p.memberId}?tab=payments`}>
+                {p.memberName}
+              </a>
+            </td>
+            <td>
+              {p.packName ?? "—"}
+              {p.note && <span class="muted block text-xs">{p.note}</span>}
+            </td>
+            <td class="capitalize">{p.method}</td>
+            <td class="text-right font-medium tabular-nums">{formatMoney(p.amountCents, p.currency)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Studio>

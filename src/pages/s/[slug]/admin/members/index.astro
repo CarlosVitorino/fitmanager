@@ -1,0 +1,145 @@
+---
+import Studio from "../../../../../layouts/Studio.astro";
+import { daysBetween, localDateOf } from "../../../../../domain/dates";
+import { formatDate, initials } from "../../../../../lib/format";
+import { can } from "../../../../../server/authz";
+import { getSettings, listMembers } from "../../../../../server/members";
+
+const ctx = Astro.locals.studio!;
+const all = await listMembers(ctx);
+const today = localDateOf(new Date(), ctx.timezone);
+const q = (Astro.url.searchParams.get("q") ?? "").trim().toLowerCase();
+const filter = Astro.url.searchParams.get("filter") ?? "all";
+const filters = {
+  all: { label: "Everyone", test: () => true },
+  expiring: {
+    label: "Expiring in 14 days",
+    test: (m: (typeof all)[number]) =>
+      m.nextExpiry !== null && daysBetween(today, m.nextExpiry) <= 14 && m.available > 0,
+  },
+  low: { label: "2 or fewer credits", test: (m: (typeof all)[number]) => m.activePacks > 0 && m.available <= 2 },
+  none: { label: "No active plan", test: (m: (typeof all)[number]) => m.activePacks === 0 && m.role === "member" },
+  staff: { label: "Staff", test: (m: (typeof all)[number]) => m.role !== "member" },
+} as const;
+const f = filters[filter as keyof typeof filters] ?? filters.all;
+const rows = all
+  .filter((m) => (filter === "staff" ? true : filter === "all" ? true : m.role === "member"))
+  .filter((m) => f.test(m))
+  .filter((m) => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q));
+const invite = can(ctx.role, "staff:manage")
+  ? new URL(`/join/${ctx.slug}/${(await getSettings(ctx)).joinCode}`, Astro.url).toString()
+  : null;
+const base = `/s/${ctx.slug}/admin/members`;
+---
+
+<Studio title="Members" wide>
+  <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold">Members</h1>
+      <p class="muted">
+        {all.filter((m) => m.role === "member").length} members, {all.filter((m) => m.role !== "member").length} staff
+      </p>
+    </div>
+    {invite && (
+      <div class="flex items-center gap-2">
+        <span class="muted hidden sm:inline">Invite link</span>
+        <input readonly class="input w-72 font-mono text-xs" value={invite} id="invite" onclick="this.select()" />
+        <button
+          type="button"
+          class="btn"
+          onclick="navigator.clipboard.writeText(document.getElementById('invite').value);this.textContent='Copied'"
+        >
+          Copy
+        </button>
+      </div>
+    )}
+  </div>
+
+  <div class="mb-4 flex flex-wrap items-center gap-2">
+    {Object.entries(filters).map(([key, v]) => (
+      <a href={`?filter=${key}`} class:list={["btn btn-sm", filter === key && "btn-primary"]}>
+        {v.label}
+      </a>
+    ))}
+    <form class="ml-auto">
+      <input type="hidden" name="filter" value={filter} />
+      <input name="q" value={q} placeholder="Search name or email" class="input w-60" />
+    </form>
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Contact</th>
+          <th class="text-right">Credits</th>
+          <th>Next expiry</th>
+          <th>Last class</th>
+          <th class="text-right">Upcoming</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 && (
+          <tr>
+            <td colspan="6" class="py-8 text-center text-stone-500">
+              No one matches.
+            </td>
+          </tr>
+        )}
+        {rows.map((m) => {
+          const days = m.nextExpiry ? daysBetween(today, m.nextExpiry) : null;
+          return (
+            <tr class="hover:bg-stone-50">
+              <td>
+                <a href={`${base}/${m.userId}`} class="flex items-center gap-3 font-medium hover:underline">
+                  <span class="flex h-8 w-8 items-center justify-center rounded-full bg-stone-200 text-xs font-semibold">
+                    {initials(m.name)}
+                  </span>
+                  {m.name}
+                  {m.role !== "member" && <span class="badge bg-stone-900 text-white capitalize">{m.role}</span>}
+                </a>
+              </td>
+              <td class="text-stone-600">
+                {m.email}
+                {m.phone && <span class="block text-xs text-stone-500">{m.phone}</span>}
+              </td>
+              <td class="text-right">
+                {m.role === "member" &&
+                  (m.activePacks === 0 ? (
+                    <span class="badge bg-stone-100 text-stone-600">No plan</span>
+                  ) : (
+                    <span
+                      class:list={[
+                        "badge tabular-nums",
+                        m.available <= 2 ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800",
+                      ]}
+                    >
+                      {m.available}
+                    </span>
+                  ))}
+              </td>
+              <td>
+                {m.nextExpiry ? (
+                  <span class:list={[days !== null && days <= 14 && "font-medium text-amber-700"]}>
+                    {formatDate(m.nextExpiry)}
+                  </span>
+                ) : (
+                  <span class="text-stone-400">—</span>
+                )}
+              </td>
+              <td class="text-stone-600">
+                {m.lastClass ? (
+                  formatDate(localDateOf(m.lastClass, ctx.timezone))
+                ) : (
+                  <span class="text-stone-400">—</span>
+                )}
+              </td>
+              <td class="text-right tabular-nums">{m.upcoming || <span class="text-stone-400">0</span>}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</Studio>
