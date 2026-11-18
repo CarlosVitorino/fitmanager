@@ -1,0 +1,100 @@
+---
+import { Ticket } from "@lucide/astro";
+import { daysBetween, localDateOf } from "../../domain/dates";
+import { formatDate, plural } from "../../lib/format";
+import type { PackSummary } from "../../server/packs";
+
+interface Props {
+  packs: PackSummary[];
+  timezone: string;
+}
+const { packs, timezone } = Astro.props;
+const today = localDateOf(new Date(), timezone);
+const active = packs.filter((p) => p.status === "active" || p.status === "upcoming");
+const main = active[0];
+const others = active.slice(1);
+const daysLeft = main?.expiresOn ? daysBetween(today, main.expiresOn) : null;
+const timePct =
+  main?.expiresOn && main.status === "active"
+    ? Math.min(
+        100,
+        Math.max(
+          0,
+          (daysBetween(main.startsOn, today) / Math.max(1, daysBetween(main.startsOn, main.expiresOn))) * 100,
+        ),
+      )
+    : null;
+const creditPct = main ? ((main.used + main.reserved) / Math.max(1, main.total)) * 100 : 0;
+---
+
+{main ? (
+  <div>
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <p class="eyebrow">Current plan</p>
+        <p class="mt-0.5 font-semibold">{main.name}</p>
+      </div>
+      <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+        <Ticket size={18} />
+      </span>
+    </div>
+    <div class="mt-4 flex items-baseline gap-1.5">
+      <span class="text-4xl font-semibold tracking-tight tabular-nums">{main.available}</span>
+      <span class="text-sm text-stone-500">of {main.total} classes left</span>
+    </div>
+    {main.reserved > 0 && (
+      <p class="text-xs text-stone-500">{plural(main.reserved, "class", "classes")} booked and waiting</p>
+    )}
+    <div class="mt-4 space-y-2.5">
+      <div>
+        <div class="mb-1 flex justify-between text-xs text-stone-500">
+          <span>Classes used</span>
+          <span>
+            {main.used + main.reserved}/{main.total}
+          </span>
+        </div>
+        <div class="h-1.5 overflow-hidden rounded-full bg-stone-100">
+          <div class="h-full rounded-full bg-stone-900" style={`width:${creditPct}%`} />
+        </div>
+      </div>
+      {timePct !== null && (
+        <div>
+          <div class="mb-1 flex justify-between text-xs text-stone-500">
+            <span>Time used</span>
+            <span>{daysLeft === 0 ? "last day" : `${plural(daysLeft!, "day")} left`}</span>
+          </div>
+          <div class="h-1.5 overflow-hidden rounded-full bg-stone-100">
+            <div
+              class:list={["h-full rounded-full", timePct > creditPct + 25 ? "bg-amber-500" : "bg-stone-400"]}
+              style={`width:${timePct}%`}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+    <p class="mt-3 text-xs text-stone-500">
+      {main.status === "upcoming"
+        ? `Starts ${formatDate(main.startsOn)}`
+        : main.expiresOn
+          ? `Valid until ${formatDate(main.expiresOn)}`
+          : "Never expires"}
+    </p>
+    {others.length > 0 && (
+      <ul class="mt-4 space-y-1.5 border-t border-stone-100 pt-3 text-sm">
+        {others.map((p) => (
+          <li class="flex justify-between gap-2">
+            <span class="text-stone-600">{p.name}</span>
+            <span class="font-medium tabular-nums">{p.available} left</span>
+          </li>
+        ))}
+      </ul>
+    )}
+    <slot />
+  </div>
+) : (
+  <div>
+    <p class="eyebrow">Current plan</p>
+    <p class="mt-2 text-sm text-stone-600">No active plan.</p>
+    <slot name="empty" />
+  </div>
+)}

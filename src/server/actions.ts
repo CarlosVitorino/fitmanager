@@ -84,3 +84,12 @@ export function bool(form: FormData, key: string): boolean {
   const v = form.get(key);
   return v === "on" || v === "true" || v === "1";
 }
+
+/** "70.5" or "70,5" → 70.5. Empty → null. */
+export function decimal(form: FormData, key: string, label = key): number | null {
+  const raw = str(form, key).replace(",", ".");
+  if (raw === "") return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new HttpError(400, `Enter a number for ${label}`);
+  return n;
+}

@@ -1,5 +1,9 @@
 ---
+import { BatteryLow, CalendarDays, Hourglass, UserPlus, UserX } from "@lucide/astro";
+import Avatar from "../../../components/Avatar.astro";
+import PageHeader from "../../../components/PageHeader.astro";
 import Section from "../../../components/Section.astro";
+import StatTile from "../../../components/StatTile.astro";
 import Studio from "../../../layouts/Studio.astro";
 import { addDays, daysBetween, localDateOf } from "../../../domain/dates";
 import { formatDate, formatDayLong, formatTimeRange, plural } from "../../../lib/format";
@@ -8,7 +12,7 @@ import { listMembers, packsExpiringSoon } from "../../../server/members";
 import { listSessions } from "../../../server/schedule";
 
 const ctx = Astro.locals.studio!;
-if (!isStaff(ctx.role)) return Astro.redirect(`/s/${ctx.slug}/book`);
+if (!isStaff(ctx.role)) return Astro.redirect(`/s/${ctx.slug}/me`);
 
 const today = localDateOf(new Date(), ctx.timezone);
 const [todays, tomorrow, expiring, members] = await Promise.all([
@@ -26,31 +30,52 @@ const now = new Date();
 ---
 
 <Studio title="Today">
-  <div class="mb-6">
-    <h1 class="text-2xl font-semibold">{formatDayLong(today)}</h1>
-    <p class="muted">
-      {plural(todays.length, "class", "classes")} today · {plural(memberRows.length, "member")}
-    </p>
-  </div>
+  <PageHeader
+    title={formatDayLong(today)}
+    subtitle={`${plural(todays.length, "class", "classes")} today · ${plural(memberRows.length, "member")}`}
+  >
+    <a href={`${base}/admin/calendar`} class="btn">
+      <CalendarDays size={16} /> Calendar
+    </a>
+    <a href={`${base}/admin/members`} class="btn btn-primary">
+      <UserPlus size={16} /> Add a plan
+    </a>
+  </PageHeader>
 
   <div class="mb-6 grid gap-3 sm:grid-cols-3">
-    <a href={`${base}/members?filter=expiring`} class="card p-4 hover:border-stone-400">
-      <div class="text-3xl font-semibold tabular-nums">{expiringWithCredits.length}</div>
-      <div class="muted">plans expiring in 14 days with credits left</div>
-    </a>
-    <a href={`${base}/members?filter=low`} class="card p-4 hover:border-stone-400">
-      <div class="text-3xl font-semibold tabular-nums">{lowCredits.length}</div>
-      <div class="muted">members with 2 or fewer credits</div>
-    </a>
-    <a href={`${base}/members?filter=none`} class="card p-4 hover:border-stone-400">
-      <div class="text-3xl font-semibold tabular-nums">{noPlan.length}</div>
-      <div class="muted">members without an active plan</div>
-    </a>
+    <StatTile
+      href={`${base}/members?filter=expiring`}
+      value={expiringWithCredits.length}
+      label="plans expiring with credits left"
+      hint="in the next 14 days"
+      tone="amber"
+    >
+      <Hourglass slot="icon" size={20} />
+    </StatTile>
+    <StatTile
+      href={`${base}/members?filter=low`}
+      value={lowCredits.length}
+      label="members running low"
+      hint="2 or fewer credits"
+      tone="rose"
+    >
+      <BatteryLow slot="icon" size={20} />
+    </StatTile>
+    <StatTile
+      href={`${base}/members?filter=none`}
+      value={noPlan.length}
+      label="members without a plan"
+      hint="no active plan"
+      tone="stone"
+    >
+      <UserX slot="icon" size={20} />
+    </StatTile>
   </div>
 
   <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
     <div class="space-y-6">
       <Section title="Today's classes">
+        <CalendarDays slot="icon" size={18} />
         {todays.length === 0 && <p class="muted">No classes today.</p>}
         <ul class="space-y-2">
           {todays.map((s) => (
@@ -101,16 +126,20 @@ const now = new Date();
 
     <div class="space-y-6">
       <Section title="Expiring soon" description="Plans ending in the next 14 days.">
+        <Hourglass slot="icon" size={18} />
         {expiring.length === 0 && <p class="muted">Nothing expiring.</p>}
         <ul class="space-y-2">
           {expiring.map((p) => {
             const days = daysBetween(today, p.expiresOn!);
             return (
               <li class="flex items-center justify-between gap-2 text-sm">
-                <a href={`${base}/members/${p.memberId}`} class="hover:underline">
-                  <span class="font-medium">{p.memberName}</span>
-                  <span class="muted block text-xs">
-                    {p.name} · {days === 0 ? "last day today" : `ends ${formatDate(p.expiresOn!)}`}
+                <a href={`${base}/members/${p.memberId}`} class="flex items-center gap-2.5 hover:underline">
+                  <Avatar name={p.memberName} size="sm" />
+                  <span>
+                    <span class="block font-medium">{p.memberName}</span>
+                    <span class="muted block text-xs">
+                      {p.name} · {days === 0 ? "last day today" : `ends ${formatDate(p.expiresOn!)}`}
+                    </span>
                   </span>
                 </a>
                 <span
@@ -127,11 +156,13 @@ const now = new Date();
         </ul>
       </Section>
       <Section title="Running low">
+        <BatteryLow slot="icon" size={18} />
         {lowCredits.length === 0 && <p class="muted">Everyone has credits.</p>}
         <ul class="space-y-2">
           {lowCredits.map((m) => (
             <li class="flex items-center justify-between text-sm">
-              <a href={`${base}/members/${m.userId}`} class="font-medium hover:underline">
+              <a href={`${base}/members/${m.userId}`} class="flex items-center gap-2.5 font-medium hover:underline">
+                <Avatar name={m.name} size="sm" />
                 {m.name}
               </a>
               <span class="badge bg-red-50 text-red-700">{plural(m.available, "credit")}</span>

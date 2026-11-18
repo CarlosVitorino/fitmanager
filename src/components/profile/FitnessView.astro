@@ -1,0 +1,203 @@
+---
+/**
+ * The fitness profile, read-only. Used on the member's own profile and as the summary on the coach's
+ * Fitness tab. Sections the viewer can't see are simply not rendered.
+ */
+import { Activity, Dumbbell, HeartPulse, Ruler, Target, Trophy } from "@lucide/astro";
+import EmptyState from "../EmptyState.astro";
+import Section from "../Section.astro";
+import Sparkline from "./Sparkline.astro";
+import { measurementChange, summariseBenchmarks } from "../../domain/progress";
+import { formatDate } from "../../lib/format";
+import type { FitnessProfile } from "../../server/profiles";
+
+interface Props {
+  profile: FitnessProfile;
+  measurements: {
+    measuredOn: string;
+    weightKg: number | null;
+    bodyFatPct: number | null;
+    waistCm: number | null;
+    hipsCm: number | null;
+    chestCm: number | null;
+    armCm: number | null;
+    thighCm: number | null;
+    restingHr: number | null;
+  }[];
+  benchmarks: { exercise: string; value: number; unit: string; recordedOn: string }[];
+  /** Member view: hide sections that aren't shared instead of showing coach-only content. */
+  memberView?: boolean;
+}
+const { profile: p, measurements, benchmarks, memberView = false } = Astro.props;
+const show = (s: keyof FitnessProfile["shared"]) => !memberView || p.shared[s];
+
+const EXPERIENCE = {
+  new: "New to training",
+  some: "Some experience",
+  regular: "Trains regularly",
+  advanced: "Advanced",
+} as const;
+const CLEARANCE = {
+  unknown: { label: "Health check not done yet", cls: "bg-stone-100 text-stone-600" },
+  cleared: { label: "Cleared to train", cls: "bg-emerald-50 text-emerald-700" },
+  needs_clearance: { label: "Needs medical clearance", cls: "bg-rose-50 text-rose-700" },
+} as const;
+
+const METRICS = [
+  { key: "weightKg", label: "Weight", unit: "kg" },
+  { key: "bodyFatPct", label: "Body fat", unit: "%" },
+  { key: "waistCm", label: "Waist", unit: "cm" },
+  { key: "hipsCm", label: "Hips", unit: "cm" },
+  { key: "chestCm", label: "Chest", unit: "cm" },
+  { key: "armCm", label: "Arm", unit: "cm" },
+  { key: "thighCm", label: "Thigh", unit: "cm" },
+  { key: "restingHr", label: "Resting HR", unit: "bpm" },
+] as const;
+const changes = METRICS.map((m) => ({ ...m, c: measurementChange(measurements, (r) => r[m.key]) })).filter((m) => m.c);
+const summary = summariseBenchmarks(benchmarks);
+const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+const UNIT = { kg: "kg", reps: "reps", seconds: "s", minutes: "min", metres: "m", km: "km", cm: "cm" } as Record<
+  string,
+  string
+>;
+const hasGoals = p.goals.length > 0 || p.goalNotes || p.targetDate;
+const hasBackground = p.experience || p.trainingNotes;
+const hasHealth = p.clearance !== "unknown" || p.injuries || p.medical;
+---
+
+<div class="grid gap-5 lg:grid-cols-2">
+  {show("goals") && (
+    <Section title="Goals">
+      <Target slot="icon" size={18} />
+      {hasGoals ? (
+        <div class="space-y-3">
+          {p.goals.length > 0 && (
+            <div class="flex flex-wrap gap-1.5">
+              {p.goals.map((g) => (
+                <span class="chip">{g}</span>
+              ))}
+            </div>
+          )}
+          {p.goalNotes && <div class="fm-prose" set:html={p.goalNotes} />}
+          {p.targetDate && <p class="text-sm text-stone-500">Target date: {formatDate(p.targetDate)}</p>}
+        </div>
+      ) : (
+        <EmptyState title="No goals yet" compact>
+          <Target slot="icon" size={20} />
+        </EmptyState>
+      )}
+    </Section>
+  )}
+  {show("background") && (
+    <Section title="Training background">
+      <Activity slot="icon" size={18} />
+      {hasBackground ? (
+        <div class="space-y-3">
+          {p.experience && <span class="chip">{EXPERIENCE[p.experience]}</span>}
+          {p.trainingNotes && <div class="fm-prose" set:html={p.trainingNotes} />}
+        </div>
+      ) : (
+        <EmptyState title="Nothing recorded yet" compact>
+          <Activity slot="icon" size={20} />
+        </EmptyState>
+      )}
+    </Section>
+  )}
+  {show("health") && (
+    <Section title="Health & injuries" class="lg:col-span-2">
+      <HeartPulse slot="icon" size={18} />
+      {hasHealth ? (
+        <div class="space-y-3">
+          <span class:list={["badge", CLEARANCE[p.clearance].cls]}>{CLEARANCE[p.clearance].label}</span>
+          <div class="grid gap-4 md:grid-cols-2">
+            {p.injuries && (
+              <div>
+                <p class="eyebrow mb-1">Injuries & limitations</p>
+                <div class="fm-prose" set:html={p.injuries} />
+              </div>
+            )}
+            {p.medical && (
+              <div>
+                <p class="eyebrow mb-1">Medical conditions & medication</p>
+                <div class="fm-prose" set:html={p.medical} />
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <EmptyState title="Nothing recorded yet" compact>
+          <HeartPulse slot="icon" size={20} />
+        </EmptyState>
+      )}
+    </Section>
+  )}
+  {show("measurements") && (
+    <Section
+      title="Body measurements"
+      description={
+        measurements.length
+          ? `${measurements.length} check-ins, latest ${formatDate(measurements[measurements.length - 1]!.measuredOn)}`
+          : undefined
+      }
+    >
+      <Ruler slot="icon" size={18} />
+      {changes.length ? (
+        <ul class="divide-y divide-stone-100">
+          {changes.map((m) => (
+            <li class="flex items-center justify-between gap-3 py-2.5">
+              <span class="w-24 text-sm text-stone-600">{m.label}</span>
+              <Sparkline points={m.c!.points} />
+              <span class="w-20 text-right font-semibold tabular-nums">
+                {fmt(m.c!.latest)}
+                <span class="text-xs font-normal text-stone-500"> {m.unit}</span>
+              </span>
+              <span
+                class:list={[
+                  "w-16 text-right text-xs tabular-nums",
+                  m.c!.change === 0 ? "text-stone-400" : "text-stone-600",
+                ]}
+              >
+                {m.c!.points.length > 1 ? `${m.c!.change > 0 ? "+" : ""}${fmt(m.c!.change)}` : "—"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState title="No measurements yet" compact>
+          <Ruler slot="icon" size={20} />
+        </EmptyState>
+      )}
+    </Section>
+  )}
+  {show("benchmarks") && (
+    <Section title="Personal records">
+      <Trophy slot="icon" size={18} />
+      {summary.length ? (
+        <ul class="divide-y divide-stone-100">
+          {summary.map((s) => (
+            <li class="flex items-center justify-between gap-3 py-2.5">
+              <span class="flex items-center gap-2 text-sm">
+                <Dumbbell size={14} class="text-stone-400" />
+                {s.exercise}
+              </span>
+              <span class="text-right">
+                <span class="font-semibold tabular-nums">
+                  {fmt(s.best.value)} {UNIT[s.unit]}
+                </span>
+                <span class="block text-xs text-stone-500">
+                  {s.history.length > 1 && s.improvement > 0
+                    ? `↑ ${fmt(s.improvement)} ${UNIT[s.unit]} since ${formatDate(s.first.recordedOn)}`
+                    : formatDate(s.best.recordedOn)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState title="No results yet" compact>
+          <Trophy slot="icon" size={20} />
+        </EmptyState>
+      )}
+    </Section>
+  )}
+</div>

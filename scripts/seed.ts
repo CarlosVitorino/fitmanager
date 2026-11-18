@@ -224,12 +224,78 @@ export async function seed(): Promise<void> {
   }
   await members.addNote(ctx, mia.id, {
     visibility: "shared",
-    body: "Great progress on your squat depth. Next goal: 3×8 at 50 kg.",
+    category: "programme",
+    pinned: true,
+    body: "<h3>Your block until Christmas</h3><ul><li><strong>2× strength</strong> (Upper body + Legs day)</li><li><strong>1× HIIT</strong> for conditioning</li><li>Mobility on Saturdays if you can</li></ul><p>We'll retest the squat in mid-December.</p>",
+  });
+  await members.addNote(ctx, mia.id, {
+    visibility: "shared",
+    category: "progress",
+    body: "<p>Great progress on your squat depth. Next goal: <strong>3×8 at 50 kg</strong>.</p>",
   });
   await members.addNote(ctx, mia.id, {
     visibility: "private",
-    body: "Mentioned a sore left knee in October. Keep an eye on lunges.",
+    category: "health",
+    body: "<p>Mentioned a sore left knee in October. Keep an eye on lunges and box jumps.</p>",
   });
+
+  // Fitness profile, measurements and records for Mia.
+  const profiles = await import("../src/server/profiles");
+  await profiles.savePersonal(ctx, mia.id, {
+    name: "Mia Member",
+    phone: "+351 912 345 678",
+    dateOfBirth: "1994-03-12",
+    gender: "Female",
+    addressLine: "Rua das Flores 12",
+    city: "Porto",
+    postalCode: "4050-262",
+    country: "Portugal",
+    emergencyName: "João Member",
+    emergencyPhone: "+351 913 111 222",
+  });
+  await profiles.saveFitness(ctx, mia.id, {
+    goals: ["Get stronger", "Move better", "First pull-up"],
+    goalNotes:
+      "<p>Wants to feel strong carrying her kids and do her <strong>first strict pull-up</strong> by summer.</p>",
+    targetDate: "2027-06-30",
+    experience: "some",
+    trainingNotes:
+      "<p>Ran casually for years, new to lifting. Prefers evening classes; enjoys strength more than cardio.</p>",
+    clearance: "cleared",
+    injuries: "<p>Left knee: mild pain on deep lunges (Oct 2026). No pain on squats.</p>",
+    medical: null,
+  });
+  const checkins: [number, number, number, number, number][] = [
+    [-70, 68.4, 29.5, 78, 99],
+    [-42, 67.6, 28.6, 76.5, 98.5],
+    [-14, 67.1, 27.9, 75, 98],
+  ];
+  for (const [d, w, bf, waist, hips] of checkins)
+    await profiles.addMeasurement(ctx, mia.id, {
+      measuredOn: addDays(today, d),
+      weightKg: w,
+      bodyFatPct: bf,
+      waistCm: waist,
+      hipsCm: hips,
+      chestCm: null,
+      armCm: null,
+      thighCm: null,
+      restingHr: null,
+      note: null,
+    });
+  const records: [string, number, "kg" | "reps" | "seconds" | "minutes", number][] = [
+    ["Back squat", 40, "kg", -70],
+    ["Back squat", 47.5, "kg", -35],
+    ["Back squat", 52.5, "kg", -7],
+    ["Deadlift", 60, "kg", -63],
+    ["Deadlift", 72.5, "kg", -14],
+    ["Push-ups", 6, "reps", -60],
+    ["Push-ups", 14, "reps", -10],
+    ["5 km run", 31.5, "minutes", -56],
+    ["5 km run", 29, "minutes", -21],
+  ];
+  for (const [exercise, value, unit, d] of records)
+    await profiles.addBenchmark(ctx, mia.id, { exercise, value, unit, recordedOn: addDays(today, d), note: null });
   const bruno = (await db.select().from(schema.user).where(eq(schema.user.email, "bruno@demo.test")))[0]!;
   const brunoPack = (await db.select().from(schema.pack).where(eq(schema.pack.memberId, bruno.id)))[0]!;
   await adjustCredits(ctx, {
