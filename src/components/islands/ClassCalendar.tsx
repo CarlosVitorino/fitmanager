@@ -4,7 +4,13 @@
  *  - member: clicking a class opens a dialog to book or cancel; the dialog posts the page's normal
  *    server form, so all booking rules run on the server
  */
-import { createViewDay, createViewList, createViewMonthGrid, createViewWeek } from "@schedule-x/calendar";
+import {
+  createViewDay,
+  createViewList,
+  createViewMonthGrid,
+  createViewWeek,
+  createViewWeekAgenda,
+} from "@schedule-x/calendar";
 import type { CalendarEventExternal } from "@schedule-x/calendar";
 import { createCurrentTimePlugin } from "@schedule-x/current-time";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
@@ -13,6 +19,7 @@ import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
 import { enGB } from "date-fns/locale";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { FORMATS } from "../../lib/format";
 // Schedule-X works with the global Temporal API; this installs it where browsers lack it.
 import "temporal-polyfill/global";
@@ -92,6 +99,41 @@ function MonthEvent({ calendarEvent }: { calendarEvent: CalendarEventExternal })
   );
 }
 
+/** A class in the week agenda: one card per class, stacked per day, no hour grid. */
+function AgendaEvent({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
+  const s = calendarEvent.session as CalendarSession;
+  const timeZone = calendarEvent.tz as string;
+  const c = shades(s.color);
+  const past = s.cancelled || Date.parse(s.end) < Date.now();
+  return (
+    <div
+      className="fm-agenda-event"
+      style={{ background: c.container, color: c.onContainer, borderLeftColor: s.color, opacity: past ? 0.5 : 1 }}
+    >
+      <div className="fm-agenda-time">
+        {fmtTime(s.start, timeZone)}–{fmtTime(s.end, timeZone)}
+      </div>
+      <div className="fm-event-title">
+        <span aria-hidden="true">{s.icon}</span> {s.title}
+      </div>
+      {s.coachName && <div className="fm-event-meta">with {s.coachName}</div>}
+      <div className={s.myBookingId ? "fm-agenda-status fm-agenda-booked" : "fm-agenda-status"}>
+        {statusText(s, calendarEvent.mode as Props["mode"])}
+      </div>
+    </div>
+  );
+}
+
+/** Hours to show in the time grid: from the earliest class to the latest, not a fixed 06–22. */
+function hourRange(sessions: CalendarSession[], timeZone: string) {
+  if (!sessions.length) return { start: 7, end: 21 };
+  const hour = (iso: string) => Number(format(new Date(iso), "H", { in: tz(timeZone) }));
+  const minute = (iso: string) => Number(format(new Date(iso), "m", { in: tz(timeZone) }));
+  const start = Math.min(...sessions.map((s) => hour(s.start)));
+  const end = Math.max(...sessions.map((s) => hour(s.end) + (minute(s.end) > 0 ? 1 : 0)));
+  return { start: Math.max(0, start), end: Math.min(24, Math.max(end, start + 1)) };
+}
+
 function EventBox({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
   const s = calendarEvent.session as CalendarSession;
   const timeZone = calendarEvent.tz as string;
@@ -134,6 +176,8 @@ export default function ClassCalendar(props: Props) {
   const [open, setOpen] = useState<CalendarSession | null>(null);
   const [narrow] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches);
 
+  const hours = useMemo(() => hourRange(sessions, timezone), [sessions, timezone]);
+
   const calendars = useMemo(() => {
     const out: Record<string, { colorName: string; lightColors: ReturnType<typeof shades> }> = {};
     for (const s of sessions)
@@ -164,17 +208,21 @@ export default function ClassCalendar(props: Props) {
 
   const calendarApp = useCalendarApp(
     {
-      views: [createViewWeek(), createViewDay(), createViewMonthGrid(), createViewList()],
-      // Phones get the list of upcoming classes; the week grid is too cramped there.
-      defaultView: narrow ? "list" : "week",
+      // Members: a day strip with the chosen day's classes as cards (no empty hours), on any screen.
+      // Coaches: the hour grid for the whole week, trimmed to the hours that have classes; list on phones.
+      views: [createViewWeekAgenda(), createViewWeek(), createViewDay(), createViewMonthGrid(), createViewList()],
+      defaultView: mode === "member" ? "week-agenda" : narrow ? "list" : "week",
       isResponsive: false,
       selectedDate: Temporal.PlainDate.from(selectedDate),
       timezone: timezone as never,
       locale: "en-GB",
       firstDayOfWeek: 1,
-      dayBoundaries: { start: "06:00", end: "22:00" },
+      dayBoundaries: {
+        start: `${String(hours.start).padStart(2, "0")}:00`,
+        end: `${String(hours.end).padStart(2, "0")}:00`,
+      },
       weekOptions: {
-        gridHeight: 900,
+        gridHeight: (hours.end - hours.start) * 56,
         eventOverlap: false,
         timeAxisFormatOptions: { hour: "2-digit", minute: "2-digit", hourCycle: "h23" },
       },
@@ -203,9 +251,15 @@ export default function ClassCalendar(props: Props) {
     <div className="fm-calendar" data-today={today}>
       <ScheduleXCalendar
         calendarApp={calendarApp}
-        customComponents={{ timeGridEvent: EventBox, dateGridEvent: EventBox, monthGridEvent: MonthEvent }}
+        customComponents={{
+          timeGridEvent: EventBox,
+          dateGridEvent: EventBox,
+          monthGridEvent: MonthEvent,
+          weekAgendaEvent: AgendaEvent,
+        }}
       />
-      {open && <BookingDialog session={open} {...props} onClose={() => setOpen(null)} />}
+      {/* Rendered on <body>, outside the calendar, so its sticky header can't cover the dialog. */}
+      {open && createPortal(<BookingDialog session={open} {...props} onClose={() => setOpen(null)} />, document.body)}
     </div>
   );
 }
@@ -226,7 +280,7 @@ function BookingDialog({
   const c = shades(s.color);
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 p-4 sm:items-center"
+      className="fixed inset-0 z-[1000] flex items-end justify-center bg-stone-900/40 p-4 sm:items-center"
       onClick={onClose}
       role="presentation"
     >
