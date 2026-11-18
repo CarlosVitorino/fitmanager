@@ -3,6 +3,8 @@ import "../styles/global.css";
 import { CalendarDays, CircleUser, CreditCard, House, LogOut, Settings2, Users } from "@lucide/astro";
 import Avatar from "../components/Avatar.astro";
 import Flash from "../components/Flash.astro";
+import LanguageMenu from "../components/LanguageMenu.astro";
+import { getLocale, t } from "../i18n";
 import { isStaff } from "../server/authz";
 
 interface Props {
@@ -27,21 +29,21 @@ const setup = [
 
 const nav = staff
   ? [
-      { href: base, label: "Today", icon: House, exact: true },
+      { href: base, label: t("nav.today"), icon: House, exact: true },
       {
         href: `${base}/admin/calendar`,
-        label: "Calendar",
+        label: t("nav.calendar"),
         icon: CalendarDays,
         match: [`${base}/admin/calendar`, `${base}/admin/sessions`],
       },
-      { href: `${base}/admin/members`, label: "Members", icon: Users },
-      { href: `${base}/admin/payments`, label: "Payments", icon: CreditCard },
-      { href: `${base}/admin/setup`, label: "Setup", icon: Settings2, match: setup },
+      { href: `${base}/admin/members`, label: t("nav.members"), icon: Users },
+      { href: `${base}/admin/payments`, label: t("nav.payments"), icon: CreditCard },
+      { href: `${base}/admin/setup`, label: t("nav.setup"), icon: Settings2, match: setup },
     ]
   : [
-      { href: `${base}/me`, label: "Home", icon: House },
-      { href: `${base}/book`, label: "Book a class", icon: CalendarDays },
-      { href: `${base}/me/profile`, label: "My profile", icon: CircleUser },
+      { href: `${base}/me`, label: t("nav.home"), icon: House },
+      { href: `${base}/book`, label: t("nav.book"), icon: CalendarDays },
+      { href: `${base}/me/profile`, label: t("nav.profile"), icon: CircleUser },
     ];
 // The tab whose address matches the current page most specifically is the active one,
 // so "/me/profile" lights up "My profile" rather than "Home".
@@ -56,7 +58,7 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={getLocale()}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -91,9 +93,10 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
               href={`${base}/book`}
               class="hidden rounded-lg px-2.5 py-1.5 text-sm text-stone-500 hover:bg-stone-100 lg:inline"
             >
-              Member view
+              {t("common.memberView")}
             </a>
           )}
+          <LanguageMenu />
           <span class="flex items-center gap-2 text-sm text-stone-700">
             <Avatar name={user.name} size="sm" />
             <span class="hidden sm:inline">{user.name}</span>
@@ -101,8 +104,8 @@ const width = wide ? "max-w-7xl" : "max-w-6xl";
           <form method="post" action="/logout">
             <button
               class="rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
-              title="Log out"
-              aria-label="Log out"
+              title={t("common.logOut")}
+              aria-label={t("common.logOut")}
             >
               <LogOut size={16} />
             </button>

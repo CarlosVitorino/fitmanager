@@ -1,0 +1,58 @@
+---
+/** Settings-style frame for every Setup page: side navigation on the left, the page on the right. */
+import { CalendarRange, LayoutGrid, Settings2, Tags, Ticket } from "@lucide/astro";
+import Studio from "./Studio.astro";
+import { t } from "../i18n";
+import { can } from "../server/authz";
+
+interface Props {
+  title: string;
+  subtitle?: string | undefined;
+  flash?: string | null | undefined;
+  error?: string | null | undefined;
+}
+const { title, subtitle, flash, error } = Astro.props;
+const ctx = Astro.locals.studio!;
+const base = `/s/${ctx.slug}/admin`;
+const owner = can(ctx.role, "studio:settings");
+const items = [
+  { href: `${base}/setup`, label: t("setup.nav.overview"), icon: LayoutGrid, show: true },
+  { href: `${base}/plans`, label: t("setup.nav.plans"), icon: Ticket, show: owner },
+  { href: `${base}/classes`, label: t("setup.nav.classTypes"), icon: Tags, show: true },
+  { href: `${base}/calendars`, label: t("setup.nav.calendars"), icon: CalendarRange, show: true },
+  { href: `${base}/settings`, label: t("setup.nav.settings"), icon: Settings2, show: owner },
+].filter((i) => i.show);
+const path = Astro.url.pathname.replace(/\/$/, "");
+const active = (href: string) => path === href || path.startsWith(`${href}/`);
+---
+
+<Studio title={title} flash={flash} error={error}>
+  <div class="grid gap-8 lg:grid-cols-[13rem_1fr]">
+    <aside>
+      <p class="eyebrow mb-3 hidden px-3 lg:block">{t("setup.title")}</p>
+      <nav class="-mx-1 flex gap-1 overflow-x-auto pb-1 lg:sticky lg:top-20 lg:mx-0 lg:flex-col lg:overflow-visible">
+        {items.map((i) => (
+          <a
+            href={i.href}
+            class:list={[
+              "inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+              active(i.href)
+                ? "bg-white text-stone-900 shadow-sm ring-1 ring-stone-200"
+                : "text-stone-600 hover:bg-stone-200/60 hover:text-stone-900",
+            ]}
+          >
+            <i.icon size={16} class={active(i.href) ? "text-stone-900" : "text-stone-400"} />
+            {i.label}
+          </a>
+        ))}
+      </nav>
+    </aside>
+    <div class="min-w-0">
+      <header class="mb-6">
+        <h1 class="text-2xl font-semibold tracking-tight">{title}</h1>
+        {subtitle && <p class="mt-1 max-w-2xl text-sm text-stone-500">{subtitle}</p>}
+      </header>
+      <slot />
+    </div>
+  </div>
+</Studio>

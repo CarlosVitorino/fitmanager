@@ -1,7 +1,8 @@
 ---
-import ClassBadge from "../../../../components/ClassBadge.astro";
+import { Pencil } from "@lucide/astro";
 import TemplateFields from "../../../../components/admin/TemplateFields.astro";
-import Studio from "../../../../layouts/Studio.astro";
+import Setup from "../../../../layouts/Setup.astro";
+import { t } from "../../../../i18n";
 import { handleActions, optStr, str } from "../../../../server/actions";
 import { archiveTemplate, listTemplates, saveTemplate, templateInput } from "../../../../server/catalog";
 
@@ -17,19 +18,19 @@ const parse = (f: FormData) =>
 const result = await handleActions(Astro, {
   create: async (f) => {
     await saveTemplate(ctx, parse(f));
-    return "Class type added.";
+    return t("setup.types.added");
   },
   update: async (f) => {
     await saveTemplate(ctx, parse(f), str(f, "id"));
-    return "Class type saved.";
+    return t("setup.types.saved");
   },
   archive: async (f) => {
     await archiveTemplate(ctx, str(f, "id"), true);
-    return "Class type hidden. Existing classes keep it.";
+    return t("setup.types.hiddenFlash");
   },
   restore: async (f) => {
     await archiveTemplate(ctx, str(f, "id"), false);
-    return "Class type restored.";
+    return t("setup.types.restored");
   },
 });
 if (result instanceof Response) return result;
@@ -38,64 +39,68 @@ const templates = await listTemplates(ctx, { includeArchived: true });
 const editId = Astro.url.searchParams.get("edit");
 ---
 
-<Studio title="Class types" flash={result.flash} error={result.error}>
-  <a href={`/s/${ctx.slug}/admin/setup`} class="muted hover:underline">
-    ← Setup
-  </a>
-  <h1 class="mt-1 mb-1 text-2xl font-semibold">Class types</h1>
-  <p class="muted mb-6">Give classes their own name, colour and icon so members can tell them apart in the calendar.</p>
-
-  <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
-    <div class="space-y-3">
-      {templates.map((t) =>
-        editId === t.id ? (
-          <form method="post" class="card space-y-4 p-5">
+<Setup title={t("setup.types.title")} subtitle={t("setup.types.subtitle")} flash={result.flash} error={result.error}>
+  <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
+    <div class="grid content-start gap-3 sm:grid-cols-2">
+      {templates.map((tpl) =>
+        editId === tpl.id ? (
+          <form method="post" class="card space-y-4 p-5 ring-2 ring-stone-900/10 sm:col-span-2">
             <input type="hidden" name="_action" value="update" />
-            <input type="hidden" name="id" value={t.id} />
+            <input type="hidden" name="id" value={tpl.id} />
             <input type="hidden" name="_redirect" value={Astro.url.pathname} />
-            <TemplateFields template={t} idPrefix={t.id} />
+            <TemplateFields template={tpl} idPrefix={tpl.id} />
             <div class="flex gap-2">
-              <button class="btn btn-primary">Save</button>
+              <button class="btn btn-primary">{t("common.save")}</button>
               <a href={Astro.url.pathname} class="btn">
-                Cancel
+                {t("common.cancel")}
               </a>
             </div>
           </form>
         ) : (
-          <div
-            class:list={["card flex items-center justify-between gap-4 border-l-4 p-4", t.archivedAt && "opacity-60"]}
-            style={`border-left-color:${t.color}`}
-          >
-            <div>
-              <div class="flex items-center gap-2">
-                <ClassBadge name={t.name} color={t.color} icon={t.icon} />
-                {t.isDefault && <span class="badge bg-stone-100 text-stone-600">Default</span>}
-                {t.archivedAt && <span class="badge bg-stone-100 text-stone-600">Hidden</span>}
+          <div class:list={["card flex flex-col overflow-hidden", tpl.archivedAt && "opacity-60"]}>
+            <div class="flex items-center gap-3 p-4" style={`background:${tpl.color}10`}>
+              <span
+                class="flex h-11 w-11 items-center justify-center rounded-xl text-2xl"
+                style={`background:${tpl.color}22`}
+                aria-hidden="true"
+              >
+                {tpl.icon}
+              </span>
+              <div class="min-w-0">
+                <p class="font-semibold" style={`color:${tpl.color}`}>
+                  {tpl.name}
+                </p>
+                <div class="flex gap-1.5">
+                  {tpl.isDefault && <span class="badge bg-white/70 text-stone-600">{t("common.default")}</span>}
+                  {tpl.archivedAt && <span class="badge bg-white/70 text-stone-600">{t("common.hidden")}</span>}
+                </div>
               </div>
-              {t.description && <p class="mt-1 ml-9 text-sm text-stone-600">{t.description}</p>}
             </div>
-            <div class="flex gap-2">
-              <a href={`?edit=${t.id}`} class="btn btn-sm">
-                Edit
-              </a>
-              {!t.isDefault && (
-                <form method="post">
-                  <input type="hidden" name="id" value={t.id} />
-                  <button class="btn btn-sm" name="_action" value={t.archivedAt ? "restore" : "archive"}>
-                    {t.archivedAt ? "Restore" : "Hide"}
-                  </button>
-                </form>
-              )}
+            <div class="flex flex-1 items-end justify-between gap-2 p-4 pt-3">
+              <p class="text-sm text-stone-600">{tpl.description ?? ""}</p>
+              <div class="flex shrink-0 gap-1.5">
+                <a href={`?edit=${tpl.id}`} class="btn btn-sm">
+                  <Pencil size={13} /> {t("common.edit")}
+                </a>
+                {!tpl.isDefault && (
+                  <form method="post">
+                    <input type="hidden" name="id" value={tpl.id} />
+                    <button class="btn btn-sm" name="_action" value={tpl.archivedAt ? "restore" : "archive"}>
+                      {tpl.archivedAt ? t("common.restore") : t("common.hide")}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         ),
       )}
     </div>
-    <form method="post" class="card h-fit space-y-4 p-5">
-      <h2 class="h2">Add a class type</h2>
+    <form method="post" class="card h-fit space-y-4 p-5 xl:sticky xl:top-20">
+      <h2 class="h2">{t("setup.types.add")}</h2>
       <input type="hidden" name="_action" value="create" />
       <TemplateFields idPrefix="new" />
-      <button class="btn btn-primary w-full">Add class type</button>
+      <button class="btn btn-primary w-full">{t("setup.types.addButton")}</button>
     </form>
   </div>
-</Studio>
+</Setup>

@@ -3,5 +3,6 @@ declare namespace App {
     user: import("./lib/auth").Session["user"] | null;
     session: import("./lib/auth").Session["session"] | null;
     studio?: import("./server/studio-context").StudioContext;
+    locale: import("./i18n/locales").Locale;
   }
 }

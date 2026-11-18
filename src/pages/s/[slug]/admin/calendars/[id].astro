@@ -1,11 +1,12 @@
 ---
-import ClassBadge from "../../../../../components/ClassBadge.astro";
-import DateField from "../../../../../components/islands/DateField";
+import { CalendarDays, Plus, Users } from "@lucide/astro";
+import DateInput from "../../../../../components/DateInput.astro";
 import TimeField from "../../../../../components/TimeField.astro";
-import Studio from "../../../../../layouts/Studio.astro";
+import Setup from "../../../../../layouts/Setup.astro";
 import { localDateOf } from "../../../../../domain/dates";
-import { WEEKDAY_NAMES } from "../../../../../domain/schedule";
-import { formatDate, plural } from "../../../../../lib/format";
+import { t } from "../../../../../i18n";
+import { weekdayNames } from "../../../../../i18n/weekdays";
+import { formatDate } from "../../../../../lib/format";
 import { handleActions, int, optStr, str } from "../../../../../server/actions";
 import {
   archiveCalendar,
@@ -24,10 +25,10 @@ const parseSlot = (f: FormData) =>
   slotInput.parse({
     calendarId: calendar.id,
     templateId: str(f, "templateId"),
-    weekday: int(f, "weekday", "day"),
+    weekday: int(f, "weekday", t("setup.calendars.day")),
     startTime: str(f, "startTime"),
-    durationMinutes: int(f, "durationMinutes", "duration"),
-    capacity: int(f, "capacity", "spots"),
+    durationMinutes: int(f, "durationMinutes", t("setup.calendars.minutes")),
+    capacity: int(f, "capacity", t("setup.calendars.spots")),
     coachId: optStr(f, "coachId"),
     startsOn: str(f, "startsOn") || today,
     endsOn: optStr(f, "endsOn"),
@@ -36,15 +37,15 @@ const parseSlot = (f: FormData) =>
 const result = await handleActions(Astro, {
   addSlot: async (f) => {
     await saveSlot(ctx, parseSlot(f));
-    return "Weekly slot added. Its classes are now bookable.";
+    return t("setup.calendars.slotAdded");
   },
   updateSlot: async (f) => {
     await saveSlot(ctx, parseSlot(f), str(f, "id"));
-    return "Slot saved. Upcoming classes without bookings were updated.";
+    return t("setup.calendars.slotSaved");
   },
   endSlot: async (f) => {
     await endSlot(ctx, str(f, "id"));
-    return "Slot stopped. Classes people already booked stay on the calendar.";
+    return t("setup.calendars.slotStopped");
   },
   rename: async (f) => {
     await saveCalendar(
@@ -52,7 +53,7 @@ const result = await handleActions(Astro, {
       calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }),
       calendar.id,
     );
-    return "Calendar saved.";
+    return t("setup.calendars.saved");
   },
   archive: async () => {
     await archiveCalendar(ctx, calendar.id);
@@ -67,7 +68,8 @@ const [slots, templates, coaches] = await Promise.all([
   listCoaches(ctx),
 ]);
 const editId = Astro.url.searchParams.get("edit");
-const byDay = WEEKDAY_NAMES.map((name, i) => ({ name, slots: slots.filter((s) => s.slot.weekday === i + 1) }));
+const days = weekdayNames();
+const byDay = days.map((name, i) => ({ name, slots: slots.filter((s) => s.slot.weekday === i + 1) }));
 type SlotRow = (typeof slots)[number]["slot"];
 const blank = {
   weekday: 1,
@@ -83,46 +85,56 @@ const editing = slots.find((s) => s.slot.id === editId)?.slot;
 const form = editing ?? blank;
 ---
 
-<Studio title={calendar.name} flash={result.flash} error={result.error}>
-  <a href={`/s/${ctx.slug}/admin/calendars`} class="muted hover:underline">
-    ← Calendars
-  </a>
-  <div class="mt-1 mb-6 flex flex-wrap items-end justify-between gap-3">
-    <div>
-      <h1 class="text-2xl font-semibold">{calendar.name}</h1>
-      <p class="muted">Weekly slots repeat every week and become bookable classes 8 weeks ahead.</p>
-    </div>
-    <a href={`/s/${ctx.slug}/admin/calendar?calendar=${calendar.id}`} class="btn">
-      See this week's classes
+<Setup title={calendar.name} subtitle={t("setup.calendars.slotsSubtitle")} flash={result.flash} error={result.error}>
+  <div class="mb-4 flex flex-wrap gap-2">
+    <a href={`/s/${ctx.slug}/admin/calendars`} class="btn btn-sm">
+      ← {t("setup.calendars.back")}
+    </a>
+    <a href={`/s/${ctx.slug}/admin/calendar?calendar=${calendar.id}`} class="btn btn-sm">
+      <CalendarDays size={14} /> {t("setup.calendars.seeInCalendar")}
     </a>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
-    <div class="card divide-y divide-stone-100">
-      {byDay.map((d) => (
+  <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
+    <div class="card divide-y divide-stone-100 overflow-hidden">
+      {byDay.map((d, i) => (
         <div class="flex gap-4 p-4">
           <div class="w-24 shrink-0 pt-1 text-sm font-semibold text-stone-500">{d.name}</div>
           <div class="flex flex-1 flex-wrap gap-2">
-            {d.slots.length === 0 && <span class="pt-1 text-sm text-stone-400">No classes</span>}
+            {d.slots.length === 0 && (
+              <a
+                href={`?day=${i + 1}`}
+                class="inline-flex items-center gap-1 rounded-lg border border-dashed border-stone-200 px-3 py-2 text-sm text-stone-400 hover:border-stone-400 hover:text-stone-600"
+              >
+                <Plus size={14} /> {t("setup.calendars.noClasses")}
+              </a>
+            )}
             {d.slots.map(({ slot, template, coachName }) => (
               <a
                 href={`?edit=${slot.id}`}
                 class:list={[
-                  "rounded-lg border border-l-4 px-3 py-2 text-sm hover:bg-stone-50",
-                  editId === slot.id ? "border-stone-900 bg-stone-50" : "border-stone-200",
+                  "min-w-44 rounded-xl border border-l-4 px-3 py-2 text-sm transition hover:shadow-sm",
+                  editId === slot.id ? "border-stone-900 bg-stone-50" : "border-stone-200 bg-white",
                 ]}
                 style={`border-left-color:${template.color}`}
               >
-                <div class="font-semibold">
-                  {slot.startTime} <span class="font-normal text-stone-500">· {slot.durationMinutes} min</span>
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="font-semibold tabular-nums">{slot.startTime}</span>
+                  <span class="text-xs text-stone-500">{slot.durationMinutes}′</span>
                 </div>
-                <ClassBadge name={template.name} color={template.color} icon={template.icon} size="sm" />
-                <div class="text-xs text-stone-500">
-                  {plural(slot.capacity, "spot")}
+                <div class="font-medium" style={`color:${template.color}`}>
+                  {template.icon} {template.name}
+                </div>
+                <div class="flex items-center gap-1 text-xs text-stone-500">
+                  <Users size={11} /> {slot.capacity}
                   {coachName && ` · ${coachName}`}
-                  {slot.startsOn > today && ` · from ${formatDate(slot.startsOn)}`}
-                  {slot.endsOn && ` · until ${formatDate(slot.endsOn)}`}
                 </div>
+                {(slot.startsOn > today || slot.endsOn) && (
+                  <div class="text-xs text-stone-400">
+                    {slot.startsOn > today && t("setup.calendars.fromDate", { date: formatDate(slot.startsOn) })}
+                    {slot.endsOn && ` ${t("setup.calendars.untilDate", { date: formatDate(slot.endsOn) })}`}
+                  </div>
+                )}
               </a>
             ))}
           </div>
@@ -130,50 +142,53 @@ const form = editing ?? blank;
       ))}
     </div>
 
-    <div class="space-y-6">
-      <form method="post" class="card space-y-3 p-5">
-        <h2 class="h2">{editing ? "Edit weekly slot" : "Add a weekly slot"}</h2>
+    <div class="space-y-4">
+      <form method="post" class:list={["card space-y-3 p-5", editing && "ring-2 ring-stone-900/10"]}>
+        <h2 class="h2">{editing ? t("setup.calendars.editSlot") : t("setup.calendars.addSlot")}</h2>
         <input type="hidden" name="_action" value={editing ? "updateSlot" : "addSlot"} />
         {editing && <input type="hidden" name="id" value={editing.id} />}
         {editing && <input type="hidden" name="_redirect" value={Astro.url.pathname} />}
+        <label class="block space-y-1">
+          <span class="label">{t("setup.calendars.day")}</span>
+          <select name="weekday" class="input">
+            {days.map((n, i) => (
+              <option
+                value={i + 1}
+                selected={(editing ? form.weekday : Number(Astro.url.searchParams.get("day") ?? 1)) === i + 1}
+              >
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div class="space-y-1">
+          <span class="label">{t("setup.calendars.startsAt")}</span>
+          <TimeField name="startTime" value={form.startTime ?? "18:00"} label={t("setup.calendars.startsAt")} />
+        </div>
         <div class="grid grid-cols-2 gap-3">
           <label class="block space-y-1">
-            <span class="label">Day</span>
-            <select name="weekday" class="input">
-              {WEEKDAY_NAMES.map((n, i) => (
-                <option value={i + 1} selected={form.weekday === i + 1}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div class="space-y-1">
-            <span class="label">Starts at</span>
-            <TimeField name="startTime" value={form.startTime ?? "18:00"} label="Start" />
-          </div>
-          <label class="block space-y-1">
-            <span class="label">Minutes</span>
+            <span class="label">{t("setup.calendars.minutes")}</span>
             <input name="durationMinutes" type="number" min="5" required class="input" value={form.durationMinutes} />
           </label>
           <label class="block space-y-1">
-            <span class="label">Spots</span>
+            <span class="label">{t("setup.calendars.spots")}</span>
             <input name="capacity" type="number" min="1" required class="input" value={form.capacity} />
           </label>
         </div>
         <label class="block space-y-1">
-          <span class="label">Class type</span>
+          <span class="label">{t("setup.calendars.classType")}</span>
           <select name="templateId" class="input">
-            {templates.map((t) => (
-              <option value={t.id} selected={form.templateId === t.id}>
-                {t.icon} {t.name}
+            {templates.map((tpl) => (
+              <option value={tpl.id} selected={form.templateId === tpl.id}>
+                {tpl.icon} {tpl.name}
               </option>
             ))}
           </select>
         </label>
         <label class="block space-y-1">
-          <span class="label">Coach</span>
+          <span class="label">{t("setup.calendars.coach")}</span>
           <select name="coachId" class="input">
-            <option value="">No coach shown</option>
+            <option value="">{t("setup.calendars.noCoach")}</option>
             {coaches.map((c) => (
               <option value={c.id} selected={form.coachId === c.id}>
                 {c.name}
@@ -181,38 +196,36 @@ const form = editing ?? blank;
             ))}
           </select>
         </label>
-        <div class="grid grid-cols-2 gap-3">
-          <label class="block space-y-1">
-            <span class="label">From</span>
-            <DateField
-              client:load
-              name="startsOn"
-              value={form.startsOn ?? today}
-              today={today}
-              required
-              ariaLabel="From"
-            />
-          </label>
-          <label class="block space-y-1">
-            <span class="label">
-              Until <span class="font-normal text-stone-400">(optional)</span>
-            </span>
-            <DateField
-              client:load
-              name="endsOn"
-              value={form.endsOn ?? null}
-              today={today}
-              optional
-              placeholder="No end date"
-              ariaLabel="Until"
-            />
-          </label>
+        <div class="space-y-1">
+          <span class="label">{t("setup.calendars.from")}</span>
+          <DateInput
+            name="startsOn"
+            value={form.startsOn ?? today}
+            today={today}
+            required
+            ariaLabel={t("setup.calendars.from")}
+          />
         </div>
-        <div class="flex gap-2">
-          <button class="btn btn-primary flex-1">{editing ? "Save slot" : "Add slot"}</button>
+        <div class="space-y-1">
+          <span class="label">
+            {t("setup.calendars.until")} <span class="font-normal text-stone-400">({t("common.optional")})</span>
+          </span>
+          <DateInput
+            name="endsOn"
+            value={form.endsOn ?? null}
+            today={today}
+            optional
+            ariaLabel={t("setup.calendars.until")}
+            placeholder={t("setup.calendars.noEndDate")}
+          />
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button class="btn btn-primary flex-1">
+            {editing ? t("setup.calendars.saveSlot") : t("setup.calendars.addSlotButton")}
+          </button>
           {editing && (
             <a href={Astro.url.pathname} class="btn">
-              Cancel
+              {t("common.cancel")}
             </a>
           )}
         </div>
@@ -220,37 +233,37 @@ const form = editing ?? blank;
       {editing && (
         <form method="post" class="card p-5">
           <input type="hidden" name="id" value={editing.id} />
-          <p class="muted mb-3">Stop this slot from today. Classes people already booked stay on the calendar.</p>
+          <p class="muted mb-3">{t("setup.calendars.stopSlotHint")}</p>
           <button class="btn btn-danger w-full" name="_action" value="endSlot">
-            Stop this weekly slot
+            {t("setup.calendars.stopSlot")}
           </button>
         </form>
       )}
       <details class="card p-5">
-        <summary class="cursor-pointer font-medium">Calendar details</summary>
+        <summary class="cursor-pointer font-medium">{t("setup.calendars.details")}</summary>
         <form method="post" class="mt-3 space-y-3">
           <input type="hidden" name="_action" value="rename" />
           <label class="block space-y-1">
-            <span class="label">Name</span>
+            <span class="label">{t("common.name")}</span>
             <input name="name" required class="input" value={calendar.name} />
           </label>
           <label class="block space-y-1">
-            <span class="label">Description</span>
+            <span class="label">{t("common.description")}</span>
             <input name="description" class="input" value={calendar.description ?? ""} />
           </label>
-          <button class="btn w-full">Save</button>
+          <button class="btn w-full">{t("common.save")}</button>
         </form>
         <form method="post" class="mt-3">
           <button
             class="btn btn-danger w-full"
             name="_action"
             value="archive"
-            onclick="return confirm('Remove this calendar? Its classes disappear from the booking page.')"
+            onclick={`return confirm(${JSON.stringify(t("setup.calendars.removeConfirm"))})`}
           >
-            Remove calendar
+            {t("setup.calendars.removeCalendar")}
           </button>
         </form>
       </details>
     </div>
   </div>
-</Studio>
+</Setup>

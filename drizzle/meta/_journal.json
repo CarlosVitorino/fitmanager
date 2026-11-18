@@ -15,6 +15,13 @@
       "when": 1795010079223,
       "tag": "0001_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795012218131,
+      "tag": "0002_languages",
+      "breakpoints": true
     }
   ]
 }

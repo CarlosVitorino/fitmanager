@@ -1,5 +1,6 @@
 import { aliasedTable, and, asc, eq, gte, inArray, isNull, lte, ne, notExists, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import { msg, t } from "../i18n";
 import { addDays, isLocalDate, isLocalTime, localDateOf, zonedToUtc, type LocalDate } from "../domain/dates";
 import { occurrences } from "../domain/schedule";
 import { booking, calendar, classSession, classTemplate, member, slot, user } from "../db/schema";
@@ -18,14 +19,14 @@ export const slotInput = z
     calendarId: z.uuid(),
     templateId: z.uuid(),
     weekday: z.number().int().min(1).max(7),
-    startTime: z.string().refine(isLocalTime, "Use a time like 18:00"),
+    startTime: z.string().refine(isLocalTime, msg("errors.timeFormat")),
     durationMinutes: z.number().int().min(5).max(600),
-    capacity: z.number().int().min(1, "At least one spot").max(500),
+    capacity: z.number().int().min(1, msg("errors.atLeastOneSpot")).max(500),
     coachId: z.string().nullable(),
-    startsOn: z.string().refine(isLocalDate, "Pick a start date"),
-    endsOn: z.string().refine(isLocalDate, "Pick an end date").nullable(),
+    startsOn: z.string().refine(isLocalDate, msg("errors.validStartDate")),
+    endsOn: z.string().refine(isLocalDate, msg("errors.pickDate")).nullable(),
   })
-  .refine((v) => !v.endsOn || v.endsOn >= v.startsOn, { message: "The end date is before the start date" });
+  .refine((v) => !v.endsOn || v.endsOn >= v.startsOn, msg("errors.endBeforeStart"));
 export type SlotInput = z.infer<typeof slotInput>;
 
 export function listSlots(ctx: StudioContext, calendarId: string) {
@@ -54,13 +55,13 @@ async function assertOwnedRefs(ctx: StudioContext, input: SlotInput) {
     .select({ id: classTemplate.id })
     .from(classTemplate)
     .where(and(eq(classTemplate.id, input.templateId), eq(classTemplate.studioId, ctx.studioId)));
-  if (!cal || !tpl) throw notFound("Calendar or class type not found");
+  if (!cal || !tpl) throw notFound(t("errors.calendarOrTypeNotFound"));
   if (input.coachId) {
     const [c] = await db
       .select({ role: member.role })
       .from(member)
       .where(and(eq(member.organizationId, ctx.studioId), eq(member.userId, input.coachId)));
-    if (!c || c.role === "member") throw badRequest("Pick a coach from this studio");
+    if (!c || c.role === "member") throw badRequest(t("errors.pickCoach"));
   }
 }
 
@@ -94,7 +95,7 @@ export async function saveSlot(ctx: StudioContext, input: SlotInput, id?: string
       .set(input)
       .where(and(eq(slot.id, id), eq(slot.studioId, ctx.studioId)))
       .returning();
-    if (!row) throw notFound("Slot not found");
+    if (!row) throw notFound(t("errors.slotNotFound"));
   }
   await ensureSessions(ctx);
   return row!;
@@ -145,8 +146,8 @@ export async function ensureSessions(
 export const oneOffInput = z.object({
   calendarId: z.uuid(),
   templateId: z.uuid(),
-  date: z.string().refine(isLocalDate, "Pick a date"),
-  startTime: z.string().refine(isLocalTime, "Use a time like 18:00"),
+  date: z.string().refine(isLocalDate, msg("errors.pickDate")),
+  startTime: z.string().refine(isLocalTime, msg("errors.timeFormat")),
   durationMinutes: z.number().int().min(5).max(600),
   capacity: z.number().int().min(1).max(500),
   coachId: z.string().nullable(),
@@ -185,13 +186,13 @@ export async function updateSession(ctx: StudioContext, id: string, input: z.inf
     .select({ id: classTemplate.id })
     .from(classTemplate)
     .where(and(eq(classTemplate.id, input.templateId), eq(classTemplate.studioId, ctx.studioId)));
-  if (!tpl) throw notFound("Class type not found");
+  if (!tpl) throw notFound(t("errors.classTypeNotFound"));
   const [row] = await db
     .update(classSession)
     .set(input)
     .where(and(eq(classSession.id, id), eq(classSession.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Class not found");
+  if (!row) throw notFound(t("errors.classNotFound"));
   await audit(db, ctx, "session.updated", null, { sessionId: id, ...input });
   return row;
 }
@@ -271,7 +272,7 @@ export async function listSessions(
 export async function getSessionDetail(ctx: StudioContext, id: string) {
   requireCapability(ctx, "members:view");
   const [s] = await listSessionsById(ctx, [id]);
-  if (!s) throw notFound("Class not found");
+  if (!s) throw notFound(t("errors.classNotFound"));
   const roster = await db
     .select({
       bookingId: booking.id,

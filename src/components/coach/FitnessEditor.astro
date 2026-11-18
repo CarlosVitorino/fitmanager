@@ -1,7 +1,9 @@
 ---
+import { t } from "../../i18n";
+import { experienceLabel, goalLabel } from "../../server/labels";
 import { Activity, HeartPulse, Target } from "@lucide/astro";
-import DateField from "../islands/DateField";
-import RichTextEditor from "../islands/RichTextEditor";
+import DateInput from "../DateInput.astro";
+import RichText from "../RichText.astro";
 import { GOALS, type FitnessProfile } from "../../server/profiles";
 
 interface Props {
@@ -10,16 +12,11 @@ interface Props {
 }
 const { p, today } = Astro.props;
 const custom = p.goals.filter((g) => !(GOALS as readonly string[]).includes(g));
-const EXPERIENCE = [
-  ["new", "New to training"],
-  ["some", "Some experience"],
-  ["regular", "Trains regularly"],
-  ["advanced", "Advanced"],
-] as const;
+const EXPERIENCE = ["new", "some", "regular", "advanced"] as const;
 const CLEARANCE = [
-  ["unknown", "Not checked yet", "Health questionnaire not done."],
-  ["cleared", "Cleared to train", "No issues, or a doctor has cleared them."],
-  ["needs_clearance", "Needs medical clearance", "Ask for a doctor's OK before training hard."],
+  ["unknown", t("profile.clearance.unknownShort"), t("profile.clearance.unknownHint")],
+  ["cleared", t("profile.clearance.cleared"), t("profile.clearance.clearedHint")],
+  ["needs_clearance", t("profile.clearance.needs_clearance"), t("profile.clearance.needsHint")],
 ] as const;
 ---
 
@@ -28,51 +25,50 @@ const CLEARANCE = [
 
   <section class="card p-5">
     <h3 class="h2 mb-4 flex items-center gap-2">
-      <Target size={18} class="text-stone-400" /> Goals
+      <Target size={18} class="text-stone-400" /> {t("profile.fitness.goals")}
     </h3>
     <div class="flex flex-wrap gap-2">
       {GOALS.map((g) => (
         <label class="cursor-pointer">
           <input type="checkbox" name="goals" value={g} checked={p.goals.includes(g)} class="peer sr-only" />
           <span class="inline-flex items-center rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 transition peer-checked:border-stone-900 peer-checked:bg-stone-900 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-stone-300">
-            {g}
+            {goalLabel(g)}
           </span>
         </label>
       ))}
     </div>
     <label class="mt-3 block space-y-1">
       <span class="label">
-        Other goals <span class="font-normal text-stone-400">(comma separated)</span>
+        {t("profile.fitness.otherGoals")}{" "}
+        <span class="font-normal text-stone-400">({t("profile.fitness.otherGoalsHint")})</span>
       </span>
       <input
         name="otherGoals"
         class="input"
         value={custom.join(", ")}
-        placeholder="e.g. First pull-up, Hike Kilimanjaro"
+        placeholder={t("profile.fitness.otherGoalsPlaceholder")}
       />
     </label>
     <div class="mt-4 grid gap-4 md:grid-cols-[1fr_14rem]">
       <div class="space-y-1">
-        <span class="label">What they want to achieve</span>
-        <RichTextEditor
-          client:load
+        <span class="label">{t("profile.fitness.wantToAchieve")}</span>
+        <RichText
           name="goalNotes"
           value={p.goalNotes}
-          placeholder="Their own words, the why, and how you'll measure it…"
+          placeholder={t("profile.fitness.wantPlaceholder")}
           minHeight={6}
-          ariaLabel="Goal details"
+          ariaLabel={t("profile.fitness.wantToAchieve")}
         />
       </div>
       <div class="space-y-1">
-        <span class="label">Target date</span>
-        <DateField
-          client:load
+        <span class="label">{t("profile.fitness.targetDateLabel")}</span>
+        <DateInput
           name="targetDate"
           value={p.targetDate}
           today={today}
           optional
-          placeholder="No target date"
-          ariaLabel="Target date"
+          placeholder={t("profile.fitness.noTargetDate")}
+          ariaLabel={t("profile.fitness.targetDateLabel")}
         />
       </div>
     </div>
@@ -80,34 +76,33 @@ const CLEARANCE = [
 
   <section class="card p-5">
     <h3 class="h2 mb-4 flex items-center gap-2">
-      <Activity size={18} class="text-stone-400" /> Training background
+      <Activity size={18} class="text-stone-400" /> {t("profile.fitness.background")}
     </h3>
     <div class="flex flex-wrap gap-2">
-      {EXPERIENCE.map(([v, l]) => (
+      {EXPERIENCE.map((v) => (
         <label class="cursor-pointer">
           <input type="radio" name="experience" value={v} checked={p.experience === v} class="peer sr-only" />
           <span class="inline-flex rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 transition peer-checked:border-stone-900 peer-checked:bg-stone-900 peer-checked:text-white">
-            {l}
+            {experienceLabel(v)}
           </span>
         </label>
       ))}
     </div>
     <div class="mt-4 space-y-1">
-      <span class="label">History, sports, what's worked before, preferences</span>
-      <RichTextEditor
-        client:load
+      <span class="label">{t("profile.fitness.historyLabel")}</span>
+      <RichText
         name="trainingNotes"
         value={p.trainingNotes}
-        placeholder="Played football until 25, hates running, prefers mornings…"
+        placeholder={t("profile.fitness.historyPlaceholder")}
         minHeight={6}
-        ariaLabel="Training background"
+        ariaLabel={t("profile.fitness.background")}
       />
     </div>
   </section>
 
   <section class="card p-5">
     <h3 class="h2 mb-4 flex items-center gap-2">
-      <HeartPulse size={18} class="text-stone-400" /> Health & injuries
+      <HeartPulse size={18} class="text-stone-400" /> {t("profile.fitness.health")}
     </h3>
     <div class="grid gap-2 sm:grid-cols-3">
       {CLEARANCE.map(([v, l, d]) => (
@@ -122,31 +117,29 @@ const CLEARANCE = [
     </div>
     <div class="mt-4 grid gap-4 md:grid-cols-2">
       <div class="space-y-1">
-        <span class="label">Injuries & limitations</span>
-        <RichTextEditor
-          client:load
+        <span class="label">{t("profile.fitness.injuries")}</span>
+        <RichText
           name="injuries"
           value={p.injuries}
-          placeholder="Old injuries, pain, movements to avoid…"
+          placeholder={t("profile.fitness.injuriesPlaceholder")}
           minHeight={6}
-          ariaLabel="Injuries and limitations"
+          ariaLabel={t("profile.fitness.injuries")}
         />
       </div>
       <div class="space-y-1">
-        <span class="label">Medical conditions & medication</span>
-        <RichTextEditor
-          client:load
+        <span class="label">{t("profile.fitness.medical")}</span>
+        <RichText
           name="medical"
           value={p.medical}
-          placeholder="Asthma, blood pressure, pregnancy, medication…"
+          placeholder={t("profile.fitness.medicalPlaceholder")}
           minHeight={6}
-          ariaLabel="Medical conditions"
+          ariaLabel={t("profile.fitness.medical")}
         />
       </div>
     </div>
   </section>
 
   <div class="sticky bottom-4 z-10 -mt-2 flex justify-end">
-    <button class="btn btn-primary shadow-lg">Save fitness profile</button>
+    <button class="btn btn-primary shadow-lg">{t("profile.fitness.save")}</button>
   </div>
 </form>

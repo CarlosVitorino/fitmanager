@@ -1,23 +1,25 @@
 ---
+import { Pencil, Ticket } from "@lucide/astro";
 import PlanFields from "../../../../components/admin/PlanFields.astro";
-import Studio from "../../../../layouts/Studio.astro";
-import { describeValidity } from "../../../../domain/packs";
+import Setup from "../../../../layouts/Setup.astro";
+import { t } from "../../../../i18n";
 import { formatMoney, plural } from "../../../../lib/format";
 import { handleActions, int, money, optInt, optStr, str } from "../../../../server/actions";
 import { archivePackType, listPackTypes, packTypeInput, savePackType } from "../../../../server/catalog";
-import { requireCapability } from "../../../../server/studio-context";
+import { validityLabel } from "../../../../server/labels";
 import { validityOf } from "../../../../server/packs";
+import { requireCapability } from "../../../../server/studio-context";
 
 const ctx = Astro.locals.studio!;
 requireCapability(ctx, "studio:settings");
 
 const parse = (f: FormData) => {
-  const amount = optInt(f, "validityAmount", "duration");
+  const amount = optInt(f, "validityAmount", t("setup.plans.validFor"));
   const unit = amount === null ? "never" : str(f, "validityUnit");
   return packTypeInput.parse({
     name: str(f, "name"),
     description: optStr(f, "description"),
-    entries: int(f, "entries", "classes"),
+    entries: int(f, "entries", t("setup.plans.classesLabel")),
     validityUnit: unit === "never" ? null : unit,
     validityAmount: unit === "never" ? null : amount,
     priceCents: money(f, "price"),
@@ -27,19 +29,19 @@ const parse = (f: FormData) => {
 const result = await handleActions(Astro, {
   create: async (f) => {
     await savePackType(ctx, parse(f));
-    return "Plan added.";
+    return t("setup.plans.added");
   },
   update: async (f) => {
     await savePackType(ctx, parse(f), str(f, "id"));
-    return "Plan saved.";
+    return t("setup.plans.saved");
   },
   archive: async (f) => {
     await archivePackType(ctx, str(f, "id"), true);
-    return "Plan hidden. Members who hold it keep their credits.";
+    return t("setup.plans.hiddenFlash");
   },
   restore: async (f) => {
     await archivePackType(ctx, str(f, "id"), false);
-    return "Plan restored.";
+    return t("setup.plans.restored");
   },
 });
 if (result instanceof Response) return result;
@@ -48,54 +50,47 @@ const plans = await listPackTypes(ctx, { includeArchived: true });
 const editId = Astro.url.searchParams.get("edit");
 ---
 
-<Studio title="Plans" flash={result.flash} error={result.error}>
-  <a href={`/s/${ctx.slug}/admin/setup`} class="muted hover:underline">
-    ← Setup
-  </a>
-  <h1 class="mt-1 mb-1 text-2xl font-semibold">Plans</h1>
-  <p class="muted mb-6">
-    The plans you assign to members. Changing a plan only affects plans assigned after the change.
-  </p>
-
-  <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+<Setup title={t("setup.plans.title")} subtitle={t("setup.plans.subtitle")} flash={result.flash} error={result.error}>
+  <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
     <div class="space-y-3">
       {plans.map((p) =>
         editId === p.id ? (
-          <form method="post" class="card space-y-3 p-5">
+          <form method="post" class="card space-y-3 p-5 ring-2 ring-stone-900/10">
             <input type="hidden" name="_action" value="update" />
             <input type="hidden" name="id" value={p.id} />
             <input type="hidden" name="_redirect" value={Astro.url.pathname} />
             <PlanFields plan={p} currency={ctx.currency} />
             <div class="flex gap-2">
-              <button class="btn btn-primary">Save</button>
+              <button class="btn btn-primary">{t("common.save")}</button>
               <a href={Astro.url.pathname} class="btn">
-                Cancel
+                {t("common.cancel")}
               </a>
             </div>
           </form>
         ) : (
-          <div
-            class:list={["card flex flex-wrap items-center justify-between gap-4 p-5", p.archivedAt && "opacity-60"]}
-          >
-            <div>
+          <div class:list={["card flex flex-wrap items-center gap-4 p-4", p.archivedAt && "opacity-60"]}>
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <Ticket size={20} />
+            </span>
+            <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
                 <span class="font-semibold">{p.name}</span>
-                {p.archivedAt && <span class="badge bg-stone-100 text-stone-600">Hidden</span>}
+                {p.archivedAt && <span class="badge bg-stone-100 text-stone-600">{t("common.hidden")}</span>}
               </div>
-              <div class="muted mt-1">
-                {plural(p.entries, "class", "classes")} · {describeValidity(validityOf(p))} ·{" "}
-                {formatMoney(p.priceCents, ctx.currency)}
+              <div class="text-sm text-stone-500">
+                {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
               </div>
-              {p.description && <p class="mt-1 text-sm text-stone-600">{p.description}</p>}
+              {p.description && <p class="mt-0.5 text-sm text-stone-600">{p.description}</p>}
             </div>
-            <div class="flex gap-2">
+            <span class="text-lg font-semibold tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
+            <div class="flex gap-1.5">
               <a href={`?edit=${p.id}`} class="btn btn-sm">
-                Edit
+                <Pencil size={13} /> {t("common.edit")}
               </a>
               <form method="post">
                 <input type="hidden" name="id" value={p.id} />
                 <button class="btn btn-sm" name="_action" value={p.archivedAt ? "restore" : "archive"}>
-                  {p.archivedAt ? "Restore" : "Hide"}
+                  {p.archivedAt ? t("common.restore") : t("common.hide")}
                 </button>
               </form>
             </div>
@@ -104,11 +99,11 @@ const editId = Astro.url.searchParams.get("edit");
       )}
     </div>
 
-    <form method="post" class="card h-fit space-y-3 p-5">
-      <h2 class="h2">Add a plan</h2>
+    <form method="post" class="card h-fit space-y-3 p-5 xl:sticky xl:top-20">
+      <h2 class="h2">{t("setup.plans.add")}</h2>
       <input type="hidden" name="_action" value="create" />
       <PlanFields currency={ctx.currency} />
-      <button class="btn btn-primary w-full">Add plan</button>
+      <button class="btn btn-primary w-full">{t("setup.plans.addButton")}</button>
     </form>
   </div>
-</Studio>
+</Setup>

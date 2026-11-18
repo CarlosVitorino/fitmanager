@@ -1,53 +1,53 @@
 ---
+import { ChevronRight } from "@lucide/astro";
 import Base from "../layouts/Base.astro";
 import { db } from "../db/client";
+import { t } from "../i18n";
 import { listUserStudios } from "../server/studio-context";
 
 const { user } = Astro.locals;
 const studios = user ? await listUserStudios(db, user.id) : [];
 if (user && studios.length === 1) return Astro.redirect(`/s/${studios[0]!.slug}`);
+const roleLabel = (r: string) =>
+  r === "owner" ? t("auth.roleOwner") : r === "coach" ? t("auth.roleCoach") : t("auth.roleMember");
 ---
 
-<Base title="Home">
+<Base title={t("common.home")}>
   {user ? (
-    <div class="space-y-6">
-      <h1 class="text-2xl font-semibold">Your studios</h1>
+    <div class="mx-auto max-w-lg space-y-6">
+      <h1 class="text-2xl font-semibold tracking-tight">{t("auth.yourStudios")}</h1>
       {studios.length === 0 ? (
-        <p class="text-stone-600">
-          You're not part of a studio yet. Ask your coach for an invite link, or create your own studio.
-        </p>
+        <p class="text-stone-600">{t("auth.noStudios")}</p>
       ) : (
-        <ul class="divide-y divide-stone-200 rounded border border-stone-200 bg-white">
+        <ul class="card divide-y divide-stone-100 overflow-hidden">
           {studios.map((s) => (
             <li>
-              <a href={`/s/${s.slug}`} class="flex justify-between px-4 py-3 hover:bg-stone-50">
-                <span>{s.name}</span>
-                <span class="text-sm capitalize text-stone-500">{s.role}</span>
+              <a href={`/s/${s.slug}`} class="flex items-center gap-3 px-4 py-3.5 hover:bg-stone-50">
+                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-stone-900 text-sm font-bold text-white">
+                  {s.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span class="flex-1 font-medium">{s.name}</span>
+                <span class="text-sm text-stone-500">{roleLabel(s.role)}</span>
+                <ChevronRight size={16} class="text-stone-300" />
               </a>
             </li>
           ))}
         </ul>
       )}
-      <a
-        href="/studios/new"
-        class="inline-block rounded border border-stone-300 bg-white px-3 py-2 text-sm hover:bg-stone-100"
-      >
-        Create a studio
+      <a href="/studios/new" class="btn">
+        {t("auth.createStudio")}
       </a>
     </div>
   ) : (
-    <div class="space-y-4">
-      <h1 class="text-3xl font-semibold tracking-tight">Class credits your members can see for themselves.</h1>
-      <p class="max-w-prose text-stone-600">
-        FitManager keeps class packs, bookings and credits for small studios and independent coaches, so nobody has to
-        email to know what's left.
-      </p>
+    <div class="max-w-2xl space-y-5 py-10">
+      <h1 class="text-4xl font-semibold tracking-tight">{t("auth.landingTitle")}</h1>
+      <p class="text-lg text-stone-600">{t("auth.landingText")}</p>
       <div class="flex gap-3">
-        <a href="/signup" class="rounded bg-stone-900 px-4 py-2 font-medium text-white hover:bg-stone-700">
-          Get started
+        <a href="/signup" class="btn btn-primary px-5 py-2.5">
+          {t("auth.getStarted")}
         </a>
-        <a href="/login" class="rounded border border-stone-300 bg-white px-4 py-2 hover:bg-stone-100">
-          Log in
+        <a href="/login" class="btn px-5 py-2.5">
+          {t("common.logIn")}
         </a>
       </div>
     </div>

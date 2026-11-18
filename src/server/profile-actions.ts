@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 /** Form handlers for profiles, shared by the member's own pages and the coach's member page. */
 import { optStr, str, type ActionHandler } from "./actions";
 import { personalInput, savePersonal } from "./profiles";
@@ -21,6 +22,6 @@ export function personalAction(ctx: StudioContext, memberId: string): ActionHand
         emergencyPhone: optStr(f, "emergencyPhone"),
       }),
     );
-    return "Details saved.";
+    return t("members.flash.detailsSaved");
   };
 }

@@ -44,6 +44,8 @@ export const studioSettings = pgTable("studio_settings", {
   timezone: text().notNull().default("UTC"),
   /** ISO 4217 code used to show plan prices and record payments. */
   currency: text().notNull().default("EUR"),
+  /** Language used when a person hasn't picked one and their browser's isn't supported. */
+  locale: text().notNull().default("en"),
   /** Members can book until this many minutes before a class starts. */
   bookingCutoffMinutes: integer().notNull().default(120),
   /** Cancelling later than this many minutes before start keeps the credit spent. */

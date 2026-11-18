@@ -17,10 +17,11 @@ import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import "@schedule-x/theme-default/dist/index.css";
 import { tz } from "@date-fns/tz";
 import { format } from "date-fns";
-import { enGB } from "date-fns/locale";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { FORMATS } from "../../lib/format";
+import { DATE_FNS_LOCALES, DATE_PATTERNS, capitalizeFirst } from "../../i18n/dates";
+import { CALENDAR_LOCALE_TAGS, type Locale } from "../../i18n/locales";
+import { translate, type Vars } from "../../i18n/translate";
 // Schedule-X works with the global Temporal API; this installs it where browsers lack it.
 import "temporal-polyfill/global";
 
@@ -54,7 +55,18 @@ interface Props {
   cancellationCutoffMinutes: number;
   credits?: number;
   minDate?: string;
+  locale: Locale;
+  /** The "booking" messages in the viewer's language. */
+  messages: Record<string, unknown>;
 }
+
+/*
+ * Schedule-X renders the event cards itself, outside this component's props, so the language and
+ * messages are set here once per page (there is one calendar per page).
+ */
+let lang: Locale = "en";
+let msgs: Record<string, unknown> = {};
+const tr = (key: string, vars?: Vars) => translate(lang, msgs as never, msgs as never, key, vars);
 
 /** Light container and dark text derived from a class type's colour. */
 function shades(hex: string) {
@@ -72,16 +84,18 @@ function shades(hex: string) {
 
 const minutesUntil = (iso: string) => Math.floor((Date.parse(iso) - Date.now()) / 60_000);
 const fmtTime = (iso: string, timeZone: string) =>
-  format(new Date(iso), FORMATS.time, { in: tz(timeZone), locale: enGB });
+  format(new Date(iso), DATE_PATTERNS[lang].time, { in: tz(timeZone), locale: DATE_FNS_LOCALES[lang] });
 const fmtDay = (iso: string, timeZone: string) =>
-  format(new Date(iso), FORMATS.dayLong, { in: tz(timeZone), locale: enGB });
+  capitalizeFirst(
+    format(new Date(iso), DATE_PATTERNS[lang].dayLong, { in: tz(timeZone), locale: DATE_FNS_LOCALES[lang] }),
+  );
 
 function statusText(s: CalendarSession, mode: Props["mode"]): string {
-  if (s.cancelled) return "Cancelled";
-  if (s.myBookingId) return "✓ Booked";
-  if (mode === "coach") return `${s.booked}/${s.capacity} booked`;
-  if (s.booked >= s.capacity) return "Full";
-  return `${s.capacity - s.booked} ${s.capacity - s.booked === 1 ? "spot" : "spots"} left`;
+  if (s.cancelled) return tr("dialog.cancelled");
+  if (s.myBookingId) return tr("dialog.booked");
+  if (mode === "coach") return tr("dialog.bookedCoach", { booked: s.booked, capacity: s.capacity });
+  if (s.booked >= s.capacity) return tr("dialog.full");
+  return tr("dialog.spotsLeft", { count: s.capacity - s.booked });
 }
 
 function MonthEvent({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
@@ -116,7 +130,7 @@ function AgendaEvent({ calendarEvent }: { calendarEvent: CalendarEventExternal }
       <div className="fm-event-title">
         <span aria-hidden="true">{s.icon}</span> {s.title}
       </div>
-      {s.coachName && <div className="fm-event-meta">with {s.coachName}</div>}
+      {s.coachName && <div className="fm-event-meta">{tr("dialog.with", { name: s.coachName })}</div>}
       <div className={s.myBookingId ? "fm-agenda-status fm-agenda-booked" : "fm-agenda-status"}>
         {statusText(s, calendarEvent.mode as Props["mode"])}
       </div>
@@ -155,16 +169,14 @@ function EventBox({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
       <div className="fm-event-meta">
         {fmtTime(s.start, timeZone)}–{fmtTime(s.end, timeZone)}
         {" · "}
-        {s.cancelled ? (
-          "Cancelled"
-        ) : s.myBookingId ? (
-          <b>✓ Booked</b>
+        {s.myBookingId ? (
+          <b>{tr("dialog.booked")}</b>
         ) : calendarEvent.mode === "coach" ? (
           `${s.booked}/${s.capacity}`
-        ) : full ? (
-          "Full"
+        ) : full && !s.cancelled ? (
+          tr("dialog.full")
         ) : (
-          `${s.capacity - s.booked} left`
+          statusText(s, calendarEvent.mode as Props["mode"])
         )}
       </div>
     </div>
@@ -173,6 +185,8 @@ function EventBox({ calendarEvent }: { calendarEvent: CalendarEventExternal }) {
 
 export default function ClassCalendar(props: Props) {
   const { mode, sessions, timezone, today, selectedDate, sessionBaseUrl } = props;
+  lang = props.locale;
+  msgs = props.messages;
   const [open, setOpen] = useState<CalendarSession | null>(null);
   const [narrow] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches);
 
@@ -215,7 +229,7 @@ export default function ClassCalendar(props: Props) {
       isResponsive: false,
       selectedDate: Temporal.PlainDate.from(selectedDate),
       timezone: timezone as never,
-      locale: "en-GB",
+      locale: CALENDAR_LOCALE_TAGS[props.locale],
       firstDayOfWeek: 1,
       dayBoundaries: {
         start: `${String(hours.start).padStart(2, "0")}:00`,
@@ -307,7 +321,7 @@ function BookingDialog({
               {fmtDay(s.start, timezone)}, {fmtTime(s.start, timezone)}–{fmtTime(s.end, timezone)}
             </p>
             <p className="text-sm text-stone-500">
-              {s.coachName ? `with ${s.coachName} · ` : ""}
+              {s.coachName ? `${tr("dialog.with", { name: s.coachName })} · ` : ""}
               {s.calendarName}
             </p>
           </div>
@@ -315,55 +329,50 @@ function BookingDialog({
             type="button"
             onClick={onClose}
             className="rounded-md px-2 text-xl leading-none text-stone-400 hover:text-stone-700"
-            aria-label="Close"
+            aria-label={tr("dialog.close")}
           >
             ×
           </button>
         </div>
         {s.description && <p className="mt-3 text-sm text-stone-600">{s.description}</p>}
         <p className="mt-3 text-sm font-medium">
-          {spots <= 0 ? "This class is full." : `${spots} of ${s.capacity} spots left`}
+          {spots <= 0 ? tr("dialog.classFull") : tr("dialog.spotsOfCapacity", { count: spots, capacity: s.capacity })}
         </p>
 
         <div className="mt-4">
           {s.myBookingId ? (
             <form method="post" className="space-y-2">
-              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                ✓ You're booked into this class.
-              </p>
+              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{tr("dialog.youAreBooked")}</p>
               <input type="hidden" name="_action" value="cancel" />
               <input type="hidden" name="bookingId" value={s.myBookingId} />
               {!started && (
                 <>
                   {late && (
                     <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                      It's less than {Math.round(cancellationCutoffMinutes / 60)}h before the class, so cancelling won't
-                      return your credit.
+                      {tr("dialog.lateWarning", { hours: Math.round(cancellationCutoffMinutes / 60) })}
                     </p>
                   )}
                   <button className="btn w-full">
-                    {late ? "Cancel anyway (credit used)" : "Cancel booking, get credit back"}
+                    {late ? tr("dialog.cancelAnyway") : tr("dialog.cancelGetBack")}
                   </button>
                 </>
               )}
             </form>
           ) : started ? (
-            <p className="text-sm text-stone-500">This class has started.</p>
+            <p className="text-sm text-stone-500">{tr("dialog.started")}</p>
           ) : closed ? (
             <p className="text-sm text-stone-500">
-              Booking closes {Math.round(bookingCutoffMinutes / 60)}h before the class.
+              {tr("dialog.closed", { hours: Math.round(bookingCutoffMinutes / 60) })}
             </p>
           ) : spots <= 0 ? (
-            <p className="text-sm text-stone-500">Ask your coach if a spot opens up.</p>
+            <p className="text-sm text-stone-500">{tr("dialog.askCoachSpot")}</p>
           ) : credits <= 0 ? (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              You have no credits. Ask your coach for a plan.
-            </p>
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{tr("dialog.noCredits")}</p>
           ) : (
             <form method="post">
               <input type="hidden" name="_action" value="book" />
               <input type="hidden" name="sessionId" value={s.id} />
-              <button className="btn btn-primary w-full">Book · uses 1 of your {credits} credits</button>
+              <button className="btn btn-primary w-full">{tr("dialog.book", { count: credits })}</button>
             </form>
           )}
         </div>

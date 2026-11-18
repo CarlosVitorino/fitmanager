@@ -1,41 +1,57 @@
 ---
 import "../styles/global.css";
+import { LogOut } from "@lucide/astro";
+import LanguageMenu from "../components/LanguageMenu.astro";
+import { getLocale, t } from "../i18n";
 
 interface Props {
   title: string;
+  narrow?: boolean;
 }
-const { title } = Astro.props;
-const { user, studio } = Astro.locals;
+const { title, narrow = false } = Astro.props;
+const { user } = Astro.locals;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={getLocale()}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} · FitManager</title>
+    <title>{title} · {t("common.appName")}</title>
   </head>
-  <body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
-    <header class="border-b border-stone-200 bg-white">
-      <nav class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <a href="/" class="font-semibold tracking-tight">
-          FitManager{studio && <span class="font-normal text-stone-500"> / {studio.name}</span>}
+  <body class="min-h-screen font-sans text-stone-900 antialiased">
+    <header class="border-b border-stone-200/80 bg-white/90">
+      <nav class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+        <a href="/" class="flex items-center gap-2.5 font-semibold tracking-tight">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-900 text-sm font-bold text-white">
+            F
+          </span>
+          {t("common.appName")}
         </a>
-        {user ? (
-          <div class="flex items-center gap-3 text-sm">
-            <span class="text-stone-600">{user.name}</span>
-            <form method="post" action="/logout">
-              <button class="rounded px-2 py-1 text-stone-600 hover:bg-stone-100">Log out</button>
-            </form>
-          </div>
-        ) : (
-          <a href="/login" class="text-sm">
-            Log in
-          </a>
-        )}
+        <div class="flex items-center gap-2 text-sm">
+          <LanguageMenu />
+          {user ? (
+            <>
+              <span class="hidden text-stone-600 sm:inline">{user.name}</span>
+              <form method="post" action="/logout">
+                <button
+                  class="rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+                  title={t("common.logOut")}
+                  aria-label={t("common.logOut")}
+                >
+                  <LogOut size={16} />
+                </button>
+              </form>
+            </>
+          ) : (
+            <a href="/login" class="rounded-lg px-3 py-1.5 font-medium hover:bg-stone-100">
+              {t("common.logIn")}
+            </a>
+          )}
+        </div>
       </nav>
     </header>
-    <main class="mx-auto max-w-5xl px-4 py-8">
+    <main class:list={["mx-auto px-4", narrow ? "max-w-md py-12" : "max-w-5xl py-10"]}>
       <slot />
     </main>
   </body>

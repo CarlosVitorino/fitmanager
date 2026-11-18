@@ -2,6 +2,7 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { calendar, classTemplate, packType } from "../db/schema";
+import { msg, t } from "../i18n";
 import { notFound } from "./errors";
 import { requireCapability, type StudioContext } from "./studio-context";
 import { db } from "./tx";
@@ -19,16 +20,14 @@ const optionalText = (max: number) =>
 
 export const packTypeInput = z
   .object({
-    name: z.string().trim().min(2, "Give the plan a name").max(60),
+    name: z.string().trim().min(2, msg("errors.namePlan")).max(60),
     description: optionalText(300),
-    entries: z.number().int().min(1, "At least one class").max(500),
+    entries: z.number().int().min(1, msg("errors.atLeastOneClass")).max(500),
     validityUnit: z.enum(["days", "weeks", "months"]).nullable(),
     validityAmount: z.number().int().min(1).max(1000).nullable(),
     priceCents: z.number().int().min(0).nullable(),
   })
-  .refine((v) => (v.validityUnit === null) === (v.validityAmount === null), {
-    message: "Set both how long the plan lasts and the unit, or neither",
-  });
+  .refine((v) => (v.validityUnit === null) === (v.validityAmount === null), msg("errors.validityPair"));
 export type PackTypeInput = z.infer<typeof packTypeInput>;
 
 export function listPackTypes(ctx: StudioContext, opts: { includeArchived?: boolean } = {}) {
@@ -53,7 +52,7 @@ export async function savePackType(ctx: StudioContext, input: PackTypeInput, id?
     .set(input)
     .where(and(eq(packType.id, id), eq(packType.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Plan not found");
+  if (!row) throw notFound(t("errors.planNotFound"));
   return row;
 }
 
@@ -66,32 +65,34 @@ export async function archivePackType(ctx: StudioContext, id: string, archived =
 }
 
 /** The three standard plans a new studio starts with. Prices left empty for the owner to fill in. */
-export const DEFAULT_PACK_TYPES: PackTypeInput[] = [
-  {
-    name: "Single class",
-    description: "One class.",
-    entries: 1,
-    validityUnit: "days",
-    validityAmount: 30,
-    priceCents: null,
-  },
-  {
-    name: "Trimester pack",
-    description: "10 classes over three months.",
-    entries: 10,
-    validityUnit: "months",
-    validityAmount: 3,
-    priceCents: null,
-  },
-  {
-    name: "10-class pack",
-    description: "10 classes, valid for 14 weeks.",
-    entries: 10,
-    validityUnit: "weeks",
-    validityAmount: 14,
-    priceCents: null,
-  },
-];
+export function defaultPackTypes(): PackTypeInput[] {
+  return [
+    {
+      name: t("setup.defaults.singleName"),
+      description: t("setup.defaults.singleDesc"),
+      entries: 1,
+      validityUnit: "days",
+      validityAmount: 30,
+      priceCents: null,
+    },
+    {
+      name: t("setup.defaults.trimesterName"),
+      description: t("setup.defaults.trimesterDesc"),
+      entries: 10,
+      validityUnit: "months",
+      validityAmount: 3,
+      priceCents: null,
+    },
+    {
+      name: t("setup.defaults.tenName"),
+      description: t("setup.defaults.tenDesc"),
+      entries: 10,
+      validityUnit: "weeks",
+      validityAmount: 14,
+      priceCents: null,
+    },
+  ];
+}
 
 /* ---------- Class templates ---------- */
 
@@ -109,9 +110,9 @@ export const TEMPLATE_COLORS = [
 ] as const;
 
 export const templateInput = z.object({
-  name: z.string().trim().min(2, "Give the class a name").max(60),
+  name: z.string().trim().min(2, msg("errors.nameClass")).max(60),
   description: optionalText(300),
-  color: z.string().regex(/^#[0-9a-f]{6}$/i, "Pick a colour"),
+  color: z.string().regex(/^#[0-9a-f]{6}$/i, msg("errors.pickColour")),
   icon: z.string().min(1).max(8),
 });
 export type TemplateInput = z.infer<typeof templateInput>;
@@ -143,7 +144,7 @@ export async function saveTemplate(ctx: StudioContext, input: TemplateInput, id?
     .set(input)
     .where(and(eq(classTemplate.id, id), eq(classTemplate.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Class type not found");
+  if (!row) throw notFound(t("errors.classTypeNotFound"));
   return row;
 }
 
@@ -159,7 +160,7 @@ export async function archiveTemplate(ctx: StudioContext, id: string, archived =
 /* ---------- Calendars ---------- */
 
 export const calendarInput = z.object({
-  name: z.string().trim().min(2, "Give the calendar a name").max(60),
+  name: z.string().trim().min(2, msg("errors.nameCalendar")).max(60),
   description: optionalText(300),
 });
 
@@ -176,7 +177,7 @@ export async function getCalendar(ctx: StudioContext, id: string) {
     .select()
     .from(calendar)
     .where(and(eq(calendar.id, id), eq(calendar.studioId, ctx.studioId), isNull(calendar.archivedAt)));
-  if (!row) throw notFound("Calendar not found");
+  if (!row) throw notFound(t("errors.calendarNotFound"));
   return row;
 }
 
@@ -194,7 +195,7 @@ export async function saveCalendar(ctx: StudioContext, input: z.infer<typeof cal
     .set(input)
     .where(and(eq(calendar.id, id), eq(calendar.studioId, ctx.studioId)))
     .returning();
-  if (!row) throw notFound("Calendar not found");
+  if (!row) throw notFound(t("errors.calendarNotFound"));
   return row;
 }
 
@@ -208,12 +209,13 @@ export async function archiveCalendar(ctx: StudioContext, id: string) {
 
 /** What a new studio starts with: a General class, two calendars and the three standard plans. */
 export async function seedStudioDefaults(studioId: string) {
+  // Written in the language of the person creating the studio; they can rename everything later.
   await db
     .insert(classTemplate)
-    .values({ studioId, name: "General class", isDefault: true, icon: "🏋️", color: "#57534e" });
+    .values({ studioId, name: t("setup.types.defaultName"), isDefault: true, icon: "🏋️", color: "#57534e" });
   await db.insert(calendar).values([
-    { studioId, name: "Group classes", sortOrder: 0 },
-    { studioId, name: "Private classes", sortOrder: 1 },
+    { studioId, name: t("setup.calendars.defaultGroup"), sortOrder: 0 },
+    { studioId, name: t("setup.calendars.defaultPrivate"), sortOrder: 1 },
   ]);
-  await db.insert(packType).values(DEFAULT_PACK_TYPES.map((t, i) => ({ ...t, studioId, sortOrder: i })));
+  await db.insert(packType).values(defaultPackTypes().map((p, i) => ({ ...p, studioId, sortOrder: i })));
 }
