@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "../db/client";
 import { studioSettings } from "../db/schema";
 import { auth } from "../lib/auth";
+import { seedStudioDefaults } from "./catalog";
 import { badRequest } from "./errors";
 
 export const RESERVED_SLUGS = new Set(["api", "admin", "login", "logout", "signup", "studios", "s", "new", "settings"]);
@@ -37,6 +39,12 @@ export async function createStudio(userId: string, input: CreateStudioInput) {
 
   const org = await auth.api.createOrganization({ body: { name: input.name, slug: input.slug, userId } });
   if (!org) throw new Error("Studio creation failed");
-  await db.insert(studioSettings).values({ studioId: org.id, timezone: input.timezone });
+  await db.insert(studioSettings).values({ studioId: org.id, timezone: input.timezone, joinCode: newJoinCode() });
+  await seedStudioDefaults(org.id);
   return org;
+}
+
+/** Secret for the member invite link. */
+export function newJoinCode(): string {
+  return randomBytes(9).toString("base64url");
 }

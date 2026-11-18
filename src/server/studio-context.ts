@@ -14,6 +14,7 @@ export interface StudioContext {
   userId: string;
   role: Role;
   timezone: string;
+  currency: string;
   bookingCutoffMinutes: number;
   cancellationCutoffMinutes: number;
 }
@@ -27,6 +28,7 @@ export async function resolveStudioContext(db: Db, slug: string, userId: string)
       name: organization.name,
       role: member.role,
       timezone: studioSettings.timezone,
+      currency: studioSettings.currency,
       bookingCutoffMinutes: studioSettings.bookingCutoffMinutes,
       cancellationCutoffMinutes: studioSettings.cancellationCutoffMinutes,
     })
