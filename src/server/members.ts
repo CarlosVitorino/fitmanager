@@ -25,6 +25,7 @@ import { audit } from "./audit";
 import { can, isRole, type Role } from "./authz";
 import { badRequest, forbidden, notFound } from "./errors";
 import { cleanHtml } from "./html";
+import { LOCALES } from "../i18n/locales";
 import { requireCapability, type StudioContext } from "./studio-context";
 import { newJoinCode } from "./studios";
 import { db } from "./tx";
@@ -389,6 +390,7 @@ export const settingsInput = z.object({
   name: z.string().trim().min(2).max(80),
   timezone: z.string(),
   currency: z.string().regex(/^[A-Z]{3}$/, "Use a 3-letter currency code like EUR"),
+  locale: z.enum(LOCALES),
   bookingCutoffMinutes: z.number().int().min(0).max(10080),
   cancellationCutoffMinutes: z.number().int().min(0).max(10080),
 });
@@ -408,6 +410,7 @@ export async function updateSettings(ctx: StudioContext, input: z.infer<typeof s
     .set({
       timezone: input.timezone,
       currency: input.currency,
+      locale: input.locale,
       bookingCutoffMinutes: input.bookingCutoffMinutes,
       cancellationCutoffMinutes: input.cancellationCutoffMinutes,
       updatedAt: new Date(),

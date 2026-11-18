@@ -1,60 +1,179 @@
 ---
-import Studio from "../../../../layouts/Studio.astro";
-import { listCalendars, listPackTypes, listTemplates } from "../../../../server/catalog";
+import { ArrowRight, CalendarRange, Check, Clock, Settings2, Tags, Ticket } from "@lucide/astro";
+import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
+import Setup from "../../../../layouts/Setup.astro";
+import { db } from "../../../../db/client";
+import { member, slot } from "../../../../db/schema";
+import { localDateOf } from "../../../../domain/dates";
+import { t } from "../../../../i18n";
+import { LOCALE_NAMES, isLocale } from "../../../../i18n/locales";
+import { formatMinutes, formatMoney, plural } from "../../../../lib/format";
 import { can } from "../../../../server/authz";
+import { listCalendars, listPackTypes, listTemplates } from "../../../../server/catalog";
+import { validityLabel } from "../../../../server/labels";
+import { validityOf } from "../../../../server/packs";
 
 const ctx = Astro.locals.studio!;
 const base = `/s/${ctx.slug}/admin`;
-const [plans, templates, calendars] = await Promise.all([listPackTypes(ctx), listTemplates(ctx), listCalendars(ctx)]);
-const items = [
-  {
-    href: `${base}/plans`,
-    title: "Plans",
-    text: "What members can hold: single class, trimester, 10-class pack…",
-    count: plans.length,
-    icon: "🎟️",
-    owner: true,
-  },
-  {
-    href: `${base}/classes`,
-    title: "Class types",
-    text: "General class, Upper body, Legs day… with colour and icon.",
-    count: templates.length,
-    icon: "🏷️",
-  },
-  {
-    href: `${base}/calendars`,
-    title: "Calendars & weekly slots",
-    text: "Group and private calendars, and the classes that repeat each week.",
-    count: calendars.length,
-    icon: "🗓️",
-  },
-  {
-    href: `${base}/settings`,
-    title: "Settings",
-    text: "Booking and cancellation windows, timezone, currency, invite link.",
-    icon: "⚙️",
-    owner: true,
-  },
-].filter((i) => !i.owner || can(ctx.role, "studio:settings"));
+const owner = can(ctx.role, "studio:settings");
+const today = localDateOf(new Date(), ctx.timezone);
+const [plans, templates, calendars, slotCounts, [memberCount]] = await Promise.all([
+  listPackTypes(ctx),
+  listTemplates(ctx),
+  listCalendars(ctx),
+  db
+    .select({ calendarId: slot.calendarId, n: sql<number>`count(*)::int` })
+    .from(slot)
+    .where(and(eq(slot.studioId, ctx.studioId), or(isNull(slot.endsOn), gte(slot.endsOn, today))))
+    .groupBy(slot.calendarId),
+  db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(member)
+    .where(and(eq(member.organizationId, ctx.studioId), eq(member.role, "member"))),
+]);
+const slotsBy = new Map(slotCounts.map((s) => [s.calendarId, s.n]));
+const totalSlots = slotCounts.reduce((n, s) => n + s.n, 0);
+
+const steps = [
+  { done: plans.length > 0 && plans.every((p) => p.priceCents !== null), title: t("setup.overview.stepPrices"), hint: t("setup.overview.stepPricesHint"), href: `${base}/plans`, show: owner },
+  { done: templates.length > 1, title: t("setup.overview.stepTypes"), hint: t("setup.overview.stepTypesHint"), href: `${base}/classes`, show: true },
+  { done: totalSlots > 0, title: t("setup.overview.stepSchedule"), hint: t("setup.overview.stepScheduleHint"), href: `${base}/calendars`, show: true },
+  { done: owner ? false : true, title: t("setup.overview.stepRules"), hint: t("setup.overview.stepRulesHint"), href: `${base}/settings`, show: owner, neutral: true },
+  { done: (memberCount?.n ?? 0) > 0, title: t("setup.overview.stepInvite"), hint: t("setup.overview.stepInviteHint"), href: owner ? `${base}/settings#invite` : `${base}/members`, show: true },
+].filter((s) => s.show);
+const counted = steps.filter((s) => !s.neutral);
+const doneCount = counted.filter((s) => s.done).length;
+const allDone = doneCount === counted.length;
+const pct = Math.round((doneCount / Math.max(1, counted.length)) * 100);
 ---
 
-<Studio title="Setup">
-  <h1 class="mb-6 text-2xl font-semibold">Setup</h1>
-  <div class="grid gap-4 sm:grid-cols-2">
-    {items.map((i) => (
-      <a href={i.href} class="card group flex gap-4 p-5 transition hover:border-stone-400">
-        <span class="text-2xl" aria-hidden="true">
-          {i.icon}
-        </span>
-        <span>
-          <span class="flex items-center gap-2 font-semibold group-hover:underline">
-            {i.title}
-            {i.count !== undefined && <span class="badge bg-stone-100 text-stone-600">{i.count}</span>}
-          </span>
-          <span class="muted mt-1 block">{i.text}</span>
-        </span>
-      </a>
-    ))}
+<Setup title={t("setup.title")} subtitle={t("setup.subtitle")}>
+  <section class="card mb-6 overflow-hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4">
+      <div>
+        <h2 class="h2">{allDone ? t("setup.overview.allDone") : t("setup.overview.checklistTitle")}</h2>
+        <p class="muted">{t("setup.overview.checklistProgress", { done: doneCount, total: counted.length })}</p>
+      </div>
+      <div class="h-2 w-40 overflow-hidden rounded-full bg-stone-100" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">
+        <div class="h-full rounded-full bg-emerald-500" style={`width:${pct}%`}></div>
+      </div>
+    </div>
+    <ol class="divide-y divide-stone-100">
+      {
+        steps.map((s, i) => (
+          <li>
+            <a href={s.href} class="group flex items-center gap-4 px-5 py-3.5 transition hover:bg-stone-50">
+              <span
+                class:list={[
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+                  s.done && !s.neutral ? "bg-emerald-500 text-white" : "border border-stone-300 text-stone-500",
+                ]}
+              >
+                {s.done && !s.neutral ? <Check size={14} /> : i + 1}
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class:list={["block text-sm font-medium", s.done && !s.neutral && "text-stone-500 line-through decoration-stone-300"]}>{s.title}</span>
+                <span class="block text-xs text-stone-500">{s.hint}</span>
+              </span>
+              <ArrowRight size={16} class="text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-stone-600" />
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <div class="grid gap-5 md:grid-cols-2">
+    {
+      owner && (
+        <section class="card p-5">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="h2 flex items-center gap-2">
+              <Ticket size={17} class="text-stone-400" /> {t("setup.overview.plansCard")}
+            </h2>
+            <a href={`${base}/plans`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
+          </div>
+          <ul class="divide-y divide-stone-100">
+            {plans.map((p) => (
+              <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span class="min-w-0">
+                  <span class="block font-medium">{p.name}</span>
+                  <span class="block text-xs text-stone-500">
+                    {plural(p.entries, "classes")} · {validityLabel(validityOf(p))}
+                  </span>
+                </span>
+                {p.priceCents !== null ? (
+                  <span class="font-semibold tabular-nums">{formatMoney(p.priceCents, ctx.currency)}</span>
+                ) : (
+                  <span class="badge bg-amber-50 text-amber-700">{t("setup.overview.noPrice")}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="card p-5">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="h2 flex items-center gap-2"><Tags size={17} class="text-stone-400" /> {t("setup.overview.typesCard")}</h2>
+        <a href={`${base}/classes`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {
+          templates.map((tpl) => (
+            <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium" style={`background:${tpl.color}14;color:${tpl.color}`}>
+              <span aria-hidden="true">{tpl.icon}</span>
+              {tpl.name}
+            </span>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="card p-5">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="h2 flex items-center gap-2"><CalendarRange size={17} class="text-stone-400" /> {t("setup.overview.calendarsCard")}</h2>
+        <a href={`${base}/calendars`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
+      </div>
+      <ul class="divide-y divide-stone-100">
+        {
+          calendars.map((c) => (
+            <li>
+              <a href={`${base}/calendars/${c.id}`} class="flex items-center justify-between py-2.5 text-sm hover:underline">
+                <span class="font-medium">{c.name}</span>
+                <span class="text-stone-500">{t("setup.overview.weeklySlots", { count: slotsBy.get(c.id) ?? 0 })}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    {
+      owner && (
+        <section class="card p-5">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="h2 flex items-center gap-2">
+              <Settings2 size={17} class="text-stone-400" /> {t("setup.overview.rulesCard")}
+            </h2>
+            <a href={`${base}/settings`} class="text-sm text-stone-500 hover:text-stone-900">{t("setup.overview.manage")} →</a>
+          </div>
+          <ul class="space-y-2 text-sm">
+            <li class="flex items-center gap-2">
+              <Clock size={15} class="text-stone-400" />
+              {t("setup.overview.bookingCloses", { time: formatMinutes(ctx.bookingCutoffMinutes) })}
+            </li>
+            <li class="flex items-center gap-2">
+              <Clock size={15} class="text-stone-400" />
+              {t("setup.overview.freeCancel", { time: formatMinutes(ctx.cancellationCutoffMinutes) })}
+            </li>
+            <li class="pt-1 text-xs text-stone-500">
+              {t("setup.overview.languageCurrency", { language: LOCALE_NAMES[isLocale(ctx.locale) ? ctx.locale : "en"], currency: ctx.currency, timezone: ctx.timezone })}
+            </li>
+          </ul>
+        </section>
+      )
+    }
   </div>
-</Studio>
+</Setup>

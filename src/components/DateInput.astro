@@ -1,0 +1,20 @@
+---
+/** The date picker island with the request's language and translated labels filled in. */
+import DateField from "./islands/DateField";
+import { getLocale, t } from "../i18n";
+
+interface Props {
+  name: string;
+  value?: string | null | undefined;
+  today: string;
+  required?: boolean;
+  optional?: boolean;
+  min?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+}
+const { placeholder, ...props } = Astro.props;
+const labels = { today: t("common.today"), clear: t("common.clear"), placeholder: placeholder ?? t("common.pickDate") };
+---
+
+<DateField client:load {...props} value={props.value ?? null} locale={getLocale()} labels={labels} />

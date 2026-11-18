@@ -2,6 +2,7 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { calendar, classTemplate, packType } from "../db/schema";
+import { t } from "../i18n";
 import { notFound } from "./errors";
 import { requireCapability, type StudioContext } from "./studio-context";
 import { db } from "./tx";
@@ -66,32 +67,34 @@ export async function archivePackType(ctx: StudioContext, id: string, archived =
 }
 
 /** The three standard plans a new studio starts with. Prices left empty for the owner to fill in. */
-export const DEFAULT_PACK_TYPES: PackTypeInput[] = [
-  {
-    name: "Single class",
-    description: "One class.",
-    entries: 1,
-    validityUnit: "days",
-    validityAmount: 30,
-    priceCents: null,
-  },
-  {
-    name: "Trimester pack",
-    description: "10 classes over three months.",
-    entries: 10,
-    validityUnit: "months",
-    validityAmount: 3,
-    priceCents: null,
-  },
-  {
-    name: "10-class pack",
-    description: "10 classes, valid for 14 weeks.",
-    entries: 10,
-    validityUnit: "weeks",
-    validityAmount: 14,
-    priceCents: null,
-  },
-];
+export function defaultPackTypes(): PackTypeInput[] {
+  return [
+    {
+      name: t("setup.defaults.singleName"),
+      description: t("setup.defaults.singleDesc"),
+      entries: 1,
+      validityUnit: "days",
+      validityAmount: 30,
+      priceCents: null,
+    },
+    {
+      name: t("setup.defaults.trimesterName"),
+      description: t("setup.defaults.trimesterDesc"),
+      entries: 10,
+      validityUnit: "months",
+      validityAmount: 3,
+      priceCents: null,
+    },
+    {
+      name: t("setup.defaults.tenName"),
+      description: t("setup.defaults.tenDesc"),
+      entries: 10,
+      validityUnit: "weeks",
+      validityAmount: 14,
+      priceCents: null,
+    },
+  ];
+}
 
 /* ---------- Class templates ---------- */
 
@@ -208,12 +211,13 @@ export async function archiveCalendar(ctx: StudioContext, id: string) {
 
 /** What a new studio starts with: a General class, two calendars and the three standard plans. */
 export async function seedStudioDefaults(studioId: string) {
+  // Written in the language of the person creating the studio; they can rename everything later.
   await db
     .insert(classTemplate)
-    .values({ studioId, name: "General class", isDefault: true, icon: "🏋️", color: "#57534e" });
+    .values({ studioId, name: t("setup.types.defaultName"), isDefault: true, icon: "🏋️", color: "#57534e" });
   await db.insert(calendar).values([
-    { studioId, name: "Group classes", sortOrder: 0 },
-    { studioId, name: "Private classes", sortOrder: 1 },
+    { studioId, name: t("setup.calendars.defaultGroup"), sortOrder: 0 },
+    { studioId, name: t("setup.calendars.defaultPrivate"), sortOrder: 1 },
   ]);
-  await db.insert(packType).values(DEFAULT_PACK_TYPES.map((t, i) => ({ ...t, studioId, sortOrder: i })));
+  await db.insert(packType).values(defaultPackTypes().map((p, i) => ({ ...p, studioId, sortOrder: i })));
 }

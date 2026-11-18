@@ -5,9 +5,13 @@
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { DayPicker } from "react-day-picker";
-import { enGB } from "react-day-picker/locale";
+import { de, enGB, es, fr, pt } from "react-day-picker/locale";
 import "react-day-picker/style.css";
 import { format } from "date-fns";
+import { DATE_FNS_LOCALES, DATE_PATTERNS, capitalizeFirst } from "../../i18n/dates";
+import type { Locale } from "../../i18n/locales";
+
+const PICKER_LOCALES = { en: enGB, de, es, fr, pt };
 
 interface Props {
   name: string;
@@ -17,8 +21,9 @@ interface Props {
   required?: boolean;
   optional?: boolean;
   min?: string;
-  placeholder?: string;
   ariaLabel?: string;
+  locale: Locale;
+  labels: { today: string; clear: string; placeholder: string };
 }
 
 const toDate = (s: string) => {
@@ -34,8 +39,9 @@ export default function DateField({
   required,
   optional,
   min,
-  placeholder = "Pick a date",
   ariaLabel,
+  locale,
+  labels,
 }: Props) {
   const [selected, setSelected] = useState<string | null>(value || null);
   const [open, setOpen] = useState(false);
@@ -74,7 +80,7 @@ export default function DateField({
         onClick={() => setOpen((o) => !o)}
       >
         <span className={selected ? "" : "text-stone-400"}>
-          {selected ? format(toDate(selected), "EEE d MMM yyyy") : placeholder}
+          {selected ? capitalizeFirst(format(toDate(selected), DATE_PATTERNS[locale].dateWithDay, { locale: DATE_FNS_LOCALES[locale] })) : labels.placeholder}
         </span>
         <svg
           width="16"
@@ -101,7 +107,7 @@ export default function DateField({
         >
           <DayPicker
             mode="single"
-            locale={enGB}
+            locale={PICKER_LOCALES[locale]}
             weekStartsOn={1}
             selected={selected ? toDate(selected) : undefined}
             onSelect={pick}
@@ -114,7 +120,7 @@ export default function DateField({
           />
           <div className="mt-2 flex justify-between border-t border-stone-100 pt-2">
             <button type="button" className="btn btn-sm" onClick={() => pick(toDate(today))}>
-              Today
+              {labels.today}
             </button>
             {optional && selected && (
               <button
@@ -125,7 +131,7 @@ export default function DateField({
                   setOpen(false);
                 }}
               >
-                Clear
+                {labels.clear}
               </button>
             )}
           </div>

@@ -1,19 +1,18 @@
 ---
-import Studio from "../../../../../layouts/Studio.astro";
-import { handleActions, optStr, str } from "../../../../../server/actions";
-import { calendarInput, listCalendars, saveCalendar } from "../../../../../server/catalog";
+import { CalendarRange, ChevronRight } from "@lucide/astro";
+import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
+import Setup from "../../../../../layouts/Setup.astro";
 import { db } from "../../../../../db/client";
 import { slot } from "../../../../../db/schema";
-import { and, eq, isNull, or, gte, sql } from "drizzle-orm";
 import { localDateOf } from "../../../../../domain/dates";
+import { t } from "../../../../../i18n";
+import { handleActions, optStr, str } from "../../../../../server/actions";
+import { calendarInput, listCalendars, saveCalendar } from "../../../../../server/catalog";
 
 const ctx = Astro.locals.studio!;
 const result = await handleActions(Astro, {
   create: async (f) => {
-    const cal = await saveCalendar(
-      ctx,
-      calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }),
-    );
+    const cal = await saveCalendar(ctx, calendarInput.parse({ name: str(f, "name"), description: optStr(f, "description") }));
     return Astro.redirect(`/s/${ctx.slug}/admin/calendars/${cal.id}`, 303);
   },
 });
@@ -29,39 +28,37 @@ const counts = await db
 const slotCount = new Map(counts.map((c) => [c.calendarId, c.n]));
 ---
 
-<Studio title="Calendars" flash={result.flash} error={result.error}>
-  <a href={`/s/${ctx.slug}/admin/setup`} class="muted hover:underline">
-    ← Setup
-  </a>
-  <h1 class="mt-1 mb-1 text-2xl font-semibold">Calendars</h1>
-  <p class="muted mb-6">Each calendar has its own weekly slots. Members can filter by calendar when booking.</p>
-  <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+<Setup title={t("setup.calendars.title")} subtitle={t("setup.calendars.subtitle")} flash={result.flash} error={result.error}>
+  <div class="grid gap-6 xl:grid-cols-[1fr_20rem]">
     <div class="space-y-3">
-      {calendars.map((c) => (
-        <a
-          href={`/s/${ctx.slug}/admin/calendars/${c.id}`}
-          class="card flex items-center justify-between p-5 hover:border-stone-400"
-        >
-          <span>
-            <span class="font-semibold">{c.name}</span>
-            {c.description && <span class="muted block">{c.description}</span>}
-          </span>
-          <span class="muted">{slotCount.get(c.id) ?? 0} weekly slots →</span>
-        </a>
-      ))}
+      {
+        calendars.map((c) => (
+          <a href={`/s/${ctx.slug}/admin/calendars/${c.id}`} class="card group flex items-center gap-4 p-4 transition hover:border-stone-300 hover:shadow-md">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+              <CalendarRange size={20} />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-semibold">{c.name}</span>
+              <span class="block text-sm text-stone-500">{c.description ?? t("setup.calendars.weeklySlots", { count: slotCount.get(c.id) ?? 0 })}</span>
+            </span>
+            <span class="badge bg-stone-100 text-stone-600">{t("setup.calendars.weeklySlots", { count: slotCount.get(c.id) ?? 0 })}</span>
+            <ChevronRight size={18} class="text-stone-300 group-hover:text-stone-600" />
+          </a>
+        ))
+      }
     </div>
-    <form method="post" class="card h-fit space-y-3 p-5">
-      <h2 class="h2">Add a calendar</h2>
+    <form method="post" class="card h-fit space-y-3 p-5 xl:sticky xl:top-20">
+      <h2 class="h2">{t("setup.calendars.add")}</h2>
       <input type="hidden" name="_action" value="create" />
       <label class="block space-y-1">
-        <span class="label">Name</span>
-        <input name="name" required class="input" placeholder="e.g. Outdoor bootcamp" />
+        <span class="label">{t("common.name")}</span>
+        <input name="name" required class="input" placeholder={t("setup.calendars.namePlaceholder")} />
       </label>
       <label class="block space-y-1">
-        <span class="label">Description</span>
+        <span class="label">{t("common.description")}</span>
         <input name="description" class="input" />
       </label>
-      <button class="btn btn-primary w-full">Add calendar</button>
+      <button class="btn btn-primary w-full">{t("setup.calendars.addButton")}</button>
     </form>
   </div>
-</Studio>
+</Setup>
