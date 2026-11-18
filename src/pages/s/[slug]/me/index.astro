@@ -138,7 +138,10 @@ const firstName = me.name.split(" ")[0];
                 </p>
                 <p class="text-xs text-stone-500">{next.calendarName}</p>
               </div>
-              <form method="post" class="text-right">
+              <form
+                method="post"
+                class="flex basis-full flex-row-reverse items-center justify-end gap-3 sm:block sm:basis-auto sm:text-right"
+              >
                 <input type="hidden" name="_action" value="cancel" />
                 <input type="hidden" name="bookingId" value={next.bookingId} />
                 <button
@@ -147,7 +150,7 @@ const firstName = me.name.split(" ")[0];
                 >
                   {t("common.cancel")}
                 </button>
-                {lateCancel && <p class="mt-1 text-[11px] text-amber-700">{t("profile.me.noRefund")}</p>}
+                {lateCancel && <p class="text-[11px] text-amber-700 sm:mt-1">{t("profile.me.noRefund")}</p>}
               </form>
             </div>
             {upcoming.length > 1 && (
