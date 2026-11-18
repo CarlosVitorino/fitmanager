@@ -1,0 +1,90 @@
+# FitManager: initial planning and feature list
+
+A booking and class-credit management tool for small studios and independent coaches. The core idea: members buy credit packs (single class, trimester pack, expiring 10-entry pack), book themselves into open calendar slots, and the studio owner sees who is close to running out of credits or letting a pack expire, without anyone emailing back and forth.
+
+## Core rules (decided)
+
+These rules drive the counts, reminders and visualisations everywhere else in the app.
+
+1. **When a credit is consumed**: on the date of the event, automatically, for all booked participants. Check-in/attendance or a no-show both end in consumption on the event date.
+2. **Cancellation policy**: a member can cancel up to 24 hours before the class by default; the credit is not returned after that. The window is configurable in the admin view.
+3. **Booking window**: members can book up to 2 hours before class start by default. Also configurable in the admin view.
+4. **Multi-pack stacking**: a member can hold several packs at once. Credits are spent from the pack closest to its expiry date first.
+5. **Reminder channel**: in-app notifications only, for the first phase. Email can come later.
+6. **Payment records**: open question, see the end of this document.
+
+## Member side (User)
+
+### Profile view
+- The member's own profile page.
+- **Progress and achievements**: class history with simple gamification, based on the number of classes taken (streaks, counts, milestones).
+- **My plans**: the packs the member holds, with entries remaining and expiry dates visible at a glance.
+
+### Buying classes
+Three purchase options, configurable per studio:
+1. **Single class** (one entry, consumed on the event date if the member is booked).
+2. **Trimester pack**: 10 entries.
+3. **Expiring pack**: 10 entries that expire after 14 weeks.
+
+The expiring pack is the one that drives the consumption-vs-expiry visuals and reminders below.
+
+### Calendar and booking
+- A public calendar showing all bookable classes, with **available spots** per session.
+- The member books a class directly if a spot is open and the booking window allows it. Full classes are shown as full.
+- Booking does not consume the credit; consumption happens automatically on the event date for all booked participants (see Core rules).
+- Cancellation follows the configured window (24h default), after which the credit is spent anyway.
+
+## Admin side
+
+### Users list
+- Table of all members with their general details (name, contact, plan status, entries remaining).
+
+### User info (single member detail)
+- **Profile**: general information about the member.
+- **Fitness details**: free-text note spaces, split into private notes (only the coach sees them) and notes shared with the member.
+- **User progress (history)**:
+  - Class history (attended, booked, missed).
+  - Payment history.
+- **Plan consumption visualisation**: a clear visual of time in plan vs. class consumption, answering two questions at a glance:
+  - Is this member burning through classes very fast?
+  - At the current rate, will they have unused classes left over when the pack expires?
+
+### Manual adjustments (backoffice tools)
+- **Give credits manually**: add entries to a member's pack, or grant a whole pack, without a payment. For goodwill, corrections and freebies.
+- **Adjust bookings**: add a member to a full class, remove a booking, or move a booking on their behalf, so the coach can fix troubles on either side without touching code or the database.
+- Every manual change is recorded: what was changed, by whom and when, so payment history and credit counts stay explainable.
+
+### Calendar management
+- Define calendars and the available slots for each. For example, a **private classes calendar** and a **group classes calendar** run side by side.
+- Configurable windows per calendar or per studio: booking cutoff (default 2h before start) and cancellation cutoff (default 24h before start).
+
+### Class templates
+- A general class is the default type.
+- The admin can create specific class types that show up in the calendar with their own identity: **Upper body**, **Legs day**, and so on.
+- Each template carries: name, description, colour, icon.
+
+### Payments info
+- A payments view, subject to what the payment provider exposes (see the open question below).
+
+### Settings
+
+Global toggles and configuration:
+- **Auto-remind when credits are almost used up**: True / False.
+- **Auto-remind when a plan is almost expiring**: True / False.
+- **Auto-remind after inactivity**: if a member has not booked anything for X days and their plan expires on day X, send a reminder.
+- **Cancellation cutoff**: hours before class start after which cancelling no longer returns the credit (default 24).
+- **Booking cutoff**: hours before class start after which booking closes (default 2).
+- Plus any other settings needed as the feature set settles.
+
+Reminders are in-app notifications in the first phase, generated by the app itself.
+
+## Tech stack
+
+- **TypeScript + Astro** for the web app.
+- Clean architecture and design principles: SOLID, DRY, KISS.
+- **Payments via Creem.io**, including checkout for the three pack types and webhook handling for successful payments.
+
+## Open questions
+
+1. **Payment records: our side or Creem.io's?** Check whether we need to keep our own copy of payments and credit purchases, or whether the Creem.io API can serve as the record of truth for the payment history screens. Webhooks should still be handled either way, since credit granting has to react to a successful payment even if we never store the payment itself.
+2. **No-show marking**: consumption happens on the event date for all booked participants, but does the app still need a check-in/no-show flag on attendance for the class history and the gamification? Worth deciding before the history screens are built.

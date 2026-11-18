@@ -19,6 +19,7 @@ These are defaults to start from, not rules. If you have a better way to reach t
 
 **Before writing code**
 - Read `build-brief.md` end to end.
+- Read `docs/notes/`: the founder's own research and notes, written before this handoff.
 - Never build anything listed under "Do not build".
 - Work in the phases of `docs/build-plan.md`, and check in with the person at the end of each one.
 
